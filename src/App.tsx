@@ -11,6 +11,8 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
+import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
+import InstructorCourseDetail from "./pages/dashboard/InstructorCourseDetail";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import { ReactNode } from "react";
 
@@ -36,6 +38,9 @@ const AppRoutes = () => (
 
     {/* Instructor routes */}
     <Route path="/instructor" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorDashboard /></ProtectedRoute>} />
+    <Route path="/instructor/courses/new" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
+    <Route path="/instructor/courses/:courseId" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseDetail /></ProtectedRoute>} />
+    <Route path="/instructor/courses/:courseId/edit" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
     <Route path="/instructor/*" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorDashboard /></ProtectedRoute>} />
 
     {/* Admin routes */}
