@@ -40,8 +40,8 @@ interface LessonForm {
 }
 
 const emptyCourse = {
-  title: '', titleAm: '', slug: '',
-  description: '', descriptionAm: '',
+  title: '', titleAm: '', titleOm: '', titleGz: '', slug: '',
+  description: '', descriptionAm: '', descriptionOm: '', descriptionGz: '',
   categoryId: '', level: '' as string,
   price: '', discountPrice: '', currency: 'ETB',
   thumbnailFile: null as File | null,
@@ -514,29 +514,59 @@ const InstructorCourseCreate = () => {
 
           {/* Localization */}
           <TabsContent value="localization" className="space-y-6 mt-6">
+            {/* Amharic */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Globe className="h-4 w-4" /> Amharic Translation
+                  <Globe className="h-4 w-4" /> Amharic Translation (አማርኛ)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Title (Amharic)</Label>
-                  <Input
-                    placeholder="ርዕስ በአማርኛ"
-                    value={course.titleAm}
-                    onChange={(e) => updateCourse('titleAm', e.target.value)}
-                  />
+                  <Input placeholder="ርዕስ በአማርኛ" value={course.titleAm} onChange={(e) => updateCourse('titleAm', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label>Description (Amharic)</Label>
-                  <Textarea
-                    rows={4}
-                    placeholder="ገለጻ በአማርኛ"
-                    value={course.descriptionAm}
-                    onChange={(e) => updateCourse('descriptionAm', e.target.value)}
-                  />
+                  <Textarea rows={4} placeholder="ገለጻ በአማርኛ" value={course.descriptionAm} onChange={(e) => updateCourse('descriptionAm', e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Oromifa */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe className="h-4 w-4" /> Oromifa Translation (Afaan Oromoo)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Title (Oromifa)</Label>
+                  <Input placeholder="Mata duree Afaan Oromootiin" value={course.titleOm} onChange={(e) => updateCourse('titleOm', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (Oromifa)</Label>
+                  <Textarea rows={4} placeholder="Ibsa Afaan Oromootiin" value={course.descriptionOm} onChange={(e) => updateCourse('descriptionOm', e.target.value)} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Geez */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Globe className="h-4 w-4" /> Geez Translation (ግዕዝ)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Title (Geez)</Label>
+                  <Input placeholder="ርእስ ብግዕዝ" value={course.titleGz} onChange={(e) => updateCourse('titleGz', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description (Geez)</Label>
+                  <Textarea rows={4} placeholder="ገለጻ ብግዕዝ" value={course.descriptionGz} onChange={(e) => updateCourse('descriptionGz', e.target.value)} />
                 </div>
               </CardContent>
             </Card>

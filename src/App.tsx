@@ -13,6 +13,10 @@ import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
 import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
 import InstructorCourseDetail from "./pages/dashboard/InstructorCourseDetail";
+import InstructorStudents from "./pages/dashboard/InstructorStudents";
+import InstructorEarnings from "./pages/dashboard/InstructorEarnings";
+import InstructorPayouts from "./pages/dashboard/InstructorPayouts";
+import InstructorSettings from "./pages/dashboard/InstructorSettings";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import { ReactNode } from "react";
 
@@ -41,6 +45,10 @@ const AppRoutes = () => (
     <Route path="/instructor/courses/new" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
     <Route path="/instructor/courses/:courseId" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseDetail /></ProtectedRoute>} />
     <Route path="/instructor/courses/:courseId/edit" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
+    <Route path="/instructor/students" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorStudents /></ProtectedRoute>} />
+    <Route path="/instructor/earnings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorEarnings /></ProtectedRoute>} />
+    <Route path="/instructor/payouts" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorPayouts /></ProtectedRoute>} />
+    <Route path="/instructor/settings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorSettings /></ProtectedRoute>} />
     <Route path="/instructor/*" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorDashboard /></ProtectedRoute>} />
 
     {/* Admin routes */}
