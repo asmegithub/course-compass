@@ -18,6 +18,14 @@ import InstructorEarnings from "./pages/dashboard/InstructorEarnings";
 import InstructorPayouts from "./pages/dashboard/InstructorPayouts";
 import InstructorSettings from "./pages/dashboard/InstructorSettings";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import AdminUsers from "./pages/dashboard/AdminUsers";
+import AdminApprovals from "./pages/dashboard/AdminApprovals";
+import AdminCategories from "./pages/dashboard/AdminCategories";
+import AdminCoupons from "./pages/dashboard/AdminCoupons";
+import AdminPayments from "./pages/dashboard/AdminPayments";
+import AdminAuditLogs from "./pages/dashboard/AdminAuditLogs";
+import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
+import AdminSettings from "./pages/dashboard/AdminSettings";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -53,6 +61,14 @@ const AppRoutes = () => (
 
     {/* Admin routes */}
     <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+    <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminUsers /></ProtectedRoute>} />
+    <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminApprovals /></ProtectedRoute>} />
+    <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
+    <Route path="/admin/coupons" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCoupons /></ProtectedRoute>} />
+    <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />
+    <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
+    <Route path="/admin/email-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminEmailLogs /></ProtectedRoute>} />
+    <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
     <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
 
     <Route path="*" element={<NotFound />} />
