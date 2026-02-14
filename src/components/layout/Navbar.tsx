@@ -45,7 +45,7 @@ const Navbar = () => {
 
         <nav className="hidden lg:flex items-center gap-6">
           <Link to="/courses" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Explore Courses</Link>
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">Categories</DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56 bg-card">
               <DropdownMenuItem asChild><Link to="/courses?category=programming">💻 Programming</Link></DropdownMenuItem>
@@ -56,7 +56,7 @@ const Navbar = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild><Link to="/categories" className="font-medium">View All Categories</Link></DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
         </nav>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden md:flex">
