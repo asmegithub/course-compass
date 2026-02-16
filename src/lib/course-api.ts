@@ -35,6 +35,34 @@ type ApiCourse = {
   updatedAt?: string;
 };
 
+export type CoursePayload = {
+  instructorId?: string;
+  categoryId: string;
+  title: string;
+  titleAm?: string;
+  titleOm?: string;
+  titleGz?: string;
+  slug: string;
+  description: string;
+  descriptionAm?: string;
+  descriptionOm?: string;
+  descriptionGz?: string;
+  thumbnail?: string;
+  previewVideo?: string;
+  price: number;
+  discountPrice?: number;
+  currency: string;
+  level: string;
+  status?: string;
+  totalDuration?: number;
+  totalLessons?: number;
+  enrollmentCount?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  isFeatured?: boolean;
+  isPopular?: boolean;
+};
+
 type ApiCategory = {
   id?: string;
   name?: string;
@@ -46,6 +74,19 @@ type ApiCategory = {
   icon?: string;
   parentId?: string;
   orderIndex?: number | string;
+  isActive?: boolean;
+};
+
+export type CategoryPayload = {
+  name: string;
+  nameAm?: string;
+  nameOm?: string;
+  nameGz?: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  parentId?: string;
+  orderIndex?: number;
   isActive?: boolean;
 };
 
@@ -139,7 +180,45 @@ export const getCourseById = async (courseId: string): Promise<Course> => {
   return toCourse(data);
 };
 
+export const createCourse = async (payload: CoursePayload): Promise<Course> => {
+  const data = await apiFetch<ApiCourse>('/api/courses', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return toCourse(data);
+};
+
+export const updateCourse = async (courseId: string, payload: CoursePayload): Promise<Course> => {
+  const data = await apiFetch<ApiCourse>(`/api/courses/${courseId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return toCourse(data);
+};
+
 export const getCategories = async (): Promise<CourseCategory[]> => {
   const data = await apiFetch<ApiCategory[]>('/api/course-categories');
   return data.map((category) => toCategory(category)).filter(Boolean) as CourseCategory[];
+};
+
+export const createCategory = async (payload: CategoryPayload): Promise<CourseCategory> => {
+  const data = await apiFetch<ApiCategory>('/api/course-categories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return toCategory(data) as CourseCategory;
+};
+
+export const updateCategory = async (categoryId: string, payload: CategoryPayload): Promise<CourseCategory> => {
+  const data = await apiFetch<ApiCategory>(`/api/course-categories/${categoryId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+  return toCategory(data) as CourseCategory;
+};
+
+export const deleteCategory = async (categoryId: string): Promise<void> => {
+  await apiFetch<void>(`/api/course-categories/${categoryId}`, {
+    method: 'DELETE',
+  });
 };

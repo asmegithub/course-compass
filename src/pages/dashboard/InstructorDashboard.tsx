@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockCourses } from '@/lib/mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { getCourses } from '@/lib/course-api';
 import {
   DollarSign, Users, BookOpen, Star, TrendingUp,
   ArrowUpRight, ArrowDownRight, PlusCircle, Eye, MoreVertical,
@@ -16,37 +17,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const instructorCourses = mockCourses.map((c) => ({
-  ...c,
-  earnings: Math.floor(Math.random() * 50000) + 10000,
-  studentsThisMonth: Math.floor(Math.random() * 200) + 30,
-  discussions: Math.floor(Math.random() * 50) + 5,
-  pendingQuestions: Math.floor(Math.random() * 10),
-}));
-
-const draftCourses = [
-  {
-    id: 'draft-1', title: 'Advanced React Patterns', status: 'DRAFT' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&h=400&fit=crop',
-    totalLessons: 12, updatedAt: '2026-02-10', level: 'ADVANCED' as const,
-  },
-  {
-    id: 'draft-2', title: 'Node.js Microservices', status: 'PENDING' as const,
-    thumbnail: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&h=400&fit=crop',
-    totalLessons: 24, updatedAt: '2026-02-08', level: 'INTERMEDIATE' as const,
-  },
-];
-
-const recentPayouts = [
-  { id: '1', amount: 12500, currency: 'ETB', status: 'COMPLETED', date: '2026-01-15' },
-  { id: '2', amount: 8700, currency: 'ETB', status: 'PENDING', date: '2026-02-01' },
-  { id: '3', amount: 15200, currency: 'ETB', status: 'COMPLETED', date: '2025-12-15' },
-];
-
 const InstructorDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('published');
+  const { data: courses = [], isLoading, isError } = useQuery({
+    queryKey: ['courses'],
+    queryFn: getCourses,
+  });
+
+  const instructorCourses = useMemo(() => {
+    if (!user?.id) return [];
+    return courses.filter((course) => course.instructorId === user.id);
+  }, [courses, user?.id]);
+
+  const publishedCourses = instructorCourses.filter((course) => course.status === 'PUBLISHED');
+  const draftCourses = instructorCourses.filter((course) => course.status !== 'PUBLISHED');
+
+  const stats = useMemo(() => {
+    const totalStudents = instructorCourses.reduce((sum, course) => sum + course.enrollmentCount, 0);
+    const avgRating = instructorCourses.length
+      ? instructorCourses.reduce((sum, course) => sum + course.averageRating, 0) / instructorCourses.length
+      : 0;
+    return {
+      totalStudents,
+      activeCourses: publishedCourses.length,
+      avgRating: avgRating.toFixed(1),
+    };
+  }, [instructorCourses, publishedCourses.length]);
 
   return (
     <DashboardLayout>
@@ -68,17 +66,16 @@ const InstructorDashboard = () => {
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Revenue', value: 'ETB 125,000', icon: DollarSign, change: '+12%', up: true },
-            { label: 'Total Students', value: '45,230', icon: Users, change: '+8%', up: true },
-            { label: 'Active Courses', value: '12', icon: BookOpen, change: '+2', up: true },
-            { label: 'Avg. Rating', value: '4.8', icon: Star, change: '+0.2', up: true },
+            { label: 'Total Revenue', value: '—', icon: DollarSign, change: 'API pending', up: true },
+            { label: 'Total Students', value: stats.totalStudents.toLocaleString(), icon: Users, change: 'Live', up: true },
+            { label: 'Active Courses', value: stats.activeCourses.toString(), icon: BookOpen, change: 'Live', up: true },
+            { label: 'Avg. Rating', value: stats.avgRating, icon: Star, change: 'Live', up: true },
           ].map((stat) => (
             <Card key={stat.label}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-2">
                   <stat.icon className="h-5 w-5 text-muted-foreground" />
-                  <span className={`text-xs font-medium flex items-center gap-0.5 ${stat.up ? 'text-green-600' : 'text-destructive'}`}>
-                    {stat.up ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  <span className="text-xs font-medium flex items-center gap-0.5 text-muted-foreground">
                     {stat.change}
                   </span>
                 </div>
@@ -95,13 +92,22 @@ const InstructorDashboard = () => {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <div className="flex items-center justify-between">
                 <TabsList>
-                  <TabsTrigger value="published">Published ({instructorCourses.length})</TabsTrigger>
+                  <TabsTrigger value="published">Published ({publishedCourses.length})</TabsTrigger>
                   <TabsTrigger value="drafts">Drafts & Pending ({draftCourses.length})</TabsTrigger>
                 </TabsList>
               </div>
 
               <TabsContent value="published" className="space-y-3 mt-4">
-                {instructorCourses.map((course) => (
+                {isLoading && (
+                  <div className="text-muted-foreground">Loading courses...</div>
+                )}
+                {isError && (
+                  <div className="text-destructive">Failed to load courses.</div>
+                )}
+                {!isLoading && !isError && publishedCourses.length === 0 && (
+                  <div className="text-muted-foreground">No published courses yet.</div>
+                )}
+                {!isLoading && !isError && publishedCourses.map((course) => (
                   <Card key={course.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -111,9 +117,9 @@ const InstructorDashboard = () => {
                           <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {course.enrollmentCount}</span>
                             <span className="flex items-center gap-1"><Star className="h-3 w-3" /> {course.averageRating}</span>
-                            <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> ETB {course.earnings.toLocaleString()}</span>
-                            <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> +{course.studentsThisMonth} this month</span>
-                            <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {course.pendingQuestions} questions</span>
+                            <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> Revenue API pending</span>
+                            <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Trend API pending</span>
+                            <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> Q&A API pending</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -144,7 +150,16 @@ const InstructorDashboard = () => {
               </TabsContent>
 
               <TabsContent value="drafts" className="space-y-3 mt-4">
-                {draftCourses.map((course) => (
+                {isLoading && (
+                  <div className="text-muted-foreground">Loading courses...</div>
+                )}
+                {isError && (
+                  <div className="text-destructive">Failed to load courses.</div>
+                )}
+                {!isLoading && !isError && draftCourses.length === 0 && (
+                  <div className="text-muted-foreground">No drafts or pending courses.</div>
+                )}
+                {!isLoading && !isError && draftCourses.map((course) => (
                   <Card key={course.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -183,22 +198,8 @@ const InstructorDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Earnings</span>
-                    <span className="font-semibold">ETB 125,000</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Withdrawn</span>
-                    <span className="font-semibold">ETB 98,500</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Balance</span>
-                    <span className="font-semibold text-primary">ETB 26,500</span>
-                  </div>
-                  <Button variant="accent" size="sm" className="w-full mt-2">
-                    Request Payout
-                  </Button>
+                <div className="text-sm text-muted-foreground">
+                  Earnings data will appear once the payouts API is connected.
                 </div>
               </CardContent>
             </Card>
@@ -208,17 +209,7 @@ const InstructorDashboard = () => {
                 <CardTitle className="text-sm font-semibold">Recent Payouts</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {recentPayouts.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between text-sm">
-                    <div>
-                      <p className="font-medium">ETB {p.amount.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{p.date}</p>
-                    </div>
-                    <Badge variant={p.status === 'COMPLETED' ? 'default' : 'secondary'} className="text-xs">
-                      {p.status}
-                    </Badge>
-                  </div>
-                ))}
+                <div className="text-sm text-muted-foreground">No payouts yet.</div>
               </CardContent>
             </Card>
           </div>

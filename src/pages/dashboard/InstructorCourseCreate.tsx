@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useQuery } from '@tanstack/react-query';
-import { getCategories } from '@/lib/course-api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createCourse, CoursePayload, getCategories } from '@/lib/course-api';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Upload, Image, Video, PlusCircle, Trash2, GripVertical,
   ChevronDown, ChevronUp, Save, Send, ArrowLeft, FileText, Globe,
@@ -67,12 +68,27 @@ const createSection = (): SectionForm => ({
 
 const InstructorCourseCreate = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [course, setCourse] = useState(emptyCourse);
   const [sections, setSections] = useState<SectionForm[]>([createSection()]);
   const [activeTab, setActiveTab] = useState('basic');
   const { data: categories = [] } = useQuery({
     queryKey: ['course-categories'],
     queryFn: getCategories,
+  });
+
+  const createCourseMutation = useMutation({
+    mutationFn: (payload: CoursePayload) => createCourse(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast({ title: 'Course submitted for review', description: 'Your course has been submitted and will be reviewed by an admin.' });
+      navigate('/instructor');
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to create course.';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
+    },
   });
 
   const updateCourse = (field: string, value: string | File | null) => {
@@ -164,8 +180,37 @@ const InstructorCourseCreate = () => {
       toast({ title: 'Missing required fields', description: 'Please fill in all required fields.', variant: 'destructive' });
       return;
     }
-    toast({ title: 'Course submitted for review', description: 'Your course has been submitted and will be reviewed by an admin.' });
-    navigate('/instructor');
+    const totalDuration = sections.reduce((acc, section) => acc + section.lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0), 0);
+    const totalLessons = sections.reduce((acc, section) => acc + section.lessons.length, 0);
+    const normalizedSlug = course.slug.trim() || course.title.trim().toLowerCase().replace(/\s+/g, '-');
+
+    const payload: CoursePayload = {
+      instructorId: user?.id,
+      categoryId: course.categoryId,
+      title: course.title.trim(),
+      titleAm: course.titleAm.trim() || undefined,
+      titleOm: course.titleOm.trim() || undefined,
+      titleGz: course.titleGz.trim() || undefined,
+      slug: normalizedSlug,
+      description: course.description.trim(),
+      descriptionAm: course.descriptionAm.trim() || undefined,
+      descriptionOm: course.descriptionOm.trim() || undefined,
+      descriptionGz: course.descriptionGz.trim() || undefined,
+      price: Number(course.price) || 0,
+      discountPrice: course.discountPrice ? Number(course.discountPrice) : undefined,
+      currency: course.currency,
+      level: course.level,
+      status: 'PENDING',
+      totalDuration,
+      totalLessons,
+      enrollmentCount: 0,
+      averageRating: 0,
+      totalReviews: 0,
+      isFeatured: false,
+      isPopular: false,
+    };
+
+    createCourseMutation.mutate(payload);
   };
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
@@ -188,7 +233,7 @@ const InstructorCourseCreate = () => {
             <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
               <Save className="h-4 w-4" /> Save Draft
             </Button>
-            <Button onClick={handleSubmit} className="gap-2">
+            <Button onClick={handleSubmit} className="gap-2" disabled={createCourseMutation.isPending}>
               <Send className="h-4 w-4" /> Submit for Review
             </Button>
           </div>
