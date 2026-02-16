@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockCategories } from '@/lib/mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from '@/lib/course-api';
 import { toast } from '@/hooks/use-toast';
 import {
   Upload, Image, Video, PlusCircle, Trash2, GripVertical,
@@ -69,6 +70,10 @@ const InstructorCourseCreate = () => {
   const [course, setCourse] = useState(emptyCourse);
   const [sections, setSections] = useState<SectionForm[]>([createSection()]);
   const [activeTab, setActiveTab] = useState('basic');
+  const { data: categories = [] } = useQuery({
+    queryKey: ['course-categories'],
+    queryFn: getCategories,
+  });
 
   const updateCourse = (field: string, value: string | File | null) => {
     setCourse((prev) => ({ ...prev, [field]: value }));
@@ -224,7 +229,7 @@ const InstructorCourseCreate = () => {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mockCategories.map((cat) => (
+                        {categories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.icon} {cat.name}
                           </SelectItem>

@@ -22,7 +22,8 @@ import {
   Grid3X3,
   List,
 } from 'lucide-react';
-import { mockCourses, mockCategories } from '@/lib/mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { getCourses, getCategories } from '@/lib/course-api';
 import { cn } from '@/lib/utils';
 
 const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'];
@@ -37,6 +38,19 @@ const Courses = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const coursesQuery = useQuery({
+    queryKey: ['courses'],
+    queryFn: getCourses,
+  });
+
+  const categoriesQuery = useQuery({
+    queryKey: ['course-categories'],
+    queryFn: getCategories,
+  });
+
+  const courses = coursesQuery.data || [];
+  const categories = categoriesQuery.data || [];
   
   // Filter states
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -46,7 +60,7 @@ const Courses = () => {
   const [sortBy, setSortBy] = useState('popular');
 
   // Filter courses
-  const filteredCourses = mockCourses.filter(course => {
+  const filteredCourses = courses.filter(course => {
     if (searchQuery && !course.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (selectedCategory && course.category?.slug !== selectedCategory) return false;
     if (selectedLevels.length && !selectedLevels.includes(course.level)) return false;
@@ -191,7 +205,7 @@ const Courses = () => {
               <div className="space-y-3">
                 <h3 className="font-semibold">Category</h3>
                 <div className="space-y-2">
-                  {mockCategories.map((cat) => (
+                  {categories.map((cat) => (
                     <label
                       key={cat.id}
                       className={cn(
@@ -275,30 +289,40 @@ const Courses = () => {
             {/* Course Grid */}
             <div className="flex-1">
               <div className="mb-4 text-sm text-muted-foreground">
-                Showing {sortedCourses.length} results
+                  Showing {sortedCourses.length} results
               </div>
 
-              {sortedCourses.length > 0 ? (
-                <div className={cn(
-                  "grid gap-6",
-                  viewMode === 'grid' 
-                    ? "sm:grid-cols-2 xl:grid-cols-3" 
-                    : "grid-cols-1"
-                )}>
-                  {sortedCourses.map((course) => (
-                    <CourseCard key={course.id} course={course} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <p className="text-muted-foreground mb-4">
-                    No courses found matching your criteria.
-                  </p>
-                  <Button variant="outline" onClick={clearFilters}>
-                    Clear Filters
-                  </Button>
-                </div>
-              )}
+                {(coursesQuery.isLoading || categoriesQuery.isLoading) && (
+                  <div className="text-muted-foreground">Loading courses...</div>
+                )}
+
+                {(coursesQuery.isError || categoriesQuery.isError) && (
+                  <div className="text-destructive">Failed to load courses.</div>
+                )}
+
+                {!coursesQuery.isLoading && !coursesQuery.isError && sortedCourses.length > 0 && (
+                  <div className={cn(
+                    "grid gap-6",
+                    viewMode === 'grid' 
+                      ? "sm:grid-cols-2 xl:grid-cols-3" 
+                      : "grid-cols-1"
+                  )}>
+                    {sortedCourses.map((course) => (
+                      <CourseCard key={course.id} course={course} />
+                    ))}
+                  </div>
+                )}
+
+                {!coursesQuery.isLoading && !coursesQuery.isError && sortedCourses.length === 0 && (
+                  <div className="text-center py-16">
+                    <p className="text-muted-foreground mb-4">
+                      No courses found matching your criteria.
+                    </p>
+                    <Button variant="outline" onClick={clearFilters}>
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
             </div>
           </div>
         </div>

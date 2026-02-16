@@ -24,7 +24,10 @@ import {
   Lock, Check, Heart, Share2, Download, ChevronRight, PlayCircle,
   MessageSquare, Send, ThumbsUp, CheckCircle2, X,
 } from 'lucide-react';
-import { mockCourses, mockReviews, formatDuration, formatPrice } from '@/lib/mock-data';
+import { mockReviews } from '@/lib/mock-data';
+import { formatDuration, formatPrice } from '@/lib/formatters';
+import { useQuery } from '@tanstack/react-query';
+import { getCourseById, getCourses } from '@/lib/course-api';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -95,12 +98,32 @@ const mockDiscussions = [
   },
 ];
 
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
 const CourseDetail = () => {
   const { slug } = useParams();
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
-  const course = mockCourses.find(c => c.slug === slug) || mockCourses[0];
-  const reviews = mockReviews.filter(r => r.courseId === course.id);
+  const slugValue = slug || '';
+  const isUuidSlug = isUuid(slugValue);
+
+  const courseByIdQuery = useQuery({
+    queryKey: ['course', slugValue],
+    queryFn: () => getCourseById(slugValue),
+    enabled: Boolean(slugValue) && isUuidSlug,
+  });
+
+  const coursesQuery = useQuery({
+    queryKey: ['courses'],
+    queryFn: getCourses,
+    enabled: Boolean(slugValue) && !isUuidSlug,
+  });
+
+  const course = isUuidSlug
+    ? courseByIdQuery.data
+    : coursesQuery.data?.find(c => c.slug === slugValue);
+
+  const reviews = course ? mockReviews.filter(r => r.courseId === course.id) : [];
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -141,6 +164,45 @@ const CourseDetail = () => {
       ],
     },
   ];
+
+  const isLoading = courseByIdQuery.isLoading || coursesQuery.isLoading;
+  const isError = courseByIdQuery.isError || coursesQuery.isError;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1">
+          <div className="container py-16 text-muted-foreground">Loading course...</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1">
+          <div className="container py-16 text-destructive">Failed to load course.</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1">
+          <div className="container py-16 text-muted-foreground">Course not found.</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   const discount = course.discountPrice 
     ? Math.round((1 - course.discountPrice / course.price) * 100) 

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Star, Clock, Users, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Course } from '@/types';
-import { formatDuration, formatPrice } from '@/lib/mock-data';
+import { formatDuration, formatPrice } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
 
 interface CourseCardProps {

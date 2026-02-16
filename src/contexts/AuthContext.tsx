@@ -1,80 +1,128 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { User, UserRole } from '@/types';
+import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { User } from '@/types';
+import { login as loginApi, signup as signupApi, logout as logoutApi, me as meApi, LoginPayload, SignupPayload } from '@/lib/auth-api';
+import { clearTokens, getAccessToken, getRefreshToken, getStoredUser, setStoredUser, setTokens } from '@/lib/auth-storage';
 
 interface AuthContextType {
   user: User | null;
   isLoggedIn: boolean;
-  login: (role: UserRole) => void;
-  logout: () => void;
+  isLoading: boolean;
+  login: (payload: LoginPayload) => Promise<void>;
+  signup: (payload: SignupPayload) => Promise<void>;
+  applyOAuthTokens: (accessToken: string, refreshToken: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoggedIn: false,
-  login: () => {},
-  logout: () => {},
+  isLoading: false,
+  login: async () => {},
+  signup: async () => {},
+  applyOAuthTokens: async () => {},
+  logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-const dummyUsers: Record<Exclude<UserRole, 'GUEST'>, User> = {
-  STUDENT: {
-    id: 'student-1',
-    email: 'student@BeteGubae.com',
-    firstName: 'Kebede',
-    lastName: 'Mengistu',
-    role: 'STUDENT',
-    isVerified: true,
-    isActive: true,
-    language: 'en',
-    referralCode: 'KEBEDE2024',
-    profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    createdAt: '2024-01-01',
-    updatedAt: '2024-06-01',
-  },
-  INSTRUCTOR: {
-    id: 'instructor-1',
-    email: 'instructor@BeteGubae.com',
-    firstName: 'Abebe',
-    lastName: 'Bekele',
-    role: 'INSTRUCTOR',
-    isVerified: true,
-    isActive: true,
-    language: 'en',
-    profileImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    createdAt: '2023-01-01',
-    updatedAt: '2024-01-01',
-  },
-  ADMIN: {
-    id: 'admin-1',
-    email: 'admin@BeteGubae.com',
-    firstName: 'Tigist',
-    lastName: 'Haile',
-    role: 'ADMIN',
-    isVerified: true,
-    isActive: true,
-    language: 'en',
-    profileImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face',
-    createdAt: '2022-01-01',
-    updatedAt: '2024-01-01',
-  },
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [isLoading, setIsLoading] = useState(false);
 
-  const login = (role: UserRole) => {
-    if (role === 'GUEST') {
+  useEffect(() => {
+    if (!getAccessToken()) {
       setUser(null);
+      setStoredUser(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
       return;
     }
-    setUser(dummyUsers[role]);
+
+    if (!user) {
+      setIsLoading(true);
+      meApi()
+        .then((profile) => {
+          setUser(profile);
+          setStoredUser(profile);
+        })
+        .catch(() => {
+          clearTokens();
+          setStoredUser(null);
+          setUser(null);
+        })
+        .finally(() => setIsLoading(false));
+    }
+  }, [user]);
+
+  const handleAuthSuccess = (response: { accessToken: string; refreshToken: string; user: User }) => {
+    setTokens(response.accessToken, response.refreshToken);
+    setUser(response.user);
+    setStoredUser(response.user);
   };
 
-  const logout = () => setUser(null);
+  const login = async (payload: LoginPayload) => {
+    setIsLoading(true);
+    try {
+      const response = await loginApi(payload);
+      handleAuthSuccess(response);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const signup = async (payload: SignupPayload) => {
+    setIsLoading(true);
+    try {
+      const response = await signupApi(payload);
+      handleAuthSuccess(response);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyOAuthTokens = async (accessToken: string, refreshToken: string) => {
+    setIsLoading(true);
+    try {
+      setTokens(accessToken, refreshToken);
+      const profile = await meApi();
+      setUser(profile);
+      setStoredUser(profile);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    const refreshToken = getRefreshToken();
+    setIsLoading(true);
+    try {
+      if (refreshToken) {
+        await logoutApi(refreshToken);
+      }
+    } finally {
+      clearTokens();
+      setStoredUser(null);
+      setUser(null);
+      setIsLoading(false);
+    }
+  };
+
+  const value = useMemo(() => ({
+    user,
+    isLoggedIn: !!user,
+    isLoading,
+    login,
+    signup,
+    applyOAuthTokens,
+    logout,
+  }), [user, isLoading]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

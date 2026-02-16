@@ -1,9 +1,15 @@
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { mockCategories } from '@/lib/mock-data';
+import { useQuery } from '@tanstack/react-query';
+import { getCategories } from '@/lib/course-api';
 
 const CategoriesSection = () => {
+  const { data: categories = [], isLoading, isError } = useQuery({
+    queryKey: ['course-categories'],
+    queryFn: getCategories,
+  });
+
   return (
     <section className="py-16 lg:py-24 bg-muted/50">
       <div className="container">
@@ -19,21 +25,38 @@ const CategoriesSection = () => {
 
         {/* Categories Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {mockCategories.map((category) => (
+          {isLoading && (
+            <div className="col-span-2 md:col-span-3 lg:col-span-6 text-muted-foreground text-center">
+              Loading categories...
+            </div>
+          )}
+          {isError && (
+            <div className="col-span-2 md:col-span-3 lg:col-span-6 text-destructive text-center">
+              Failed to load categories.
+            </div>
+          )}
+          {!isLoading && !isError && categories.map((category) => (
             <Link
               key={category.id}
               to={`/courses?category=${category.slug}`}
               className="group flex flex-col items-center p-6 bg-card rounded-xl shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1"
             >
-              <span className="text-4xl mb-3">{category.icon}</span>
+              <span className="text-4xl mb-3">{category.icon || '📚'}</span>
               <h3 className="font-semibold text-card-foreground text-center group-hover:text-accent transition-colors">
                 {category.name}
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                {category.nameAm}
-              </p>
+              {category.nameAm && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {category.nameAm}
+                </p>
+              )}
             </Link>
           ))}
+          {!isLoading && !isError && categories.length === 0 && (
+            <div className="col-span-2 md:col-span-3 lg:col-span-6 text-muted-foreground text-center">
+              No categories available.
+            </div>
+          )}
         </div>
 
         {/* CTA */}
