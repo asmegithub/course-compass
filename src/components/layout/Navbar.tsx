@@ -40,7 +40,7 @@ const Navbar = () => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
             <GraduationCap className="h-5 w-5 text-accent-foreground" />
           </div>
-          <span className="font-display text-xl font-bold text-foreground hidden sm:block">LearnHub</span>
+          <span className="font-display text-xl font-bold text-foreground hidden sm:block">BeteGubae</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-6">

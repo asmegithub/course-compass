@@ -20,7 +20,7 @@ export const useAuth = () => useContext(AuthContext);
 const dummyUsers: Record<Exclude<UserRole, 'GUEST'>, User> = {
   STUDENT: {
     id: 'student-1',
-    email: 'student@learnhub.com',
+    email: 'student@BeteGubae.com',
     firstName: 'Kebede',
     lastName: 'Mengistu',
     role: 'STUDENT',
@@ -34,7 +34,7 @@ const dummyUsers: Record<Exclude<UserRole, 'GUEST'>, User> = {
   },
   INSTRUCTOR: {
     id: 'instructor-1',
-    email: 'instructor@learnhub.com',
+    email: 'instructor@BeteGubae.com',
     firstName: 'Abebe',
     lastName: 'Bekele',
     role: 'INSTRUCTOR',
@@ -47,7 +47,7 @@ const dummyUsers: Record<Exclude<UserRole, 'GUEST'>, User> = {
   },
   ADMIN: {
     id: 'admin-1',
-    email: 'admin@learnhub.com',
+    email: 'admin@BeteGubae.com',
     firstName: 'Tigist',
     lastName: 'Haile',
     role: 'ADMIN',

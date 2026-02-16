@@ -40,7 +40,7 @@ const WhyChooseUs = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Why Learn with LearnHub?
+            Why Learn with BeteGubae?
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             We're committed to making quality education accessible to everyone across Africa

@@ -12,7 +12,7 @@ const Footer = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                 <GraduationCap className="h-6 w-6 text-accent-foreground" />
               </div>
-              <span className="font-display text-xl font-bold">LearnHub</span>
+              <span className="font-display text-xl font-bold">BeteGubae</span>
             </Link>
             <p className="text-sm text-primary-foreground/70 mb-4">
               Empowering Africa through quality education. Learn skills that matter, in your language.
@@ -84,7 +84,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/60">
-            © {new Date().getFullYear()} LearnHub. All rights reserved.
+            © {new Date().getFullYear()} BeteGubae. All rights reserved.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-primary-foreground/60">
             <Link to="/privacy" className="hover:text-accent transition-colors">Privacy Policy</Link>

@@ -365,9 +365,9 @@ const CourseDetail = () => {
                       </>
                     )}
 
-                    <p className="text-xs text-center text-muted-foreground">
+                    {/* <p className="text-xs text-center text-muted-foreground">
                       30-Day Money-Back Guarantee
-                    </p>
+                    </p> */}
 
                     {/* Quick Info */}
                     <div className="space-y-3 pt-4 border-t">

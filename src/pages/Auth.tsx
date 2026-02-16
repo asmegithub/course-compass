@@ -59,7 +59,7 @@ const Auth = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
               <GraduationCap className="h-6 w-6 text-accent-foreground" />
             </div>
-            <span className="font-display text-xl font-bold text-foreground">LearnHub</span>
+            <span className="font-display text-xl font-bold text-foreground">BeteGubae</span>
           </div>
 
           <div className="mb-6">
@@ -67,7 +67,7 @@ const Auth = () => {
               {mode === 'signin' ? 'Welcome back!' : 'Create your account'}
             </h1>
             <p className="text-muted-foreground">
-              {mode === 'signin' ? 'Sign in to continue your learning journey' : 'Start your learning journey with LearnHub'}
+              {mode === 'signin' ? 'Sign in to continue your learning journey' : 'Start your learning journey with BeteGubae'}
             </p>
           </div>
 

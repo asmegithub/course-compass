@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Mail, Search, Eye, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 const emails = [
-  { id: '1', to: 'dawit@example.com', subject: 'Welcome to LearnHub!', type: 'WELCOME', status: 'DELIVERED', sentAt: '2026-02-13 14:30', body: 'Hi Dawit, welcome to LearnHub! Start exploring courses today.' },
+  { id: '1', to: 'dawit@example.com', subject: 'Welcome to BeteGubae!', type: 'WELCOME', status: 'DELIVERED', sentAt: '2026-02-13 14:30', body: 'Hi Dawit, welcome to BeteGubae! Start exploring courses today.' },
   { id: '2', to: 'abebe@example.com', subject: 'Your course "Advanced React Patterns" has been approved', type: 'APPROVAL', status: 'DELIVERED', sentAt: '2026-02-13 10:15', body: 'Congratulations! Your course has been approved and is now live.' },
   { id: '3', to: 'meron@example.com', subject: 'Course Rejection: Business Analytics with Excel', type: 'REJECTION', status: 'DELIVERED', sentAt: '2026-02-12 16:45', body: 'Your course submission needs revisions. Please review the feedback.' },
   { id: '4', to: 'hana@example.com', subject: 'Enrollment Confirmation: UI/UX Design', type: 'ENROLLMENT', status: 'DELIVERED', sentAt: '2026-02-12 09:20', body: 'You have been enrolled in UI/UX Design Masterclass.' },

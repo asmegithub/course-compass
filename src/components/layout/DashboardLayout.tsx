@@ -82,7 +82,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
               <GraduationCap className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
-            <span className="font-display text-lg font-bold">LearnHub</span>
+            <span className="font-display text-lg font-bold">BeteGubae</span>
           </Link>
           <Button variant="ghost" size="icon" className="lg:hidden text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />

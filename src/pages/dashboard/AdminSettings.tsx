@@ -14,9 +14,9 @@ import { Save, Globe, DollarSign, Mail, ShieldCheck, Palette } from 'lucide-reac
 const AdminSettings = () => {
   const { toast } = useToast();
   const [general, setGeneral] = useState({
-    siteName: 'LearnHub',
+    siteName: 'BeteGubae',
     tagline: 'Ethiopia\'s Premier Learning Platform',
-    supportEmail: 'support@learnhub.et',
+    supportEmail: 'support@BeteGubae.et',
     defaultLanguage: 'en',
     maintenanceMode: false,
     registrationOpen: true,
@@ -35,8 +35,8 @@ const AdminSettings = () => {
   const [email, setEmail] = useState({
     smtpHost: 'smtp.gmail.com',
     smtpPort: '587',
-    senderName: 'LearnHub',
-    senderEmail: 'no-reply@learnhub.et',
+    senderName: 'BeteGubae',
+    senderEmail: 'no-reply@BeteGubae.et',
     welcomeEmailEnabled: true,
     enrollmentEmailEnabled: true,
     payoutEmailEnabled: true,

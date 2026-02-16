@@ -24,7 +24,7 @@ const CTASection = () => {
             </h2>
 
             <p className="text-lg text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-              Join over 50,000 learners who are already building their skills with LearnHub. 
+              Join over 50,000 learners who are already building their skills with BeteGubae. 
               Your journey to success starts with a single course.
             </p>
 
