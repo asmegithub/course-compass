@@ -3,9 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs, getCourseApprovals, getUsers } from '@/lib/admin-api';
 import { getCourses } from '@/lib/course-api';
+import { getPendingInstructorProfiles } from '@/lib/instructor-profile-api';
 import {
   Users, BookOpen, DollarSign, ShieldCheck, Activity,
   CheckCircle2, XCircle, ArrowUpRight,
@@ -29,11 +31,16 @@ const AdminDashboard = () => {
     queryKey: ['courses'],
     queryFn: getCourses,
   });
+  const pendingInstructorProfilesQuery = useQuery({
+    queryKey: ['pending-instructor-profiles'],
+    queryFn: getPendingInstructorProfiles,
+  });
 
   const users = usersQuery.data || [];
   const approvals = approvalsQuery.data || [];
   const auditLogs = auditLogsQuery.data || [];
   const courses = coursesQuery.data || [];
+  const pendingInstructorProfiles = pendingInstructorProfilesQuery.data || [];
 
   const pendingApprovals = approvals.filter((approval) => approval.status === 'PENDING');
     const getInstructorName = (approval: typeof pendingApprovals[number]) => {
@@ -67,12 +74,13 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Users', value: users.length.toLocaleString(), icon: Users, change: 'Live' },
             { label: 'Active Courses', value: activeCourses.toString(), icon: BookOpen, change: 'Live' },
             { label: 'Revenue (MTD)', value: '—', icon: DollarSign, change: 'API pending' },
             { label: 'Pending Approvals', value: pendingApprovals.length.toString(), icon: ShieldCheck, change: 'Live' },
+            { label: 'Instructor Apps', value: pendingInstructorProfiles.length.toString(), icon: Users, change: 'Live' },
           ].map((stat) => (
             <Card key={stat.label}>
               <CardContent className="pt-6">
@@ -86,6 +94,12 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="flex justify-end">
+          <Link to="/admin/instructor-verifications">
+            <Button variant="outline" size="sm">Open Instructor Verifications</Button>
+          </Link>
         </div>
 
         <Tabs defaultValue="approvals" className="space-y-4">

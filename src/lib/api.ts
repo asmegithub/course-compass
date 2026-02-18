@@ -17,13 +17,19 @@ const buildUrl = (path: string) => {
 
 export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const accessToken = getAccessToken();
+  const baseHeaders: Record<string, string> = {
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    ...((init?.headers as Record<string, string> | undefined) || {}),
+  };
+
+  const isFormDataBody = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  if (!isFormDataBody && !baseHeaders['Content-Type']) {
+    baseHeaders['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(buildUrl(path), {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...(init?.headers || {}),
-    },
+    headers: baseHeaders,
   });
 
   if (!response.ok) {

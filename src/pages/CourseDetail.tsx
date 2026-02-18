@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -24,79 +24,50 @@ import {
   Lock, Check, Heart, Share2, Download, ChevronRight, PlayCircle,
   MessageSquare, Send, ThumbsUp, CheckCircle2, X,
 } from 'lucide-react';
-import { mockReviews } from '@/lib/mock-data';
 import { formatDuration, formatPrice } from '@/lib/formatters';
-import { useQuery } from '@tanstack/react-query';
-import { getCourseById, getCourses } from '@/lib/course-api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  createDiscussionReply,
+  createLessonDiscussion,
+  getApprovedCourses,
+  getCourseById,
+  getCourseSections,
+  getCourseOutcomes,
+  getCourseRequirements,
+  getDiscussionReplies,
+  getLessonDiscussions,
+  getLessons,
+  getReviews,
+  CourseOutcomePayload,
+  CourseRequirementPayload,
+  LessonPayload,
+} from '@/lib/course-api';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-// Mock discussion data
-const mockDiscussions = [
-  {
-    id: 'd1',
-    userId: 's1',
-    userName: 'Kebede M.',
-    userAvatar: 'K',
-    question: 'How do I set up a local development environment for this course?',
-    createdAt: '2024-02-10',
-    likes: 12,
-    replies: [
-      {
-        id: 'r1',
-        userId: 'u1',
-        userName: 'Abebe Bekele',
-        userAvatar: 'A',
-        isInstructor: true,
-        content: 'Great question! I recommend following the "Setting Up Your Environment" lesson in Section 1. If you face any issues, make sure you have Node.js v18+ installed.',
-        createdAt: '2024-02-10',
-        likes: 8,
-      },
-      {
-        id: 'r2',
-        userId: 's3',
-        userName: 'Solomon G.',
-        userAvatar: 'S',
-        isInstructor: false,
-        content: 'I had the same question. The setup lesson was very helpful!',
-        createdAt: '2024-02-11',
-        likes: 3,
-      },
-    ],
-  },
-  {
-    id: 'd2',
-    userId: 's2',
-    userName: 'Meron T.',
-    userAvatar: 'M',
-    question: 'Is there a recommended IDE or code editor for this course?',
-    createdAt: '2024-02-12',
-    likes: 7,
-    replies: [
-      {
-        id: 'r3',
-        userId: 'u1',
-        userName: 'Abebe Bekele',
-        userAvatar: 'A',
-        isInstructor: true,
-        content: 'I personally use VS Code and highly recommend it. It\'s free and has excellent extensions for web development.',
-        createdAt: '2024-02-12',
-        likes: 15,
-      },
-    ],
-  },
-  {
-    id: 'd3',
-    userId: 's4',
-    userName: 'Dawit A.',
-    userAvatar: 'D',
-    question: 'Can I access the course materials offline?',
-    createdAt: '2024-02-14',
-    likes: 5,
-    replies: [],
-  },
-];
+interface DiscussionReplyView {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  isInstructor: boolean;
+  content: string;
+  createdAt: string;
+  likes: number;
+}
+
+interface DiscussionView {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  question: string;
+  createdAt: string;
+  likes: number;
+  lessonId: string;
+  replies: DiscussionReplyView[];
+}
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
@@ -104,6 +75,7 @@ const CourseDetail = () => {
   const { slug } = useParams();
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const slugValue = slug || '';
   const isUuidSlug = isUuid(slugValue);
 
@@ -114,8 +86,8 @@ const CourseDetail = () => {
   });
 
   const coursesQuery = useQuery({
-    queryKey: ['courses'],
-    queryFn: getCourses,
+    queryKey: ['courses', 'approved'],
+    queryFn: getApprovedCourses,
     enabled: Boolean(slugValue) && !isUuidSlug,
   });
 
@@ -123,50 +95,193 @@ const CourseDetail = () => {
     ? courseByIdQuery.data
     : coursesQuery.data?.find(c => c.slug === slugValue);
 
-  const reviews = course ? mockReviews.filter(r => r.courseId === course.id) : [];
+  const sectionsQuery = useQuery({
+    queryKey: ['course-sections'],
+    queryFn: getCourseSections,
+    enabled: Boolean(course?.id),
+  });
+
+  const lessonsQuery = useQuery({
+    queryKey: ['lessons'],
+    queryFn: getLessons,
+    enabled: Boolean(course?.id),
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ['reviews', course?.id],
+    queryFn: getReviews,
+    enabled: Boolean(course?.id),
+  });
+
+  const outcomesQuery = useQuery({
+    queryKey: ['course-outcomes', course?.id],
+    queryFn: getCourseOutcomes,
+    enabled: Boolean(course?.id),
+  });
+
+  const requirementsQuery = useQuery({
+    queryKey: ['course-requirements', course?.id],
+    queryFn: getCourseRequirements,
+    enabled: Boolean(course?.id),
+  });
+
+  const discussionQuery = useQuery({
+    queryKey: ['lesson-discussions', course?.id],
+    queryFn: async () => {
+      const [allDiscussions, allReplies, allSections, allLessons] = await Promise.all([
+        getLessonDiscussions(),
+        getDiscussionReplies(),
+        getCourseSections(),
+        getLessons(),
+      ]);
+
+      const lessonSectionIds = new Set(allLessons.map((lesson) => lesson.sectionId).filter(Boolean));
+      const courseSectionIdsFromCourse = new Set(
+        allSections
+          .filter((section) => section.courseId === course?.id)
+          .map((section) => section.id)
+      );
+      const courseSectionIdsFromLessons = new Set(
+        allSections
+          .filter((section) => lessonSectionIds.has(section.id))
+          .map((section) => section.id)
+      );
+      const courseSectionIds = courseSectionIdsFromCourse.size > 0
+        ? courseSectionIdsFromCourse
+        : courseSectionIdsFromLessons;
+
+      const courseLessons = allLessons.filter((lesson) => courseSectionIds.has(lesson.sectionId));
+      const courseLessonIds = new Set(courseLessons.map((lesson) => lesson.id));
+
+      const courseDiscussions = allDiscussions.filter((discussion) => courseLessonIds.has(discussion.lessonId));
+      const discussionIds = new Set(courseDiscussions.map((discussion) => discussion.id));
+      const courseReplies = allReplies.filter((reply) => discussionIds.has(reply.discussionId));
+
+      return { courseLessons, courseDiscussions, courseReplies };
+    },
+    enabled: Boolean(course?.id),
+  });
+
+  const curriculumSections = useMemo(() => {
+    if (!course?.id) {
+      return [] as Array<{ id: string; title: string; lessons: LessonPayload[] }>;
+    }
+
+    const allSections = sectionsQuery.data || [];
+    const allLessons = lessonsQuery.data || [];
+    const lessonSectionIds = new Set(allLessons.map((lesson) => lesson.sectionId).filter(Boolean));
+    const courseSections = allSections.filter((section) => section.courseId === course.id);
+    const inferredSections = allSections.filter((section) => lessonSectionIds.has(section.id));
+    const sectionsToUse = (courseSections.length > 0 ? courseSections : inferredSections)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    return sectionsToUse.map((section) => ({
+      id: section.id,
+      title: section.title || 'Course Section',
+      lessons: allLessons
+        .filter((lesson) => lesson.sectionId === section.id && lesson.isPublished)
+        .sort((a, b) => a.orderIndex - b.orderIndex),
+    }));
+  }, [sectionsQuery.data, lessonsQuery.data, course?.id]);
+
+  const reviews = useMemo(() => {
+    return (reviewsQuery.data || []).filter((review) => review.courseId === course?.id && review.visible);
+  }, [reviewsQuery.data, course?.id]);
+
+  const whatYoullLearn = useMemo<string[]>(() => {
+    const items = (outcomesQuery.data || [])
+      .filter((outcome: CourseOutcomePayload) => outcome.courseId === course?.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((outcome) => outcome.text)
+      .filter(Boolean);
+    return items;
+  }, [outcomesQuery.data, course?.id]);
+
+  const requirements = useMemo<string[]>(() => {
+    const items = (requirementsQuery.data || [])
+      .filter((requirement: CourseRequirementPayload) => requirement.courseId === course?.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((requirement) => requirement.text)
+      .filter(Boolean);
+    return items;
+  }, [requirementsQuery.data, course?.id]);
+
+  const discussions = useMemo<DiscussionView[]>(() => {
+    const courseDiscussions = discussionQuery.data?.courseDiscussions || [];
+    const courseReplies = discussionQuery.data?.courseReplies || [];
+
+    return courseDiscussions.map((discussion) => {
+      const userName = discussion.userName || 'Learner';
+      return {
+        id: discussion.id,
+        userId: discussion.userId,
+        userName,
+        userAvatar: userName[0]?.toUpperCase() || 'L',
+        question: discussion.content,
+        createdAt: discussion.createdAt ? new Date(discussion.createdAt).toLocaleDateString() : '',
+        likes: 0,
+        lessonId: discussion.lessonId,
+        replies: courseReplies
+          .filter((reply) => reply.discussionId === discussion.id)
+          .map((reply) => {
+            const replyName = reply.userName || 'Learner';
+            return {
+              id: reply.id,
+              userId: reply.userId,
+              userName: replyName,
+              userAvatar: replyName[0]?.toUpperCase() || 'L',
+              isInstructor: reply.userRole === 'INSTRUCTOR' || reply.userId === course?.instructorId,
+              content: reply.content,
+              createdAt: reply.createdAt ? new Date(reply.createdAt).toLocaleDateString() : '',
+              likes: 0,
+            };
+          }),
+      };
+    });
+  }, [discussionQuery.data, course?.instructorId]);
+
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewLesson, setPreviewLesson] = useState<{ title: string; id: string } | null>(null);
+  const [previewLesson, setPreviewLesson] = useState<{ title: string; id: string; videoUrl?: string } | null>(null);
 
   // Discussion state
-  const [discussions, setDiscussions] = useState(mockDiscussions);
   const [newQuestion, setNewQuestion] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const sections = [
-    {
-      id: '1',
-      title: 'Getting Started',
-      lessons: [
-        { id: 'l1', title: 'Course Introduction', type: 'VIDEO', duration: 5, isFree: true },
-        { id: 'l2', title: 'Setting Up Your Environment', type: 'VIDEO', duration: 15, isFree: true },
-        { id: 'l3', title: 'Course Resources', type: 'DOCUMENT', duration: 2, isFree: false },
-      ],
+  const postDiscussionMutation = useMutation({
+    mutationFn: (payload: { lessonId: string; userId: string; content: string }) => createLessonDiscussion(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lesson-discussions', course?.id] });
     },
-    {
-      id: '2',
-      title: 'Core Fundamentals',
-      lessons: [
-        { id: 'l4', title: 'Understanding the Basics', type: 'VIDEO', duration: 25, isFree: false },
-        { id: 'l5', title: 'Your First Project', type: 'VIDEO', duration: 30, isFree: false },
-        { id: 'l6', title: 'Knowledge Check', type: 'QUIZ', duration: 10, isFree: false },
-      ],
-    },
-    {
-      id: '3',
-      title: 'Advanced Techniques',
-      lessons: [
-        { id: 'l7', title: 'Deep Dive into Advanced Topics', type: 'VIDEO', duration: 45, isFree: false },
-        { id: 'l8', title: 'Real-World Case Study', type: 'VIDEO', duration: 35, isFree: false },
-        { id: 'l9', title: 'Final Assessment', type: 'QUIZ', duration: 20, isFree: false },
-      ],
-    },
-  ];
+  });
 
-  const isLoading = courseByIdQuery.isLoading || coursesQuery.isLoading;
-  const isError = courseByIdQuery.isError || coursesQuery.isError;
+  const postReplyMutation = useMutation({
+    mutationFn: (payload: { discussionId: string; userId: string; content: string }) => createDiscussionReply(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lesson-discussions', course?.id] });
+    },
+  });
+
+  const isLoading =
+    courseByIdQuery.isLoading ||
+    coursesQuery.isLoading ||
+    sectionsQuery.isLoading ||
+    lessonsQuery.isLoading ||
+    reviewsQuery.isLoading ||
+    outcomesQuery.isLoading ||
+    requirementsQuery.isLoading ||
+    discussionQuery.isLoading;
+  const isError =
+    courseByIdQuery.isError ||
+    coursesQuery.isError ||
+    sectionsQuery.isError ||
+    lessonsQuery.isError ||
+    reviewsQuery.isError ||
+    outcomesQuery.isError ||
+    requirementsQuery.isError ||
+    discussionQuery.isError;
 
   if (isLoading) {
     return (
@@ -208,20 +323,10 @@ const CourseDetail = () => {
     ? Math.round((1 - course.discountPrice / course.price) * 100) 
     : 0;
 
-  const whatYoullLearn = [
-    'Build real-world projects from scratch',
-    'Understand core concepts and best practices',
-    'Master advanced techniques used by professionals',
-    'Get job-ready skills for the industry',
-    'Earn a verified certificate upon completion',
-    'Access to exclusive community and resources',
-  ];
+  const firstPreviewLesson = curriculumSections
+    .flatMap((section) => section.lessons)
+    .find((lesson) => lesson.isFree && lesson.type === 'VIDEO');
 
-  const requirements = [
-    'Basic computer skills',
-    'A computer with internet access',
-    'Willingness to learn and practice',
-  ];
 
   const handleEnroll = () => {
     if (!isLoggedIn) {
@@ -237,49 +342,38 @@ const CourseDetail = () => {
     toast({ title: 'Unenrolled', description: 'You have been unenrolled from this course.' });
   };
 
-  const handlePreview = (lesson: { title: string; id: string }) => {
+  const handlePreview = (lesson: { title: string; id: string; videoUrl?: string }) => {
     setPreviewLesson(lesson);
     setPreviewOpen(true);
   };
 
-  const handlePostQuestion = () => {
-    if (!newQuestion.trim()) return;
-    const newDisc = {
-      id: `d${Date.now()}`,
-      userId: user?.id || 'guest',
-      userName: user ? `${user.firstName} ${user.lastName?.[0]}.` : 'You',
-      userAvatar: user?.firstName?.[0] || 'Y',
-      question: newQuestion,
-      createdAt: new Date().toISOString().split('T')[0],
-      likes: 0,
-      replies: [],
-    };
-    setDiscussions([newDisc, ...discussions]);
+  const handlePostQuestion = async () => {
+    if (!newQuestion.trim() || !user?.id) return;
+    const firstLessonId = discussionQuery.data?.courseLessons?.[0]?.id;
+    if (!firstLessonId) {
+      toast({ title: 'No lesson available', description: 'Cannot post discussion because this course has no lessons yet.', variant: 'destructive' });
+      return;
+    }
+
+    await postDiscussionMutation.mutateAsync({
+      lessonId: firstLessonId,
+      userId: user.id,
+      content: newQuestion,
+    });
+
     setNewQuestion('');
     toast({ title: 'Question posted!', description: 'Your question has been posted to the discussion.' });
   };
 
-  const handlePostReply = (discussionId: string) => {
-    if (!replyText.trim()) return;
-    const isInstructor = user?.role === 'INSTRUCTOR';
-    setDiscussions(discussions.map(d => {
-      if (d.id === discussionId) {
-        return {
-          ...d,
-          replies: [...d.replies, {
-            id: `r${Date.now()}`,
-            userId: user?.id || 'guest',
-            userName: user ? `${user.firstName} ${user.lastName}` : 'You',
-            userAvatar: user?.firstName?.[0] || 'Y',
-            isInstructor,
-            content: replyText,
-            createdAt: new Date().toISOString().split('T')[0],
-            likes: 0,
-          }],
-        };
-      }
-      return d;
-    }));
+  const handlePostReply = async (discussionId: string) => {
+    if (!replyText.trim() || !user?.id) return;
+
+    await postReplyMutation.mutateAsync({
+      discussionId,
+      userId: user.id,
+      content: replyText,
+    });
+
     setReplyText('');
     setReplyingTo(null);
     toast({ title: 'Reply posted!' });
@@ -371,7 +465,18 @@ const CourseDetail = () => {
               <div className="hidden lg:block">
                 <div className="bg-card text-card-foreground rounded-xl shadow-xl overflow-hidden sticky top-24">
                   {/* Preview thumbnail */}
-                  <div className="relative aspect-video cursor-pointer" onClick={() => handlePreview({ title: 'Course Introduction', id: 'l1' })}>
+                  <div
+                    className="relative aspect-video cursor-pointer"
+                    onClick={() => {
+                      if (firstPreviewLesson) {
+                        handlePreview({
+                          title: firstPreviewLesson.title,
+                          id: firstPreviewLesson.id,
+                          videoUrl: firstPreviewLesson.videoUrl,
+                        });
+                      }
+                    }}
+                  >
                     <img 
                       src={course.thumbnail}
                       alt={course.title}
@@ -560,12 +665,12 @@ const CourseDetail = () => {
               <TabsContent value="curriculum" className="space-y-4">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm text-muted-foreground">
-                    {sections.length} sections • {course.totalLessons} lessons • {formatDuration(course.totalDuration)} total
+                    {curriculumSections.length} sections • {course.totalLessons} lessons • {formatDuration(course.totalDuration)} total
                   </span>
                 </div>
 
                 <Accordion type="multiple" className="space-y-3">
-                  {sections.map((section) => (
+                  {curriculumSections.map((section) => (
                     <AccordionItem 
                       key={section.id} 
                       value={section.id}
@@ -592,7 +697,11 @@ const CourseDetail = () => {
                               )}
                               onClick={() => {
                                 if (lesson.isFree && lesson.type === 'VIDEO') {
-                                  handlePreview(lesson);
+                                  handlePreview({
+                                    title: lesson.title,
+                                    id: lesson.id,
+                                    videoUrl: lesson.videoUrl,
+                                  });
                                 }
                               }}
                             >
@@ -689,15 +798,15 @@ const CourseDetail = () => {
                     <div key={review.id} className="border-b pb-6 last:border-0">
                       <div className="flex items-start gap-4">
                         <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center font-semibold text-accent">
-                          {review.student?.firstName?.[0]}
+                          {(review.studentName || 'L')[0]?.toUpperCase()}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
                             <p className="font-semibold">
-                              {review.student?.firstName} {review.student?.lastName}
+                              {review.studentName || 'Learner'}
                             </p>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString()}
+                              {review.createdAt ? new Date(review.createdAt).toLocaleDateString() : ''}
                             </span>
                           </div>
                           <div className="flex gap-1 my-1">
@@ -870,18 +979,28 @@ const CourseDetail = () => {
             </DialogTitle>
           </DialogHeader>
           <div className="aspect-video bg-black relative flex items-center justify-center">
-            <img
-              src={course.thumbnail}
-              alt="Video preview"
-              className="w-full h-full object-cover opacity-40"
-            />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4">
-              <div className="h-20 w-20 rounded-full bg-accent/90 flex items-center justify-center animate-pulse">
-                <Play className="h-10 w-10 text-accent-foreground ml-1" />
-              </div>
-              <p className="text-sm text-white/80">Video preview placeholder</p>
-              <p className="text-xs text-white/50">Connect to a video service to enable playback</p>
-            </div>
+            {previewLesson?.videoUrl ? (
+              <video
+                src={previewLesson.videoUrl}
+                className="w-full h-full"
+                controls
+                playsInline
+              />
+            ) : (
+              <>
+                <img
+                  src={course.thumbnail}
+                  alt="Video preview"
+                  className="w-full h-full object-cover opacity-40"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white gap-4">
+                  <div className="h-20 w-20 rounded-full bg-accent/90 flex items-center justify-center animate-pulse">
+                    <Play className="h-10 w-10 text-accent-foreground ml-1" />
+                  </div>
+                  <p className="text-sm text-white/80">Video preview not available</p>
+                </div>
+              </>
+            )}
           </div>
           <div className="p-4 bg-card">
             <h3 className="font-semibold text-sm">{previewLesson?.title}</h3>

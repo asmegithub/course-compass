@@ -23,16 +23,10 @@ import {
   List,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { getCourses, getCategories } from '@/lib/course-api';
+import { getApprovedCourses, getCategories } from '@/lib/course-api';
 import { cn } from '@/lib/utils';
 
 const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'];
-const priceRanges = [
-  { label: 'Free', min: 0, max: 0 },
-  { label: 'Under ETB 200', min: 1, max: 200 },
-  { label: 'ETB 200 - 500', min: 200, max: 500 },
-  { label: 'ETB 500+', min: 500, max: Infinity },
-];
 
 const Courses = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,8 +34,8 @@ const Courses = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const coursesQuery = useQuery({
-    queryKey: ['courses'],
-    queryFn: getCourses,
+    queryKey: ['courses', 'approved'],
+    queryFn: getApprovedCourses,
   });
 
   const categoriesQuery = useQuery({

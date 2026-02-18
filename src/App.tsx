@@ -10,6 +10,7 @@ import CourseDetail from "./pages/CourseDetail";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
+import StudentInstructorApplication from "./pages/dashboard/StudentInstructorApplication";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
 import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
 import InstructorCourseDetail from "./pages/dashboard/InstructorCourseDetail";
@@ -26,6 +27,7 @@ import AdminPayments from "./pages/dashboard/AdminPayments";
 import AdminAuditLogs from "./pages/dashboard/AdminAuditLogs";
 import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
 import AdminSettings from "./pages/dashboard/AdminSettings";
+import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerifications";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -46,6 +48,7 @@ const AppRoutes = () => (
 
     {/* Student routes */}
     <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+    <Route path="/dashboard/become-instructor" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentInstructorApplication /></ProtectedRoute>} />
     <Route path="/dashboard/*" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
 
     {/* Instructor routes */}
@@ -63,6 +66,7 @@ const AppRoutes = () => (
     <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
     <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminUsers /></ProtectedRoute>} />
     <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminApprovals /></ProtectedRoute>} />
+    <Route path="/admin/instructor-verifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminInstructorVerifications /></ProtectedRoute>} />
     <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
     <Route path="/admin/coupons" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCoupons /></ProtectedRoute>} />
     <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />

@@ -8,11 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CoursePayload, getCourses, updateCourse } from '@/lib/course-api';
+import { CoursePayload, getCourses, getCourseSections, getLessons, updateCourse } from '@/lib/course-api';
 import { formatDuration } from '@/lib/formatters';
 import {
   Eye, CheckCircle2, XCircle, Clock, BookOpen,
-  FileText,
+  FileText, PlayCircle,
 } from 'lucide-react';
 
 const AdminApprovals = () => {
@@ -20,6 +20,14 @@ const AdminApprovals = () => {
   const coursesQuery = useQuery({
     queryKey: ['courses'],
     queryFn: getCourses,
+  });
+  const sectionsQuery = useQuery({
+    queryKey: ['course-sections'],
+    queryFn: getCourseSections,
+  });
+  const lessonsQuery = useQuery({
+    queryKey: ['lessons'],
+    queryFn: getLessons,
   });
   const [reviewCourseId, setReviewCourseId] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
@@ -29,6 +37,18 @@ const AdminApprovals = () => {
   const courses = coursesQuery.data || [];
   const reviewCourse = courses.find((course) => course.id === reviewCourseId) || null;
   const rejectDialog = courses.find((course) => course.id === rejectDialogId) || null;
+  const allSections = sectionsQuery.data || [];
+  const allLessons = lessonsQuery.data || [];
+  const reviewSections = reviewCourse
+    ? allSections
+        .filter((section) => section.courseId === reviewCourse.id)
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+    : [];
+  const reviewLessons = reviewCourse
+    ? allLessons
+        .filter((lesson) => reviewSections.some((section) => section.id === lesson.sectionId))
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+    : [];
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: CoursePayload }) => updateCourse(id, payload),
@@ -239,10 +259,53 @@ const AdminApprovals = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Curriculum</h3>
-                  <div className="border border-border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Sections and lessons will appear once the curriculum API is connected.
-                  </div>
+                  {sectionsQuery.isLoading || lessonsQuery.isLoading ? (
+                    <div className="border border-border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Loading curriculum...
+                    </div>
+                  ) : reviewSections.length === 0 ? (
+                    <div className="border border-border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      No sections added yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {reviewSections.map((section) => (
+                        <div key={section.id} className="border border-border rounded-lg">
+                          <div className="px-3 py-2 border-b text-sm font-medium">
+                            {section.title || 'Untitled section'}
+                          </div>
+                          <div className="p-3 text-sm text-muted-foreground space-y-2">
+                            {reviewLessons
+                              .filter((lesson) => lesson.sectionId === section.id)
+                              .map((lesson) => (
+                                <div key={lesson.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                  <div className="flex items-center gap-2">
+                                    {lesson.type === 'VIDEO' ? <PlayCircle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                                    <span>{lesson.title || 'Untitled lesson'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Badge variant="outline">{lesson.type}</Badge>
+                                    <span>{formatDuration(lesson.duration || 0)}</span>
+                                    {lesson.videoUrl && lesson.type === 'VIDEO' && (
+                                      <Button variant="outline" size="sm" asChild>
+                                        <a href={lesson.videoUrl} target="_blank" rel="noreferrer">Preview</a>
+                                      </Button>
+                                    )}
+                                    {lesson.documentUrl && lesson.type === 'DOCUMENT' && (
+                                      <Button variant="outline" size="sm" asChild>
+                                        <a href={lesson.documentUrl} target="_blank" rel="noreferrer">Preview</a>
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

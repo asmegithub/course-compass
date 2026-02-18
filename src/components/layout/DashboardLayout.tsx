@@ -18,6 +18,7 @@ interface NavItem {
 
 const studentNav: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: BookOpen },
+  { label: 'Become Instructor', href: '/dashboard/become-instructor', icon: User },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
   { label: 'Certificates', href: '/dashboard/certificates', icon: Award },
   { label: 'Payments', href: '/dashboard/payments', icon: CreditCard },
@@ -41,6 +42,7 @@ const adminNav: NavItem[] = [
   { label: 'Dashboard', href: '/admin', icon: Activity },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Course Approvals', href: '/admin/approvals', icon: ShieldCheck },
+  { label: 'Instructor Verify', href: '/admin/instructor-verifications', icon: ShieldCheck },
   { label: 'Categories', href: '/admin/categories', icon: FolderOpen },
   { label: 'Coupons', href: '/admin/coupons', icon: Tag },
   { label: 'Payments', href: '/admin/payments', icon: CreditCard },

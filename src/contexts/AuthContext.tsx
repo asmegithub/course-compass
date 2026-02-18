@@ -42,21 +42,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (!user) {
-      setIsLoading(true);
-      meApi()
-        .then((profile) => {
-          setUser(profile);
-          setStoredUser(profile);
-        })
-        .catch(() => {
-          clearTokens();
-          setStoredUser(null);
-          setUser(null);
-        })
-        .finally(() => setIsLoading(false));
-    }
-  }, [user]);
+    setIsLoading(true);
+    meApi()
+      .then((profile) => {
+        setUser(profile);
+        setStoredUser(profile);
+      })
+      .catch(() => {
+        clearTokens();
+        setStoredUser(null);
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   const handleAuthSuccess = (response: { accessToken: string; refreshToken: string; user: User }) => {
     setTokens(response.accessToken, response.refreshToken);
