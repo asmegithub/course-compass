@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { mockCourses } from '@/lib/mock-data';
-import { BookOpen, Award, Clock, TrendingUp, Play, Bell, CreditCard } from 'lucide-react';
+import { BookOpen, Award, Clock, TrendingUp, Play, Bell, CreditCard, GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const enrolledCourses = [
@@ -134,6 +134,11 @@ const StudentDashboard = () => {
                 <Link to="/dashboard/payments">
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
                     <CreditCard className="h-4 w-4" /> Payment History
+                  </Button>
+                </Link>
+                <Link to="/dashboard/become-instructor">
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                    <GraduationCap className="h-4 w-4" /> Apply as Instructor
                   </Button>
                 </Link>
                 <Link to="/courses">

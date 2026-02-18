@@ -31,8 +31,8 @@ const InstructorDashboard = () => {
     return courses.filter((course) => course.instructorId === user.id);
   }, [courses, user?.id]);
 
-  const publishedCourses = instructorCourses.filter((course) => course.status === 'PUBLISHED');
-  const draftCourses = instructorCourses.filter((course) => course.status !== 'PUBLISHED');
+  const publishedCourses = instructorCourses.filter((course) => course.status === 'APPROVED');
+  const draftCourses = instructorCourses.filter((course) => course.status !== 'APPROVED');
 
   const stats = useMemo(() => {
     const totalStudents = instructorCourses.reduce((sum, course) => sum + course.enrollmentCount, 0);

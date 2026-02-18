@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createCourse, CoursePayload, getCategories } from '@/lib/course-api';
+import {
+  createCourse,
+  createCourseSection,
+  createLesson,
+  createLessonResource,
+  createCourseOutcome,
+  createCourseRequirement,
+  deleteCourseOutcome,
+  deleteCourseRequirement,
+  deleteCourseSection,
+  deleteDiscussionReply,
+  deleteLesson,
+  deleteLessonDiscussion,
+  deleteLessonResource,
+  CoursePayload,
+  getCategories,
+  getCourseById,
+  getCourseOutcomes,
+  getCourseRequirements,
+  getCourseSections,
+  getDiscussionReplies,
+  getLessonDiscussions,
+  getLessons,
+  getLessonResources,
+  updateCourse as updateCourseApi,
+  uploadCourseMedia,
+} from '@/lib/course-api';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -35,10 +61,17 @@ interface LessonForm {
   videoFile: File | null;
   videoUrl: string;
   documentFile: File | null;
+  documentUrl: string;
+  documentType: string;
   content: string;
   duration: number;
   isFree: boolean;
   isDownloadable: boolean;
+}
+
+interface ListItem {
+  id: string;
+  text: string;
 }
 
 const emptyCourse = {
@@ -46,43 +79,307 @@ const emptyCourse = {
   description: '', descriptionAm: '', descriptionOm: '', descriptionGz: '',
   categoryId: '', level: '' as string,
   price: '', discountPrice: '', currency: 'ETB',
+  thumbnail: '',
+  previewVideo: '',
   thumbnailFile: null as File | null,
   thumbnailPreview: '',
   previewVideoFile: null as File | null,
   previewVideoName: '',
 };
 
-const createLesson = (): LessonForm => ({
+const createLessonForm = (): LessonForm => ({
   id: crypto.randomUUID(),
   title: '', titleAm: '', type: 'VIDEO',
-  videoFile: null, videoUrl: '', documentFile: null,
+  videoFile: null, videoUrl: '', documentFile: null, documentUrl: '', documentType: '',
   content: '', duration: 0, isFree: false, isDownloadable: false,
 });
 
 const createSection = (): SectionForm => ({
   id: crypto.randomUUID(),
   title: '', titleAm: '',
-  lessons: [createLesson()],
+  lessons: [createLessonForm()],
   isExpanded: true,
+});
+
+const createListItem = (): ListItem => ({
+  id: crypto.randomUUID(),
+  text: '',
 });
 
 const InstructorCourseCreate = () => {
   const navigate = useNavigate();
+  const { courseId } = useParams();
+  const isEditMode = Boolean(courseId);
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [course, setCourse] = useState(emptyCourse);
   const [sections, setSections] = useState<SectionForm[]>([createSection()]);
+  const [outcomes, setOutcomes] = useState<ListItem[]>([createListItem()]);
+  const [requirements, setRequirements] = useState<ListItem[]>([createListItem()]);
   const [activeTab, setActiveTab] = useState('basic');
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [isUploadingPreviewVideo, setIsUploadingPreviewVideo] = useState(false);
+  const [pendingLessonUploads, setPendingLessonUploads] = useState(0);
+  const [isEditInitialized, setIsEditInitialized] = useState(false);
+  const [isEditLocked, setIsEditLocked] = useState(false);
   const { data: categories = [] } = useQuery({
     queryKey: ['course-categories'],
     queryFn: getCategories,
   });
 
+  const courseQuery = useQuery({
+    queryKey: ['course', courseId],
+    queryFn: () => getCourseById(courseId as string),
+    enabled: isEditMode,
+  });
+
+  const sectionsQuery = useQuery({
+    queryKey: ['course-sections', courseId],
+    queryFn: getCourseSections,
+    enabled: isEditMode,
+  });
+
+  const lessonsQuery = useQuery({
+    queryKey: ['lessons', courseId],
+    queryFn: getLessons,
+    enabled: isEditMode,
+  });
+
+  const outcomesQuery = useQuery({
+    queryKey: ['course-outcomes', courseId],
+    queryFn: getCourseOutcomes,
+    enabled: isEditMode,
+  });
+
+  const requirementsQuery = useQuery({
+    queryKey: ['course-requirements', courseId],
+    queryFn: getCourseRequirements,
+    enabled: isEditMode,
+  });
+
+  const lessonResourcesQuery = useQuery({
+    queryKey: ['lesson-resources', courseId],
+    queryFn: getLessonResources,
+    enabled: isEditMode,
+  });
+
+  const discussionsQuery = useQuery({
+    queryKey: ['lesson-discussions', courseId],
+    queryFn: getLessonDiscussions,
+    enabled: isEditMode,
+  });
+
+  const repliesQuery = useQuery({
+    queryKey: ['discussion-replies', courseId],
+    queryFn: getDiscussionReplies,
+    enabled: isEditMode,
+  });
+
+  useEffect(() => {
+    if (!isEditMode || isEditInitialized || !courseQuery.data) {
+      return;
+    }
+
+    const courseData = courseQuery.data;
+    const locked = courseData.status === 'PUBLISHED' || courseData.status === 'APPROVED';
+    setIsEditLocked(locked);
+
+    setCourse({
+      ...emptyCourse,
+      title: courseData.title || '',
+      titleAm: courseData.titleAm || '',
+      titleOm: courseData.titleOm || '',
+      titleGz: courseData.titleGz || '',
+      slug: courseData.slug || '',
+      description: courseData.description || '',
+      descriptionAm: courseData.descriptionAm || '',
+      descriptionOm: courseData.descriptionOm || '',
+      descriptionGz: courseData.descriptionGz || '',
+      categoryId: courseData.categoryId || '',
+      level: courseData.level || '',
+      price: courseData.price != null ? String(courseData.price) : '',
+      discountPrice: courseData.discountPrice != null ? String(courseData.discountPrice) : '',
+      currency: courseData.currency || 'ETB',
+      thumbnail: courseData.thumbnail || '',
+      previewVideo: courseData.previewVideo || '',
+      thumbnailPreview: courseData.thumbnail || '',
+      previewVideoName: courseData.previewVideo ? courseData.previewVideo.split('/').pop() || '' : '',
+      thumbnailFile: null,
+      previewVideoFile: null,
+    });
+
+    const allSections = sectionsQuery.data || [];
+    const allLessons = lessonsQuery.data || [];
+    const courseSections = allSections
+      .filter((section) => section.courseId === courseData.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    if (courseSections.length > 0) {
+      setSections(
+        courseSections.map((section) => {
+          const sectionLessons = allLessons
+            .filter((lesson) => lesson.sectionId === section.id)
+            .sort((a, b) => a.orderIndex - b.orderIndex)
+            .map((lesson) => ({
+              id: lesson.id,
+              title: lesson.title || '',
+              titleAm: lesson.titleAm || '',
+              type: lesson.type,
+              videoFile: null,
+              videoUrl: lesson.videoUrl || '',
+              documentFile: null,
+              documentUrl: lesson.documentUrl || '',
+              documentType: lesson.documentType || '',
+              content: lesson.content || '',
+              duration: lesson.duration || 0,
+              isFree: Boolean(lesson.isFree),
+              isDownloadable: Boolean(lesson.isDownloadable),
+            }));
+
+          return {
+            id: section.id,
+            title: section.title || '',
+            titleAm: section.titleAm || '',
+            lessons: sectionLessons.length > 0 ? sectionLessons : [createLessonForm()],
+            isExpanded: true,
+          };
+        })
+      );
+    }
+
+    const nextOutcomes = (outcomesQuery.data || [])
+      .filter((item) => item.courseId === courseData.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((item) => ({ id: item.id, text: item.text }));
+    setOutcomes(nextOutcomes.length > 0 ? nextOutcomes : [createListItem()]);
+
+    const nextRequirements = (requirementsQuery.data || [])
+      .filter((item) => item.courseId === courseData.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((item) => ({ id: item.id, text: item.text }));
+    setRequirements(nextRequirements.length > 0 ? nextRequirements : [createListItem()]);
+
+    setIsEditInitialized(true);
+  }, [
+    courseQuery.data,
+    isEditInitialized,
+    isEditMode,
+    lessonsQuery.data,
+    outcomesQuery.data,
+    requirementsQuery.data,
+    sectionsQuery.data,
+  ]);
+
   const createCourseMutation = useMutation({
-    mutationFn: (payload: CoursePayload) => createCourse(payload),
+    mutationFn: async (payload: CoursePayload) => {
+      const updatedCourse = isEditMode
+        ? await updateCourseApi(courseId as string, payload)
+        : await createCourse(payload);
+
+      const courseIdValue = updatedCourse.id;
+
+      if (isEditMode) {
+        const existingSections = (sectionsQuery.data || []).filter((section) => section.courseId === courseIdValue);
+        const existingSectionIds = new Set(existingSections.map((section) => section.id));
+        const existingLessons = (lessonsQuery.data || []).filter((lesson) => existingSectionIds.has(lesson.sectionId));
+        const existingLessonIds = new Set(existingLessons.map((lesson) => lesson.id));
+        const existingResources = (lessonResourcesQuery.data || []).filter((resource) => existingLessonIds.has(resource.lessonId));
+        const existingOutcomes = (outcomesQuery.data || []).filter((item) => item.courseId === courseIdValue);
+        const existingRequirements = (requirementsQuery.data || []).filter((item) => item.courseId === courseIdValue);
+        const discussionsData = discussionsQuery.data || await getLessonDiscussions();
+        const repliesData = repliesQuery.data || await getDiscussionReplies();
+        const existingDiscussions = discussionsData.filter((discussion) => existingLessonIds.has(discussion.lessonId));
+        const existingReplies = repliesData.filter((reply) =>
+          existingDiscussions.some((discussion) => discussion.id === reply.discussionId)
+        );
+
+        await Promise.all(existingReplies.map((reply) => deleteDiscussionReply(reply.id)));
+        await Promise.all(existingDiscussions.map((discussion) => deleteLessonDiscussion(discussion.id)));
+        await Promise.all(existingResources.map((resource) => deleteLessonResource(resource.id)));
+        await Promise.all(existingLessons.map((lesson) => deleteLesson(lesson.id)));
+        await Promise.all(existingSections.map((section) => deleteCourseSection(section.id)));
+        await Promise.all(existingOutcomes.map((item) => deleteCourseOutcome(item.id)));
+        await Promise.all(existingRequirements.map((item) => deleteCourseRequirement(item.id)));
+      }
+
+      const trimmedOutcomes = outcomes.map((item) => item.text.trim()).filter(Boolean);
+      for (let index = 0; index < trimmedOutcomes.length; index += 1) {
+        await createCourseOutcome({
+          courseId: courseIdValue,
+          text: trimmedOutcomes[index],
+          orderIndex: index,
+        });
+      }
+
+      const trimmedRequirements = requirements.map((item) => item.text.trim()).filter(Boolean);
+      for (let index = 0; index < trimmedRequirements.length; index += 1) {
+        await createCourseRequirement({
+          courseId: courseIdValue,
+          text: trimmedRequirements[index],
+          orderIndex: index,
+        });
+      }
+
+      for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
+        const section = sections[sectionIndex];
+        const sectionTitle = section.title.trim();
+        if (!sectionTitle) {
+          throw new Error(`Section ${sectionIndex + 1} title is required.`);
+        }
+
+        const createdSection = await createCourseSection({
+          courseId: courseIdValue,
+          title: sectionTitle,
+          titleAm: section.titleAm.trim() || undefined,
+          orderIndex: sectionIndex,
+        });
+
+        for (let lessonIndex = 0; lessonIndex < section.lessons.length; lessonIndex += 1) {
+          const lesson = section.lessons[lessonIndex];
+          const lessonTitle = lesson.title.trim();
+          if (!lessonTitle) {
+            throw new Error(`Lesson ${lessonIndex + 1} in section ${sectionIndex + 1} needs a title.`);
+          }
+
+          const createdLesson = await createLesson({
+            sectionId: createdSection.id,
+            title: lessonTitle,
+            titleAm: lesson.titleAm.trim() || undefined,
+            type: lesson.type,
+            videoUrl: lesson.type === 'VIDEO' ? lesson.videoUrl || undefined : undefined,
+            duration: Number(lesson.duration) || 0,
+            documentUrl: lesson.type === 'DOCUMENT' ? lesson.documentUrl || undefined : undefined,
+            documentType: lesson.type === 'DOCUMENT' ? lesson.documentType || undefined : undefined,
+            content: lesson.type === 'TEXT' ? lesson.content.trim() || undefined : undefined,
+            orderIndex: lessonIndex,
+            isFree: lesson.isFree,
+            isDownloadable: lesson.isDownloadable,
+            isPublished: true,
+          });
+
+          if (lesson.type === 'DOCUMENT' && lesson.documentUrl) {
+            await createLessonResource({
+              lessonId: createdLesson.id,
+              title: `${lessonTitle} Resource`,
+              type: lesson.documentType || 'DOCUMENT',
+              url: lesson.documentUrl,
+              fileSize: lesson.documentFile?.size || 0,
+              orderIndex: 0,
+            });
+          }
+        }
+      }
+
+      return updatedCourse;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      toast({ title: 'Course submitted for review', description: 'Your course has been submitted and will be reviewed by an admin.' });
+      toast({
+        title: isEditMode ? 'Course updated' : 'Course submitted for review',
+        description: isEditMode
+          ? 'Your course updates have been saved.'
+          : 'Your course has been submitted and will be reviewed by an admin.',
+      });
       navigate('/instructor');
     },
     onError: (error: unknown) => {
@@ -95,19 +392,41 @@ const InstructorCourseCreate = () => {
     setCourse((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnail = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       updateCourse('thumbnailFile', file);
       updateCourse('thumbnailPreview', URL.createObjectURL(file));
+      setIsUploadingThumbnail(true);
+      try {
+        const uploaded = await uploadCourseMedia(file);
+        updateCourse('thumbnail', uploaded.url);
+      } catch (error: unknown) {
+        updateCourse('thumbnail', '');
+        const message = error instanceof Error ? error.message : 'Failed to upload thumbnail.';
+        toast({ title: 'Thumbnail upload failed', description: message, variant: 'destructive' });
+      } finally {
+        setIsUploadingThumbnail(false);
+      }
     }
   };
 
-  const handlePreviewVideo = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePreviewVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       updateCourse('previewVideoFile', file);
       updateCourse('previewVideoName', file.name);
+      setIsUploadingPreviewVideo(true);
+      try {
+        const uploaded = await uploadCourseMedia(file);
+        updateCourse('previewVideo', uploaded.url);
+      } catch (error: unknown) {
+        updateCourse('previewVideo', '');
+        const message = error instanceof Error ? error.message : 'Failed to upload preview video.';
+        toast({ title: 'Preview video upload failed', description: message, variant: 'destructive' });
+      } finally {
+        setIsUploadingPreviewVideo(false);
+      }
     }
   };
 
@@ -126,7 +445,7 @@ const InstructorCourseCreate = () => {
   const addLesson = (sectionId: string) => {
     setSections((prev) =>
       prev.map((s) =>
-        s.id === sectionId ? { ...s, lessons: [...s.lessons, createLesson()] } : s
+        s.id === sectionId ? { ...s, lessons: [...s.lessons, createLessonForm()] } : s
       )
     );
   };
@@ -156,18 +475,61 @@ const InstructorCourseCreate = () => {
     );
   };
 
-  const handleLessonVideo = (sectionId: string, lessonId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const addOutcome = () => setOutcomes((prev) => [...prev, createListItem()]);
+
+  const updateOutcome = (id: string, value: string) => {
+    setOutcomes((prev) => prev.map((item) => (item.id === id ? { ...item, text: value } : item)));
+  };
+
+  const removeOutcome = (id: string) => {
+    setOutcomes((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const addRequirement = () => setRequirements((prev) => [...prev, createListItem()]);
+
+  const updateRequirement = (id: string, value: string) => {
+    setRequirements((prev) => prev.map((item) => (item.id === id ? { ...item, text: value } : item)));
+  };
+
+  const removeRequirement = (id: string) => {
+    setRequirements((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleLessonVideo = async (sectionId: string, lessonId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       updateLesson(sectionId, lessonId, 'videoFile', file);
-      updateLesson(sectionId, lessonId, 'videoUrl', file.name);
+      setPendingLessonUploads((prev) => prev + 1);
+      try {
+        const uploaded = await uploadCourseMedia(file);
+        updateLesson(sectionId, lessonId, 'videoUrl', uploaded.url);
+      } catch (error: unknown) {
+        updateLesson(sectionId, lessonId, 'videoUrl', '');
+        const message = error instanceof Error ? error.message : 'Failed to upload lesson video.';
+        toast({ title: 'Lesson video upload failed', description: message, variant: 'destructive' });
+      } finally {
+        setPendingLessonUploads((prev) => Math.max(prev - 1, 0));
+      }
     }
   };
 
-  const handleLessonDocument = (sectionId: string, lessonId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLessonDocument = async (sectionId: string, lessonId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       updateLesson(sectionId, lessonId, 'documentFile', file);
+      setPendingLessonUploads((prev) => prev + 1);
+      try {
+        const uploaded = await uploadCourseMedia(file);
+        updateLesson(sectionId, lessonId, 'documentUrl', uploaded.url);
+        updateLesson(sectionId, lessonId, 'documentType', file.type || 'application/octet-stream');
+      } catch (error: unknown) {
+        updateLesson(sectionId, lessonId, 'documentUrl', '');
+        updateLesson(sectionId, lessonId, 'documentType', '');
+        const message = error instanceof Error ? error.message : 'Failed to upload lesson document.';
+        toast({ title: 'Lesson document upload failed', description: message, variant: 'destructive' });
+      } finally {
+        setPendingLessonUploads((prev) => Math.max(prev - 1, 0));
+      }
     }
   };
 
@@ -178,6 +540,14 @@ const InstructorCourseCreate = () => {
   const handleSubmit = () => {
     if (!course.title || !course.description || !course.categoryId || !course.level) {
       toast({ title: 'Missing required fields', description: 'Please fill in all required fields.', variant: 'destructive' });
+      return;
+    }
+    if (isEditMode && isEditLocked) {
+      toast({ title: 'Editing disabled', description: 'Approved courses cannot be edited.' });
+      return;
+    }
+    if (pendingLessonUploads > 0 || isUploadingThumbnail || isUploadingPreviewVideo) {
+      toast({ title: 'Upload in progress', description: 'Please wait for media uploads to finish before submitting.' });
       return;
     }
     const totalDuration = sections.reduce((acc, section) => acc + section.lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0), 0);
@@ -196,11 +566,13 @@ const InstructorCourseCreate = () => {
       descriptionAm: course.descriptionAm.trim() || undefined,
       descriptionOm: course.descriptionOm.trim() || undefined,
       descriptionGz: course.descriptionGz.trim() || undefined,
+      thumbnail: course.thumbnail || undefined,
+      previewVideo: course.previewVideo || undefined,
       price: Number(course.price) || 0,
       discountPrice: course.discountPrice ? Number(course.discountPrice) : undefined,
       currency: course.currency,
       level: course.level,
-      status: 'PENDING',
+      status: isEditMode ? (courseQuery.data?.status || 'PENDING') : 'PENDING',
       totalDuration,
       totalLessons,
       enrollmentCount: 0,
@@ -215,6 +587,22 @@ const InstructorCourseCreate = () => {
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
 
+  if (isEditMode && courseQuery.isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="py-12 text-muted-foreground">Loading course...</div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isEditMode && courseQuery.isError) {
+    return (
+      <DashboardLayout>
+        <div className="py-12 text-destructive">Failed to load course for editing.</div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6 max-w-5xl">
@@ -224,7 +612,9 @@ const InstructorCourseCreate = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="font-display text-2xl font-bold text-foreground">Create New Course</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">
+              {isEditMode ? 'Edit Course' : 'Create New Course'}
+            </h1>
             <p className="text-muted-foreground text-sm mt-1">
               {sections.length} sections · {totalLessons} lessons
             </p>
@@ -233,8 +623,18 @@ const InstructorCourseCreate = () => {
             <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
               <Save className="h-4 w-4" /> Save Draft
             </Button>
-            <Button onClick={handleSubmit} className="gap-2" disabled={createCourseMutation.isPending}>
-              <Send className="h-4 w-4" /> Submit for Review
+            <Button
+              onClick={handleSubmit}
+              className="gap-2"
+              disabled={
+                createCourseMutation.isPending ||
+                isUploadingThumbnail ||
+                isUploadingPreviewVideo ||
+                pendingLessonUploads > 0 ||
+                isEditLocked
+              }
+            >
+              <Send className="h-4 w-4" /> {isEditMode ? 'Update Course' : 'Submit for Review'}
             </Button>
           </div>
         </div>
@@ -306,6 +706,65 @@ const InstructorCourseCreate = () => {
                       onChange={(e) => updateCourse('description', e.target.value)}
                     />
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Learning Outcomes & Requirements</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-3">
+                  <Label>What you'll learn</Label>
+                  {outcomes.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <Input
+                        placeholder={`Outcome ${index + 1}`}
+                        value={item.text}
+                        onChange={(e) => updateOutcome(item.id, e.target.value)}
+                      />
+                      {outcomes.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => removeOutcome(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addOutcome} className="gap-2">
+                    <PlusCircle className="h-4 w-4" /> Add Outcome
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Requirements</Label>
+                  {requirements.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <Input
+                        placeholder={`Requirement ${index + 1}`}
+                        value={item.text}
+                        onChange={(e) => updateRequirement(item.id, e.target.value)}
+                      />
+                      {requirements.length > 1 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => removeRequirement(item.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addRequirement} className="gap-2">
+                    <PlusCircle className="h-4 w-4" /> Add Requirement
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -477,7 +936,7 @@ const InstructorCourseCreate = () => {
                               </Button>
                             </label>
                             {lesson.videoUrl && (
-                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">{lesson.videoUrl}</span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">{lesson.videoFile?.name || lesson.videoUrl}</span>
                             )}
                           </div>
                         )}
