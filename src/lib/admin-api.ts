@@ -1,6 +1,19 @@
 import { apiFetch } from '@/lib/api';
 import { User } from '@/types';
 
+export interface AdminUser extends User {
+  bio?: string;
+  timezone?: string;
+  emailVerifiedAt?: string;
+  phoneVerifiedAt?: string;
+}
+
+export interface AdminEnrollment {
+  id: string;
+  student?: { id?: string };
+  course?: { id?: string };
+}
+
 export interface CourseApprovalInstructor {
   firstName?: string;
   lastName?: string;
@@ -46,8 +59,19 @@ export interface AuditLog {
   updatedAt?: string;
 }
 
-export const getUsers = async (): Promise<User[]> => {
-  return apiFetch<User[]>('/api/users');
+export const getUsers = async (): Promise<AdminUser[]> => {
+  return apiFetch<AdminUser[]>('/api/users');
+};
+
+export const updateUser = async (id: string, payload: AdminUser): Promise<AdminUser> => {
+  return apiFetch<AdminUser>(`/api/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const getEnrollments = async (): Promise<AdminEnrollment[]> => {
+  return apiFetch<AdminEnrollment[]>('/api/enrollments');
 };
 
 export const getCourseApprovals = async (): Promise<CourseApproval[]> => {

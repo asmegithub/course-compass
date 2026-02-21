@@ -1,9 +1,48 @@
 import { apiFetch } from '@/lib/api';
 import { Course, CourseCategory, CourseLevel, CourseStatus, InstructorProfile, User } from '@/types';
 
+type ApiInstructorUser = {
+  id?: string;
+  email?: string | null;
+  phone?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  role?: User['role'] | null;
+  isVerified?: boolean | null;
+  isActive?: boolean | null;
+  profileImage?: string | null;
+  language?: User['language'] | null;
+  referralCode?: string | null;
+  referredBy?: string | null;
+  lastLoginAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+type ApiInstructorProfile = {
+  id?: string;
+  user?: ApiInstructorUser;
+  headline?: string | null;
+  headlineAm?: string | null;
+  headlineOm?: string | null;
+  headlineGz?: string | null;
+  biography?: string | null;
+  biographyAm?: string | null;
+  biographyOm?: string | null;
+  biographyGz?: string | null;
+  expertise?: string | null;
+  socialLinks?: string | null;
+  totalStudents?: number | string | null;
+  totalCourses?: number | string | null;
+  totalRevenue?: number | string | null;
+  averageRating?: number | string | null;
+  isVerified?: boolean | null;
+  verifiedAt?: string | null;
+};
+
 type ApiCourse = {
   id?: string;
-  instructor?: User;
+  instructor?: ApiInstructorProfile;
   instructorId?: string;
   category?: CourseCategory;
   categoryId?: string;
@@ -120,6 +159,51 @@ type ApiLessonResource = {
   orderIndex?: number | string;
 };
 
+type ApiQuiz = {
+  id?: string;
+  lesson?: { id?: string };
+  title?: string;
+  titleAm?: string;
+  titleOm?: string;
+  description?: string;
+  quizType?: string;
+  passingScore?: number | string;
+  maxAttempts?: number | string;
+  timeLimit?: number | string;
+  shuffleQuestions?: boolean;
+  shuffleOptions?: boolean;
+  showCorrectAnswers?: string;
+  isActive?: boolean;
+};
+
+type ApiQuestion = {
+  id?: string;
+  quiz?: { id?: string };
+  questionText?: string;
+  questionTextAm?: string;
+  questionTextOm?: string;
+  questionTextGz?: string;
+  type?: string;
+  explanation?: string;
+  explanationAm?: string;
+  explanationOm?: string;
+  explanationGz?: string;
+  points?: number | string;
+  orderIndex?: number | string;
+  imageUrl?: string;
+};
+
+type ApiQuestionOption = {
+  id?: string;
+  question?: { id?: string };
+  optionText?: string;
+  optionTextAm?: string;
+  optionTextOm?: string;
+  optionTextGz?: string;
+  isCorrect?: boolean;
+  orderIndex?: number | string;
+};
+
 type ApiReview = {
   id?: string;
   course?: { id?: string };
@@ -192,19 +276,51 @@ const toNumber = (value: unknown, fallback: number = 0) => {
   return Number.isFinite(numeric) ? numeric : fallback;
 };
 
-const toInstructorProfile = (user?: User): InstructorProfile | undefined => {
+const toUser = (user?: ApiInstructorUser): User | undefined => {
   if (!user) return undefined;
+
   return {
-    id: user.id,
-    userId: user.id,
-    user,
-    headline: '',
-    biography: '',
-    totalStudents: 0,
-    totalCourses: 0,
-    totalRevenue: 0,
-    averageRating: 0,
+    id: user.id || '',
+    email: user.email || '',
+    phone: user.phone || undefined,
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
+    role: user.role || 'INSTRUCTOR',
     isVerified: Boolean(user.isVerified),
+    isActive: user.isActive ?? true,
+    profileImage: user.profileImage || undefined,
+    language: user.language || 'en',
+    referralCode: user.referralCode || undefined,
+    referredBy: user.referredBy || undefined,
+    lastLoginAt: user.lastLoginAt || undefined,
+    createdAt: user.createdAt || '',
+    updatedAt: user.updatedAt || '',
+  };
+};
+
+const toInstructorProfile = (profile?: ApiInstructorProfile): InstructorProfile | undefined => {
+  if (!profile) return undefined;
+
+  const normalizedUser = toUser(profile.user);
+
+  return {
+    id: profile.id || normalizedUser?.id || '',
+    userId: normalizedUser?.id || '',
+    user: normalizedUser,
+    headline: profile.headline || '',
+    headlineAm: profile.headlineAm || undefined,
+    headlineOm: profile.headlineOm || undefined,
+    headlineGz: profile.headlineGz || undefined,
+    biography: profile.biography || '',
+    biographyAm: profile.biographyAm || undefined,
+    biographyOm: profile.biographyOm || undefined,
+    biographyGz: profile.biographyGz || undefined,
+    totalStudents: toNumber(profile.totalStudents, 0),
+    totalCourses: toNumber(profile.totalCourses, 0),
+    totalRevenue: toNumber(profile.totalRevenue, 0),
+    averageRating: toNumber(profile.averageRating, 0),
+    isVerified: Boolean(profile.isVerified ?? normalizedUser?.isVerified),
+    verifiedAt: profile.verifiedAt || undefined,
   };
 };
 
@@ -418,6 +534,51 @@ export type CreateLessonResourcePayload = {
   orderIndex: number;
 };
 
+export type QuizPayload = {
+  id: string;
+  lessonId: string;
+  title: string;
+  titleAm?: string;
+  titleOm?: string;
+  description?: string;
+  quizType: string;
+  passingScore: number;
+  maxAttempts: number;
+  timeLimit: number;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  showCorrectAnswers: string;
+  isActive: boolean;
+};
+
+export type QuestionPayload = {
+  id: string;
+  quizId: string;
+  questionText: string;
+  questionTextAm?: string;
+  questionTextOm?: string;
+  questionTextGz?: string;
+  type: string;
+  explanation?: string;
+  explanationAm?: string;
+  explanationOm?: string;
+  explanationGz?: string;
+  points: number;
+  orderIndex: number;
+  imageUrl?: string;
+};
+
+export type QuestionOptionPayload = {
+  id: string;
+  questionId: string;
+  optionText: string;
+  optionTextAm?: string;
+  optionTextOm?: string;
+  optionTextGz?: string;
+  isCorrect: boolean;
+  orderIndex: number;
+};
+
 export type ReviewPayload = {
   id: string;
   courseId: string;
@@ -474,6 +635,156 @@ export type CourseRequirementPayload = {
 export type CreateCourseOutcomePayload = Omit<CourseOutcomePayload, 'id'>;
 export type CreateCourseRequirementPayload = Omit<CourseRequirementPayload, 'id'>;
 export type LessonResourceDeletePayload = { id: string };
+export type CreateQuizPayload = Omit<QuizPayload, 'id'>;
+export type CreateQuestionPayload = Omit<QuestionPayload, 'id'>;
+export type CreateQuestionOptionPayload = Omit<QuestionOptionPayload, 'id'>;
+
+type ApiEnrollment = {
+  id?: string;
+  student?: { id?: string };
+  course?: { id?: string };
+  payment?: { id?: string };
+  progress?: number | string;
+  completedLessonsCount?: number | string;
+  lastAccessedLessonId?: string;
+  isCompleted?: boolean;
+  completedAt?: string;
+  enrolledAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type EnrollmentPayload = {
+  id: string;
+  studentId: string;
+  courseId: string;
+  paymentId?: string;
+  progress: number;
+  completedLessonsCount: number;
+  lastAccessedLessonId?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  enrolledAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type InstructorEnrollmentSummary = {
+  totalEnrollments: number;
+  totalStudents: number;
+  totalCourses: number;
+};
+
+type ApiNotification = {
+  id?: string;
+  user?: { id?: string };
+  type?: string;
+  title?: string;
+  message?: string;
+  isRead?: boolean;
+  relatedId?: string;
+  relatedType?: string;
+  actionUrl?: string;
+  createdAt?: string;
+};
+
+type ApiCertificate = {
+  id?: string;
+  enrollment?: { id?: string };
+  student?: { id?: string };
+  course?: { id?: string };
+  template?: { id?: string };
+  certificateNumber?: string;
+  certificateUrl?: string;
+  verificationCode?: string;
+  issuedAt?: string;
+  expiresAt?: string;
+};
+
+const toEnrollment = (enrollment: ApiEnrollment): EnrollmentPayload => ({
+  id: enrollment.id || '',
+  studentId: enrollment.student?.id || '',
+  courseId: enrollment.course?.id || '',
+  paymentId: enrollment.payment?.id || undefined,
+  progress: toNumber(enrollment.progress, 0),
+  completedLessonsCount: toNumber(enrollment.completedLessonsCount, 0),
+  lastAccessedLessonId: enrollment.lastAccessedLessonId || undefined,
+  isCompleted: Boolean(enrollment.isCompleted),
+  completedAt: enrollment.completedAt || undefined,
+  enrolledAt: enrollment.enrolledAt || undefined,
+  createdAt: enrollment.createdAt || undefined,
+  updatedAt: enrollment.updatedAt || undefined,
+});
+
+export const createEnrollment = async (payload: { courseId: string; paymentId?: string }): Promise<EnrollmentPayload> => {
+  const data = await apiFetch<ApiEnrollment>('/api/enrollments', {
+    method: 'POST',
+    body: JSON.stringify({
+      course: { id: payload.courseId },
+      ...(payload.paymentId ? { payment: { id: payload.paymentId } } : {}),
+    }),
+  });
+
+  return toEnrollment(data);
+};
+
+export const getMyCourseEnrollment = async (courseId: string): Promise<EnrollmentPayload | null> => {
+  const data = await apiFetch<ApiEnrollment | null>(`/api/enrollments/me?courseId=${encodeURIComponent(courseId)}`);
+  if (!data) {
+    return null;
+  }
+  return toEnrollment(data);
+};
+
+export const deleteEnrollment = async (enrollmentId: string): Promise<void> => {
+  await apiFetch<void>(`/api/enrollments/${enrollmentId}`, { method: 'DELETE' });
+};
+
+export const getMyInstructorEnrollmentSummary = async (): Promise<InstructorEnrollmentSummary> => {
+  const data = await apiFetch<Partial<InstructorEnrollmentSummary>>('/api/enrollments/me/instructor-summary');
+  return {
+    totalEnrollments: toNumber(data.totalEnrollments, 0),
+    totalStudents: toNumber(data.totalStudents, 0),
+    totalCourses: toNumber(data.totalCourses, 0),
+  };
+};
+
+export const getMyEnrollments = async (): Promise<EnrollmentPayload[]> => {
+  const data = await apiFetch<ApiEnrollment[]>('/api/enrollments/me');
+  return data.map((enrollment) => toEnrollment(enrollment));
+};
+
+export const getNotifications = async () => {
+  const data = await apiFetch<ApiNotification[]>('/api/notifications');
+  return data.map((notification) => ({
+    id: notification.id || '',
+    userId: notification.user?.id || '',
+    type: notification.type || 'SYSTEM',
+    title: notification.title || '',
+    message: notification.message || '',
+    isRead: Boolean(notification.isRead),
+    relatedId: notification.relatedId || undefined,
+    relatedType: notification.relatedType || undefined,
+    actionUrl: notification.actionUrl || undefined,
+    createdAt: notification.createdAt || undefined,
+  }));
+};
+
+export const getCertificates = async () => {
+  const data = await apiFetch<ApiCertificate[]>('/api/certificates');
+  return data.map((certificate) => ({
+    id: certificate.id || '',
+    enrollmentId: certificate.enrollment?.id || '',
+    studentId: certificate.student?.id || '',
+    courseId: certificate.course?.id || '',
+    templateId: certificate.template?.id || '',
+    certificateNumber: certificate.certificateNumber || '',
+    certificateUrl: certificate.certificateUrl || '',
+    verificationCode: certificate.verificationCode || '',
+    issuedAt: certificate.issuedAt || '',
+    expiresAt: certificate.expiresAt || undefined,
+  }));
+};
 
 export const getCourseSections = async (): Promise<CourseSectionPayload[]> => {
   const data = await apiFetch<ApiCourseSection[]>('/api/course-sections');
@@ -653,6 +964,41 @@ export const getReviews = async (): Promise<ReviewPayload[]> => {
   }));
 };
 
+export const createReview = async (payload: { courseId: string; studentId: string; rating: number; title?: string; content: string }) => {
+  return apiFetch<ApiReview>('/api/reviews', {
+    method: 'POST',
+    body: JSON.stringify({
+      course: { id: payload.courseId },
+      student: { id: payload.studentId },
+      rating: payload.rating,
+      title: payload.title,
+      content: payload.content,
+      visible: true,
+      helpfulCount: 0,
+    }),
+  });
+};
+
+export const updateReview = async (reviewId: string, payload: { courseId: string; studentId: string; rating: number; title?: string; content: string }) => {
+  return apiFetch<ApiReview>(`/api/reviews/${reviewId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      id: reviewId,
+      course: { id: payload.courseId },
+      student: { id: payload.studentId },
+      rating: payload.rating,
+      title: payload.title,
+      content: payload.content,
+      visible: true,
+      helpfulCount: 0,
+    }),
+  });
+};
+
+export const deleteReview = async (reviewId: string): Promise<void> => {
+  await apiFetch<void>(`/api/reviews/${reviewId}`, { method: 'DELETE' });
+};
+
 export const getLessonDiscussions = async (): Promise<LessonDiscussionPayload[]> => {
   const data = await apiFetch<ApiLessonDiscussion[]>('/api/lesson-discussions');
   return data.map((discussion) => ({
@@ -790,4 +1136,172 @@ export const deleteCourseOutcome = async (outcomeId: string): Promise<void> => {
 
 export const deleteCourseRequirement = async (requirementId: string): Promise<void> => {
   await apiFetch<void>(`/api/course-requirements/${requirementId}`, { method: 'DELETE' });
+};
+
+export const getQuizzes = async (): Promise<QuizPayload[]> => {
+  const data = await apiFetch<ApiQuiz[]>('/api/quizzes');
+  return data.map((quiz) => ({
+    id: quiz.id || '',
+    lessonId: quiz.lesson?.id || '',
+    title: quiz.title || '',
+    titleAm: quiz.titleAm || undefined,
+    titleOm: quiz.titleOm || undefined,
+    description: quiz.description || undefined,
+    quizType: quiz.quizType || 'MULTIPLE_CHOICE',
+    passingScore: toNumber(quiz.passingScore, 0),
+    maxAttempts: toNumber(quiz.maxAttempts, 0),
+    timeLimit: toNumber(quiz.timeLimit, 0),
+    shuffleQuestions: Boolean(quiz.shuffleQuestions),
+    shuffleOptions: Boolean(quiz.shuffleOptions),
+    showCorrectAnswers: quiz.showCorrectAnswers || 'AFTER_SUBMIT',
+    isActive: Boolean(quiz.isActive),
+  }));
+};
+
+export const getQuestions = async (): Promise<QuestionPayload[]> => {
+  const data = await apiFetch<ApiQuestion[]>('/api/questions');
+  return data.map((question) => ({
+    id: question.id || '',
+    quizId: question.quiz?.id || '',
+    questionText: question.questionText || '',
+    questionTextAm: question.questionTextAm || undefined,
+    questionTextOm: question.questionTextOm || undefined,
+    questionTextGz: question.questionTextGz || undefined,
+    type: question.type || 'MULTIPLE_CHOICE',
+    explanation: question.explanation || undefined,
+    explanationAm: question.explanationAm || undefined,
+    explanationOm: question.explanationOm || undefined,
+    explanationGz: question.explanationGz || undefined,
+    points: toNumber(question.points, 1),
+    orderIndex: toNumber(question.orderIndex, 0),
+    imageUrl: question.imageUrl || undefined,
+  }));
+};
+
+export const getQuestionOptions = async (): Promise<QuestionOptionPayload[]> => {
+  const data = await apiFetch<ApiQuestionOption[]>('/api/question-options');
+  return data.map((option) => ({
+    id: option.id || '',
+    questionId: option.question?.id || '',
+    optionText: option.optionText || '',
+    optionTextAm: option.optionTextAm || undefined,
+    optionTextOm: option.optionTextOm || undefined,
+    optionTextGz: option.optionTextGz || undefined,
+    isCorrect: Boolean(option.isCorrect),
+    orderIndex: toNumber(option.orderIndex, 0),
+  }));
+};
+
+export const createQuiz = async (payload: CreateQuizPayload): Promise<QuizPayload> => {
+  const data = await apiFetch<ApiQuiz>('/api/quizzes', {
+    method: 'POST',
+    body: JSON.stringify({
+      lesson: { id: payload.lessonId },
+      title: payload.title,
+      titleAm: payload.titleAm,
+      titleOm: payload.titleOm,
+      description: payload.description,
+      quizType: payload.quizType,
+      passingScore: payload.passingScore,
+      maxAttempts: payload.maxAttempts,
+      timeLimit: payload.timeLimit,
+      shuffleQuestions: payload.shuffleQuestions,
+      shuffleOptions: payload.shuffleOptions,
+      showCorrectAnswers: payload.showCorrectAnswers,
+      isActive: payload.isActive,
+    }),
+  });
+
+  return {
+    id: data.id || '',
+    lessonId: data.lesson?.id || '',
+    title: data.title || '',
+    titleAm: data.titleAm || undefined,
+    titleOm: data.titleOm || undefined,
+    description: data.description || undefined,
+    quizType: data.quizType || 'MULTIPLE_CHOICE',
+    passingScore: toNumber(data.passingScore, 0),
+    maxAttempts: toNumber(data.maxAttempts, 0),
+    timeLimit: toNumber(data.timeLimit, 0),
+    shuffleQuestions: Boolean(data.shuffleQuestions),
+    shuffleOptions: Boolean(data.shuffleOptions),
+    showCorrectAnswers: data.showCorrectAnswers || 'AFTER_SUBMIT',
+    isActive: Boolean(data.isActive),
+  };
+};
+
+export const createQuestion = async (payload: CreateQuestionPayload): Promise<QuestionPayload> => {
+  const data = await apiFetch<ApiQuestion>('/api/questions', {
+    method: 'POST',
+    body: JSON.stringify({
+      quiz: { id: payload.quizId },
+      questionText: payload.questionText,
+      questionTextAm: payload.questionTextAm,
+      questionTextOm: payload.questionTextOm,
+      questionTextGz: payload.questionTextGz,
+      type: payload.type,
+      explanation: payload.explanation,
+      explanationAm: payload.explanationAm,
+      explanationOm: payload.explanationOm,
+      explanationGz: payload.explanationGz,
+      points: payload.points,
+      orderIndex: payload.orderIndex,
+      imageUrl: payload.imageUrl,
+    }),
+  });
+
+  return {
+    id: data.id || '',
+    quizId: data.quiz?.id || '',
+    questionText: data.questionText || '',
+    questionTextAm: data.questionTextAm || undefined,
+    questionTextOm: data.questionTextOm || undefined,
+    questionTextGz: data.questionTextGz || undefined,
+    type: data.type || 'MULTIPLE_CHOICE',
+    explanation: data.explanation || undefined,
+    explanationAm: data.explanationAm || undefined,
+    explanationOm: data.explanationOm || undefined,
+    explanationGz: data.explanationGz || undefined,
+    points: toNumber(data.points, 1),
+    orderIndex: toNumber(data.orderIndex, 0),
+    imageUrl: data.imageUrl || undefined,
+  };
+};
+
+export const createQuestionOption = async (payload: CreateQuestionOptionPayload): Promise<QuestionOptionPayload> => {
+  const data = await apiFetch<ApiQuestionOption>('/api/question-options', {
+    method: 'POST',
+    body: JSON.stringify({
+      question: { id: payload.questionId },
+      optionText: payload.optionText,
+      optionTextAm: payload.optionTextAm,
+      optionTextOm: payload.optionTextOm,
+      optionTextGz: payload.optionTextGz,
+      isCorrect: payload.isCorrect,
+      orderIndex: payload.orderIndex,
+    }),
+  });
+
+  return {
+    id: data.id || '',
+    questionId: data.question?.id || '',
+    optionText: data.optionText || '',
+    optionTextAm: data.optionTextAm || undefined,
+    optionTextOm: data.optionTextOm || undefined,
+    optionTextGz: data.optionTextGz || undefined,
+    isCorrect: Boolean(data.isCorrect),
+    orderIndex: toNumber(data.orderIndex, 0),
+  };
+};
+
+export const deleteQuiz = async (quizId: string): Promise<void> => {
+  await apiFetch<void>(`/api/quizzes/${quizId}`, { method: 'DELETE' });
+};
+
+export const deleteQuestion = async (questionId: string): Promise<void> => {
+  await apiFetch<void>(`/api/questions/${questionId}`, { method: 'DELETE' });
+};
+
+export const deleteQuestionOption = async (optionId: string): Promise<void> => {
+  await apiFetch<void>(`/api/question-options/${optionId}`, { method: 'DELETE' });
 };

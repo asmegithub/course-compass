@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
-import { getCourses } from '@/lib/course-api';
+import { getCourses, getMyInstructorEnrollmentSummary } from '@/lib/course-api';
 import {
   DollarSign, Users, BookOpen, Star, TrendingUp,
   ArrowUpRight, ArrowDownRight, PlusCircle, Eye, MoreVertical,
@@ -25,6 +25,11 @@ const InstructorDashboard = () => {
     queryKey: ['courses'],
     queryFn: getCourses,
   });
+  const { data: enrollmentSummary } = useQuery({
+    queryKey: ['enrollments', 'me', 'instructor-summary'],
+    queryFn: getMyInstructorEnrollmentSummary,
+    enabled: Boolean(user?.id),
+  });
 
   const instructorCourses = useMemo(() => {
     if (!user?.id) return [];
@@ -35,7 +40,8 @@ const InstructorDashboard = () => {
   const draftCourses = instructorCourses.filter((course) => course.status !== 'APPROVED');
 
   const stats = useMemo(() => {
-    const totalStudents = instructorCourses.reduce((sum, course) => sum + course.enrollmentCount, 0);
+    const totalStudents = enrollmentSummary?.totalStudents
+      ?? instructorCourses.reduce((sum, course) => sum + course.enrollmentCount, 0);
     const avgRating = instructorCourses.length
       ? instructorCourses.reduce((sum, course) => sum + course.averageRating, 0) / instructorCourses.length
       : 0;
@@ -44,7 +50,7 @@ const InstructorDashboard = () => {
       activeCourses: publishedCourses.length,
       avgRating: avgRating.toFixed(1),
     };
-  }, [instructorCourses, publishedCourses.length]);
+  }, [enrollmentSummary?.totalStudents, instructorCourses, publishedCourses.length]);
 
   return (
     <DashboardLayout>

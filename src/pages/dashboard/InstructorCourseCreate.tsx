@@ -18,10 +18,16 @@ import {
   createLessonResource,
   createCourseOutcome,
   createCourseRequirement,
+  createQuestion,
+  createQuestionOption,
+  createQuiz,
   deleteCourseOutcome,
   deleteCourseRequirement,
   deleteCourseSection,
   deleteDiscussionReply,
+  deleteQuestion,
+  deleteQuestionOption,
+  deleteQuiz,
   deleteLesson,
   deleteLessonDiscussion,
   deleteLessonResource,
@@ -35,6 +41,9 @@ import {
   getLessonDiscussions,
   getLessons,
   getLessonResources,
+  getQuestionOptions,
+  getQuestions,
+  getQuizzes,
   updateCourse as updateCourseApi,
   uploadCourseMedia,
 } from '@/lib/course-api';
@@ -67,6 +76,49 @@ interface LessonForm {
   duration: number;
   isFree: boolean;
   isDownloadable: boolean;
+  quiz: QuizForm | null;
+}
+
+interface QuizForm {
+  id: string;
+  title: string;
+  titleAm: string;
+  titleOm: string;
+  description: string;
+  quizType: string;
+  passingScore: number;
+  maxAttempts: number;
+  timeLimit: number;
+  shuffleQuestions: boolean;
+  shuffleOptions: boolean;
+  showCorrectAnswers: string;
+  isActive: boolean;
+  questions: QuestionForm[];
+}
+
+interface QuestionForm {
+  id: string;
+  questionText: string;
+  questionTextAm: string;
+  questionTextOm: string;
+  questionTextGz: string;
+  type: string;
+  explanation: string;
+  explanationAm: string;
+  explanationOm: string;
+  explanationGz: string;
+  points: number;
+  imageUrl: string;
+  options: OptionForm[];
+}
+
+interface OptionForm {
+  id: string;
+  optionText: string;
+  optionTextAm: string;
+  optionTextOm: string;
+  optionTextGz: string;
+  isCorrect: boolean;
 }
 
 interface ListItem {
@@ -87,11 +139,54 @@ const emptyCourse = {
   previewVideoName: '',
 };
 
+const createOptionForm = (isCorrect: boolean = false): OptionForm => ({
+  id: crypto.randomUUID(),
+  optionText: '',
+  optionTextAm: '',
+  optionTextOm: '',
+  optionTextGz: '',
+  isCorrect,
+});
+
+const createQuestionForm = (): QuestionForm => ({
+  id: crypto.randomUUID(),
+  questionText: '',
+  questionTextAm: '',
+  questionTextOm: '',
+  questionTextGz: '',
+  type: 'MULTIPLE_CHOICE',
+  explanation: '',
+  explanationAm: '',
+  explanationOm: '',
+  explanationGz: '',
+  points: 1,
+  imageUrl: '',
+  options: [createOptionForm(true), createOptionForm(false)],
+});
+
+const createQuizForm = (title?: string): QuizForm => ({
+  id: crypto.randomUUID(),
+  title: title || '',
+  titleAm: '',
+  titleOm: '',
+  description: '',
+  quizType: 'MULTIPLE_CHOICE',
+  passingScore: 70,
+  maxAttempts: 1,
+  timeLimit: 0,
+  shuffleQuestions: true,
+  shuffleOptions: true,
+  showCorrectAnswers: 'AFTER_SUBMIT',
+  isActive: true,
+  questions: [createQuestionForm()],
+});
+
 const createLessonForm = (): LessonForm => ({
   id: crypto.randomUUID(),
   title: '', titleAm: '', type: 'VIDEO',
   videoFile: null, videoUrl: '', documentFile: null, documentUrl: '', documentType: '',
   content: '', duration: 0, isFree: false, isDownloadable: false,
+  quiz: null,
 });
 
 const createSection = (): SectionForm => ({
@@ -163,6 +258,24 @@ const InstructorCourseCreate = () => {
     enabled: isEditMode,
   });
 
+  const quizzesQuery = useQuery({
+    queryKey: ['quizzes', courseId],
+    queryFn: getQuizzes,
+    enabled: isEditMode,
+  });
+
+  const questionsQuery = useQuery({
+    queryKey: ['questions', courseId],
+    queryFn: getQuestions,
+    enabled: isEditMode,
+  });
+
+  const questionOptionsQuery = useQuery({
+    queryKey: ['question-options', courseId],
+    queryFn: getQuestionOptions,
+    enabled: isEditMode,
+  });
+
   const discussionsQuery = useQuery({
     queryKey: ['lesson-discussions', courseId],
     queryFn: getLessonDiscussions,
@@ -177,6 +290,9 @@ const InstructorCourseCreate = () => {
 
   useEffect(() => {
     if (!isEditMode || isEditInitialized || !courseQuery.data) {
+      return;
+    }
+    if (isEditMode && (quizzesQuery.isLoading || questionsQuery.isLoading || questionOptionsQuery.isLoading)) {
       return;
     }
 
@@ -210,6 +326,9 @@ const InstructorCourseCreate = () => {
 
     const allSections = sectionsQuery.data || [];
     const allLessons = lessonsQuery.data || [];
+    const allQuizzes = quizzesQuery.data || [];
+    const allQuestions = questionsQuery.data || [];
+    const allQuestionOptions = questionOptionsQuery.data || [];
     const courseSections = allSections
       .filter((section) => section.courseId === courseData.id)
       .sort((a, b) => a.orderIndex - b.orderIndex);
@@ -220,21 +339,76 @@ const InstructorCourseCreate = () => {
           const sectionLessons = allLessons
             .filter((lesson) => lesson.sectionId === section.id)
             .sort((a, b) => a.orderIndex - b.orderIndex)
-            .map((lesson) => ({
-              id: lesson.id,
-              title: lesson.title || '',
-              titleAm: lesson.titleAm || '',
-              type: lesson.type,
-              videoFile: null,
-              videoUrl: lesson.videoUrl || '',
-              documentFile: null,
-              documentUrl: lesson.documentUrl || '',
-              documentType: lesson.documentType || '',
-              content: lesson.content || '',
-              duration: lesson.duration || 0,
-              isFree: Boolean(lesson.isFree),
-              isDownloadable: Boolean(lesson.isDownloadable),
-            }));
+            .map((lesson) => {
+              const lessonQuiz = allQuizzes.find((quiz) => quiz.lessonId === lesson.id);
+              const quizQuestions = lessonQuiz
+                ? allQuestions.filter((question) => question.quizId === lessonQuiz.id).sort((a, b) => a.orderIndex - b.orderIndex)
+                : [];
+
+              const quizForm: QuizForm | null = lessonQuiz
+                ? {
+                    id: lessonQuiz.id,
+                    title: lessonQuiz.title || '',
+                    titleAm: lessonQuiz.titleAm || '',
+                    titleOm: lessonQuiz.titleOm || '',
+                    description: lessonQuiz.description || '',
+                    quizType: lessonQuiz.quizType || 'MULTIPLE_CHOICE',
+                    passingScore: lessonQuiz.passingScore || 0,
+                    maxAttempts: lessonQuiz.maxAttempts || 0,
+                    timeLimit: lessonQuiz.timeLimit || 0,
+                    shuffleQuestions: lessonQuiz.shuffleQuestions,
+                    shuffleOptions: lessonQuiz.shuffleOptions,
+                    showCorrectAnswers: lessonQuiz.showCorrectAnswers || 'AFTER_SUBMIT',
+                    isActive: lessonQuiz.isActive,
+                    questions: quizQuestions.map((question) => {
+                      const questionOptions = allQuestionOptions
+                        .filter((option) => option.questionId === question.id)
+                        .sort((a, b) => a.orderIndex - b.orderIndex)
+                        .map((option) => ({
+                          id: option.id,
+                          optionText: option.optionText || '',
+                          optionTextAm: option.optionTextAm || '',
+                          optionTextOm: option.optionTextOm || '',
+                          optionTextGz: option.optionTextGz || '',
+                          isCorrect: option.isCorrect,
+                        }));
+
+                      return {
+                        id: question.id,
+                        questionText: question.questionText || '',
+                        questionTextAm: question.questionTextAm || '',
+                        questionTextOm: question.questionTextOm || '',
+                        questionTextGz: question.questionTextGz || '',
+                        type: question.type || 'MULTIPLE_CHOICE',
+                        explanation: question.explanation || '',
+                        explanationAm: question.explanationAm || '',
+                        explanationOm: question.explanationOm || '',
+                        explanationGz: question.explanationGz || '',
+                        points: question.points || 1,
+                        imageUrl: question.imageUrl || '',
+                        options: questionOptions.length > 0 ? questionOptions : [createOptionForm()],
+                      };
+                    }),
+                  }
+                : null;
+
+              return {
+                id: lesson.id,
+                title: lesson.title || '',
+                titleAm: lesson.titleAm || '',
+                type: lesson.type,
+                videoFile: null,
+                videoUrl: lesson.videoUrl || '',
+                documentFile: null,
+                documentUrl: lesson.documentUrl || '',
+                documentType: lesson.documentType || '',
+                content: lesson.content || '',
+                duration: lesson.duration || 0,
+                isFree: Boolean(lesson.isFree),
+                isDownloadable: Boolean(lesson.isDownloadable),
+                quiz: quizForm,
+              };
+            });
 
           return {
             id: section.id,
@@ -266,6 +440,12 @@ const InstructorCourseCreate = () => {
     isEditMode,
     lessonsQuery.data,
     outcomesQuery.data,
+    questionOptionsQuery.data,
+    questionOptionsQuery.isLoading,
+    questionsQuery.data,
+    questionsQuery.isLoading,
+    quizzesQuery.data,
+    quizzesQuery.isLoading,
     requirementsQuery.data,
     sectionsQuery.data,
   ]);
@@ -286,6 +466,14 @@ const InstructorCourseCreate = () => {
         const existingResources = (lessonResourcesQuery.data || []).filter((resource) => existingLessonIds.has(resource.lessonId));
         const existingOutcomes = (outcomesQuery.data || []).filter((item) => item.courseId === courseIdValue);
         const existingRequirements = (requirementsQuery.data || []).filter((item) => item.courseId === courseIdValue);
+        const quizzesData = quizzesQuery.data || await getQuizzes();
+        const questionsData = questionsQuery.data || await getQuestions();
+        const questionOptionsData = questionOptionsQuery.data || await getQuestionOptions();
+        const existingQuizzes = quizzesData.filter((quiz) => existingLessonIds.has(quiz.lessonId));
+        const existingQuizIds = new Set(existingQuizzes.map((quiz) => quiz.id));
+        const existingQuestions = questionsData.filter((question) => existingQuizIds.has(question.quizId));
+        const existingQuestionIds = new Set(existingQuestions.map((question) => question.id));
+        const existingQuestionOptions = questionOptionsData.filter((option) => existingQuestionIds.has(option.questionId));
         const discussionsData = discussionsQuery.data || await getLessonDiscussions();
         const repliesData = repliesQuery.data || await getDiscussionReplies();
         const existingDiscussions = discussionsData.filter((discussion) => existingLessonIds.has(discussion.lessonId));
@@ -293,6 +481,9 @@ const InstructorCourseCreate = () => {
           existingDiscussions.some((discussion) => discussion.id === reply.discussionId)
         );
 
+        await Promise.all(existingQuestionOptions.map((option) => deleteQuestionOption(option.id)));
+        await Promise.all(existingQuestions.map((question) => deleteQuestion(question.id)));
+        await Promise.all(existingQuizzes.map((quiz) => deleteQuiz(quiz.id)));
         await Promise.all(existingReplies.map((reply) => deleteDiscussionReply(reply.id)));
         await Promise.all(existingDiscussions.map((discussion) => deleteLessonDiscussion(discussion.id)));
         await Promise.all(existingResources.map((resource) => deleteLessonResource(resource.id)));
@@ -366,6 +557,71 @@ const InstructorCourseCreate = () => {
               fileSize: lesson.documentFile?.size || 0,
               orderIndex: 0,
             });
+          }
+
+          if (lesson.quiz) {
+            const quizTitle = lesson.quiz.title.trim() || `${lessonTitle} Quiz`;
+            const createdQuiz = await createQuiz({
+              lessonId: createdLesson.id,
+              title: quizTitle,
+              titleAm: lesson.quiz.titleAm.trim() || undefined,
+              titleOm: lesson.quiz.titleOm.trim() || undefined,
+              description: lesson.quiz.description.trim() || undefined,
+              quizType: lesson.quiz.quizType,
+              passingScore: Number(lesson.quiz.passingScore) || 0,
+              maxAttempts: Number(lesson.quiz.maxAttempts) || 0,
+              timeLimit: Number(lesson.quiz.timeLimit) || 0,
+              shuffleQuestions: lesson.quiz.shuffleQuestions,
+              shuffleOptions: lesson.quiz.shuffleOptions,
+              showCorrectAnswers: lesson.quiz.showCorrectAnswers,
+              isActive: lesson.quiz.isActive,
+            });
+
+            let questionOrder = 0;
+            for (const question of lesson.quiz.questions) {
+              const questionText = question.questionText.trim();
+              if (!questionText) {
+                continue;
+              }
+
+              const createdQuestion = await createQuestion({
+                quizId: createdQuiz.id,
+                questionText,
+                questionTextAm: question.questionTextAm.trim() || undefined,
+                questionTextOm: question.questionTextOm.trim() || undefined,
+                questionTextGz: question.questionTextGz.trim() || undefined,
+                type: question.type,
+                explanation: question.explanation.trim() || undefined,
+                explanationAm: question.explanationAm.trim() || undefined,
+                explanationOm: question.explanationOm.trim() || undefined,
+                explanationGz: question.explanationGz.trim() || undefined,
+                points: Number(question.points) || 1,
+                orderIndex: questionOrder,
+                imageUrl: question.imageUrl.trim() || undefined,
+              });
+
+              let optionOrder = 0;
+              for (const option of question.options) {
+                const optionText = option.optionText.trim();
+                if (!optionText) {
+                  continue;
+                }
+
+                await createQuestionOption({
+                  questionId: createdQuestion.id,
+                  optionText,
+                  optionTextAm: option.optionTextAm.trim() || undefined,
+                  optionTextOm: option.optionTextOm.trim() || undefined,
+                  optionTextGz: option.optionTextGz.trim() || undefined,
+                  isCorrect: option.isCorrect,
+                  orderIndex: optionOrder,
+                });
+
+                optionOrder += 1;
+              }
+
+              questionOrder += 1;
+            }
           }
         }
       }
@@ -467,7 +723,207 @@ const InstructorCourseCreate = () => {
           ? {
               ...s,
               lessons: s.lessons.map((l) =>
-                l.id === lessonId ? { ...l, [field]: value } : l
+                l.id === lessonId
+                  ? {
+                      ...l,
+                      [field]: value,
+                      quiz: field === 'type' && value === 'QUIZ' && !l.quiz
+                        ? createQuizForm(l.title)
+                        : l.quiz,
+                    }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const toggleLessonQuiz = (sectionId: string, lessonId: string, enabled: boolean) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId
+                  ? { ...l, quiz: enabled ? (l.quiz ?? createQuizForm(l.title)) : null }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const updateLessonQuiz = (sectionId: string, lessonId: string, field: keyof QuizForm, value: unknown) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? { ...l, quiz: { ...l.quiz, [field]: value } }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const addQuizQuestion = (sectionId: string, lessonId: string) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? { ...l, quiz: { ...l.quiz, questions: [...l.quiz.questions, createQuestionForm()] } }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const removeQuizQuestion = (sectionId: string, lessonId: string, questionId: string) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? { ...l, quiz: { ...l.quiz, questions: l.quiz.questions.filter((q) => q.id !== questionId) } }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const updateQuizQuestion = (
+    sectionId: string,
+    lessonId: string,
+    questionId: string,
+    field: keyof QuestionForm,
+    value: unknown
+  ) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? {
+                      ...l,
+                      quiz: {
+                        ...l.quiz,
+                        questions: l.quiz.questions.map((q) =>
+                          q.id === questionId ? { ...q, [field]: value } : q
+                        ),
+                      },
+                    }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const addQuizOption = (sectionId: string, lessonId: string, questionId: string) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? {
+                      ...l,
+                      quiz: {
+                        ...l.quiz,
+                        questions: l.quiz.questions.map((q) =>
+                          q.id === questionId
+                            ? { ...q, options: [...q.options, createOptionForm()] }
+                            : q
+                        ),
+                      },
+                    }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const removeQuizOption = (sectionId: string, lessonId: string, questionId: string, optionId: string) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? {
+                      ...l,
+                      quiz: {
+                        ...l.quiz,
+                        questions: l.quiz.questions.map((q) =>
+                          q.id === questionId
+                            ? { ...q, options: q.options.filter((o) => o.id !== optionId) }
+                            : q
+                        ),
+                      },
+                    }
+                  : l
+              ),
+            }
+          : s
+      )
+    );
+  };
+
+  const updateQuizOption = (
+    sectionId: string,
+    lessonId: string,
+    questionId: string,
+    optionId: string,
+    field: keyof OptionForm,
+    value: unknown
+  ) => {
+    setSections((prev) =>
+      prev.map((s) =>
+        s.id === sectionId
+          ? {
+              ...s,
+              lessons: s.lessons.map((l) =>
+                l.id === lessonId && l.quiz
+                  ? {
+                      ...l,
+                      quiz: {
+                        ...l.quiz,
+                        questions: l.quiz.questions.map((q) =>
+                          q.id === questionId
+                            ? {
+                                ...q,
+                                options: q.options.map((o) =>
+                                  o.id === optionId ? { ...o, [field]: value } : o
+                                ),
+                              }
+                            : q
+                        ),
+                      },
+                    }
+                  : l
               ),
             }
           : s
@@ -644,6 +1100,7 @@ const InstructorCourseCreate = () => {
             <TabsTrigger value="basic">Basic Info</TabsTrigger>
             <TabsTrigger value="media">Media</TabsTrigger>
             <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
+            <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
             <TabsTrigger value="pricing">Pricing</TabsTrigger>
             <TabsTrigger value="localization">
               <Globe className="h-3 w-3 mr-1" /> Localization
@@ -974,6 +1431,286 @@ const InstructorCourseCreate = () => {
             <Button variant="outline" onClick={addSection} className="gap-2 w-full">
               <PlusCircle className="h-4 w-4" /> Add Section
             </Button>
+          </TabsContent>
+
+          {/* Quizzes */}
+          <TabsContent value="quizzes" className="space-y-4 mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Lesson Quizzes</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm text-muted-foreground">
+                Add optional quizzes for each lesson. Quizzes can include multiple questions and answer options.
+              </CardContent>
+            </Card>
+
+            {sections.map((section, sIndex) => (
+              <Card key={section.id}>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Section {sIndex + 1}: {section.title || 'Untitled section'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {section.lessons.map((lesson, lIndex) => (
+                    <div key={lesson.id} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold">{lesson.title || `Lesson ${lIndex + 1}`}</p>
+                          <p className="text-xs text-muted-foreground">Lesson {lIndex + 1}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Badge variant="secondary" className="text-[10px]">{lesson.type}</Badge>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={Boolean(lesson.quiz)}
+                              onCheckedChange={(value) => toggleLessonQuiz(section.id, lesson.id, value)}
+                            />
+                            <Label className="text-xs">Enable Quiz</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {!lesson.quiz && (
+                        <p className="text-xs text-muted-foreground">No quiz added for this lesson.</p>
+                      )}
+
+                      {lesson.quiz && (
+                        <div className="space-y-4">
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-1 sm:col-span-2">
+                              <Label className="text-xs">Quiz Title</Label>
+                              <Input
+                                value={lesson.quiz.title}
+                                onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'title', e.target.value)}
+                                placeholder="Quiz title"
+                              />
+                            </div>
+                            <div className="space-y-1 sm:col-span-2">
+                              <Label className="text-xs">Description</Label>
+                              <Textarea
+                                rows={3}
+                                value={lesson.quiz.description}
+                                onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'description', e.target.value)}
+                                placeholder="Quiz instructions or overview"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Quiz Type</Label>
+                              <Select
+                                value={lesson.quiz.quizType}
+                                onValueChange={(value) => updateLessonQuiz(section.id, lesson.id, 'quizType', value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="MULTIPLE_CHOICE">Multiple Choice</SelectItem>
+                                  <SelectItem value="TRUE_FALSE">True/False</SelectItem>
+                                  <SelectItem value="SHORT_ANSWER">Short Answer</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Passing Score</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={lesson.quiz.passingScore}
+                                onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'passingScore', Number(e.target.value))}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Max Attempts</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={lesson.quiz.maxAttempts}
+                                onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'maxAttempts', Number(e.target.value))}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Time Limit (min)</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                value={lesson.quiz.timeLimit}
+                                onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'timeLimit', Number(e.target.value))}
+                                className="h-8 text-xs"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Show Correct Answers</Label>
+                              <Select
+                                value={lesson.quiz.showCorrectAnswers}
+                                onValueChange={(value) => updateLessonQuiz(section.id, lesson.id, 'showCorrectAnswers', value)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="AFTER_SUBMIT">After Submit</SelectItem>
+                                  <SelectItem value="AFTER_PASS">After Pass</SelectItem>
+                                  <SelectItem value="ALWAYS">Always</SelectItem>
+                                  <SelectItem value="NEVER">Never</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={lesson.quiz.shuffleQuestions}
+                                  onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'shuffleQuestions', value)}
+                                />
+                                <Label className="text-xs">Shuffle Questions</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={lesson.quiz.shuffleOptions}
+                                  onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'shuffleOptions', value)}
+                                />
+                                <Label className="text-xs">Shuffle Options</Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={lesson.quiz.isActive}
+                                  onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'isActive', value)}
+                                />
+                                <Label className="text-xs">Active</Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">Questions</Label>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => addQuizQuestion(section.id, lesson.id)}
+                              >
+                                <PlusCircle className="h-3 w-3" /> Add Question
+                              </Button>
+                            </div>
+                            {lesson.quiz.questions.map((question, qIndex) => (
+                              <div key={question.id} className="border rounded-lg p-4 space-y-3 bg-muted/40">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-muted-foreground">Question {qIndex + 1}</span>
+                                  {lesson.quiz.questions.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-destructive"
+                                      onClick={() => removeQuizQuestion(section.id, lesson.id, question.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label className="text-xs">Question Text</Label>
+                                    <Input
+                                      value={question.questionText}
+                                      onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'questionText', e.target.value)}
+                                      placeholder="Type the question"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Question Type</Label>
+                                    <Select
+                                      value={question.type}
+                                      onValueChange={(value) => updateQuizQuestion(section.id, lesson.id, question.id, 'type', value)}
+                                    >
+                                      <SelectTrigger className="h-8 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="MULTIPLE_CHOICE">Multiple Choice</SelectItem>
+                                        <SelectItem value="TRUE_FALSE">True/False</SelectItem>
+                                        <SelectItem value="SHORT_ANSWER">Short Answer</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Points</Label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      className="h-8 text-xs"
+                                      value={question.points}
+                                      onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'points', Number(e.target.value))}
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label className="text-xs">Explanation</Label>
+                                    <Textarea
+                                      rows={2}
+                                      value={question.explanation}
+                                      onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'explanation', e.target.value)}
+                                      placeholder="Explain the correct answer"
+                                    />
+                                  </div>
+                                  <div className="space-y-1 sm:col-span-2">
+                                    <Label className="text-xs">Image URL</Label>
+                                    <Input
+                                      value={question.imageUrl}
+                                      onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'imageUrl', e.target.value)}
+                                      placeholder="Optional image URL"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-xs">Options</Label>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="gap-1"
+                                      onClick={() => addQuizOption(section.id, lesson.id, question.id)}
+                                    >
+                                      <PlusCircle className="h-3 w-3" /> Add Option
+                                    </Button>
+                                  </div>
+                                  {question.options.map((option, oIndex) => (
+                                    <div key={option.id} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                      <Input
+                                        value={option.optionText}
+                                        onChange={(e) => updateQuizOption(section.id, lesson.id, question.id, option.id, 'optionText', e.target.value)}
+                                        placeholder={`Option ${oIndex + 1}`}
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <Switch
+                                          checked={option.isCorrect}
+                                          onCheckedChange={(value) => updateQuizOption(section.id, lesson.id, question.id, option.id, 'isCorrect', value)}
+                                        />
+                                        <Label className="text-xs">Correct</Label>
+                                      </div>
+                                      {question.options.length > 1 && (
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8 text-destructive"
+                                          onClick={() => removeQuizOption(section.id, lesson.id, question.id, option.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
           </TabsContent>
 
           {/* Pricing */}

@@ -1,30 +1,83 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Users, Search, Ban, CheckCircle2, Eye, Mail, UserPlus } from 'lucide-react';
+import { Search, Ban, CheckCircle2, Eye } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getCourses } from '@/lib/course-api';
+import { AdminUser, getEnrollments, getUsers, updateUser } from '@/lib/admin-api';
+import { useToast } from '@/hooks/use-toast';
 
-const allUsers = [
-  { id: '1', name: 'Dawit Alemu', email: 'dawit@example.com', role: 'STUDENT', joinedAt: '2026-02-09', status: 'active', courses: 4 },
-  { id: '2', name: 'Sara Tadesse', email: 'sara@example.com', role: 'INSTRUCTOR', joinedAt: '2026-02-08', status: 'active', courses: 3 },
-  { id: '3', name: 'Henok Girma', email: 'henok@example.com', role: 'STUDENT', joinedAt: '2026-02-07', status: 'banned', courses: 1 },
-  { id: '4', name: 'Hana Mesfin', email: 'hana@example.com', role: 'STUDENT', joinedAt: '2026-02-06', status: 'active', courses: 6 },
-  { id: '5', name: 'Abebe Bekele', email: 'abebe@example.com', role: 'INSTRUCTOR', joinedAt: '2025-12-01', status: 'active', courses: 12 },
-  { id: '6', name: 'Tigist Haile', email: 'tigist@example.com', role: 'ADMIN', joinedAt: '2025-06-15', status: 'active', courses: 0 },
-  { id: '7', name: 'Meron Tadesse', email: 'meron@example.com', role: 'INSTRUCTOR', joinedAt: '2026-01-10', status: 'active', courses: 2 },
-  { id: '8', name: 'Solomon Gebre', email: 'solomon@example.com', role: 'STUDENT', joinedAt: '2026-01-20', status: 'inactive', courses: 0 },
-];
+type UserView = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  joinedAt: string;
+  status: 'active' | 'inactive';
+  courses: number;
+  raw: AdminUser;
+};
 
 const AdminUsers = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [selectedUser, setSelectedUser] = useState<typeof allUsers[0] | null>(null);
-  const [users, setUsers] = useState(allUsers);
+  const [selectedUser, setSelectedUser] = useState<UserView | null>(null);
+
+  const usersQuery = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: getUsers,
+  });
+
+  const coursesQuery = useQuery({
+    queryKey: ['courses'],
+    queryFn: getCourses,
+  });
+
+  const enrollmentsQuery = useQuery({
+    queryKey: ['admin-enrollments'],
+    queryFn: getEnrollments,
+  });
+
+  const users = useMemo<UserView[]>(() => {
+    const allUsers = usersQuery.data || [];
+    const allCourses = coursesQuery.data || [];
+    const allEnrollments = enrollmentsQuery.data || [];
+
+    return allUsers.map((user) => {
+      const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
+      const joinedAt = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—';
+
+      const courseCount = user.role === 'INSTRUCTOR'
+        ? allCourses.filter((course) => course.instructorId === user.id).length
+        : user.role === 'STUDENT'
+          ? new Set(
+            allEnrollments
+              .filter((enrollment) => enrollment.student?.id === user.id)
+              .map((enrollment) => enrollment.course?.id)
+              .filter(Boolean)
+          ).size
+          : 0;
+
+      return {
+        id: user.id,
+        name,
+        email: user.email,
+        role: user.role,
+        joinedAt,
+        status: user.isActive ? 'active' : 'inactive',
+        courses: courseCount,
+        raw: user,
+      };
+    });
+  }, [usersQuery.data, coursesQuery.data, enrollmentsQuery.data]);
 
   const filtered = users.filter(u => {
     const matchesSearch = u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase());
@@ -33,9 +86,22 @@ const AdminUsers = () => {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const toggleBan = (userId: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: u.status === 'banned' ? 'active' : 'banned' } : u));
-  };
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async (user: UserView) => {
+      return updateUser(user.id, {
+        ...user.raw,
+        isActive: !user.raw.isActive,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ title: 'User status updated' });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to update user status';
+      toast({ title: 'Update failed', description: message, variant: 'destructive' });
+    },
+  });
 
   return (
     <DashboardLayout>
@@ -47,13 +113,20 @@ const AdminUsers = () => {
           </div>
         </div>
 
+        {(usersQuery.isLoading || coursesQuery.isLoading || enrollmentsQuery.isLoading) && (
+          <div className="text-muted-foreground">Loading users...</div>
+        )}
+        {(usersQuery.isError || coursesQuery.isError || enrollmentsQuery.isError) && (
+          <div className="text-destructive">Failed to load user management data.</div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Total Users', value: users.length, color: 'text-foreground' },
             { label: 'Students', value: users.filter(u => u.role === 'STUDENT').length, color: 'text-info' },
             { label: 'Instructors', value: users.filter(u => u.role === 'INSTRUCTOR').length, color: 'text-accent' },
-            { label: 'Banned', value: users.filter(u => u.status === 'banned').length, color: 'text-destructive' },
+            { label: 'Inactive', value: users.filter(u => u.status === 'inactive').length, color: 'text-destructive' },
           ].map(s => (
             <Card key={s.label}>
               <CardContent className="pt-6">
@@ -85,7 +158,6 @@ const AdminUsers = () => {
               <SelectItem value="ALL">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="banned">Banned</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -118,13 +190,13 @@ const AdminUsers = () => {
                       <td className="p-4 text-muted-foreground">{u.joinedAt}</td>
                       <td className="p-4 text-muted-foreground">{u.courses}</td>
                       <td className="p-4">
-                        <Badge variant={u.status === 'active' ? 'default' : u.status === 'banned' ? 'destructive' : 'secondary'} className="text-xs">{u.status}</Badge>
+                        <Badge variant={u.status === 'active' ? 'default' : 'secondary'} className="text-xs">{u.status}</Badge>
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-1">
                           <Button size="sm" variant="ghost" onClick={() => setSelectedUser(u)}><Eye className="h-3.5 w-3.5" /></Button>
-                          <Button size="sm" variant="ghost" onClick={() => toggleBan(u.id)}>
-                            {u.status === 'banned' ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <Ban className="h-3.5 w-3.5 text-destructive" />}
+                          <Button size="sm" variant="ghost" onClick={() => toggleUserStatusMutation.mutate(u)} disabled={toggleUserStatusMutation.isPending}>
+                            {u.status === 'inactive' ? <CheckCircle2 className="h-3.5 w-3.5 text-success" /> : <Ban className="h-3.5 w-3.5 text-destructive" />}
                           </Button>
                         </div>
                       </td>
@@ -148,7 +220,7 @@ const AdminUsers = () => {
                   <div><span className="text-muted-foreground">Name:</span> <span className="font-medium ml-1">{selectedUser.name}</span></div>
                   <div><span className="text-muted-foreground">Email:</span> <span className="font-medium ml-1">{selectedUser.email}</span></div>
                   <div><span className="text-muted-foreground">Role:</span> <Badge variant="secondary" className="ml-1 text-xs">{selectedUser.role}</Badge></div>
-                  <div><span className="text-muted-foreground">Status:</span> <Badge variant={selectedUser.status === 'active' ? 'default' : 'destructive'} className="ml-1 text-xs">{selectedUser.status}</Badge></div>
+                  <div><span className="text-muted-foreground">Status:</span> <Badge variant={selectedUser.status === 'active' ? 'default' : 'secondary'} className="ml-1 text-xs">{selectedUser.status}</Badge></div>
                   <div><span className="text-muted-foreground">Joined:</span> <span className="font-medium ml-1">{selectedUser.joinedAt}</span></div>
                   <div><span className="text-muted-foreground">Courses:</span> <span className="font-medium ml-1">{selectedUser.courses}</span></div>
                 </div>

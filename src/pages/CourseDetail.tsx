@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -27,17 +27,23 @@ import {
 import { formatDuration, formatPrice } from '@/lib/formatters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  createEnrollment,
+  createReview,
   createDiscussionReply,
   createLessonDiscussion,
+  deleteReview,
+  deleteEnrollment,
   getApprovedCourses,
   getCourseById,
   getCourseSections,
   getCourseOutcomes,
   getCourseRequirements,
+  getMyCourseEnrollment,
   getDiscussionReplies,
   getLessonDiscussions,
   getLessons,
   getReviews,
+  updateReview,
   CourseOutcomePayload,
   CourseRequirementPayload,
   LessonPayload,
@@ -73,6 +79,8 @@ const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 
 const CourseDetail = () => {
   const { slug } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -162,6 +170,12 @@ const CourseDetail = () => {
     enabled: Boolean(course?.id),
   });
 
+  const myEnrollmentQuery = useQuery({
+    queryKey: ['my-course-enrollment', course?.id, user?.id],
+    queryFn: () => getMyCourseEnrollment(course!.id),
+    enabled: Boolean(course?.id) && isLoggedIn,
+  });
+
   const curriculumSections = useMemo(() => {
     if (!course?.id) {
       return [] as Array<{ id: string; title: string; lessons: LessonPayload[] }>;
@@ -249,6 +263,53 @@ const CourseDetail = () => {
   const [newQuestion, setNewQuestion] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setIsEnrolled(false);
+      return;
+    }
+    setIsEnrolled(Boolean(myEnrollmentQuery.data?.id));
+  }, [isLoggedIn, myEnrollmentQuery.data?.id]);
+
+  const myReview = useMemo(() => {
+    if (!user?.id || !course?.id) return null;
+    return (reviewsQuery.data || []).find((review) => review.courseId === course.id && review.studentId === user.id) || null;
+  }, [reviewsQuery.data, user?.id, course?.id]);
+
+  useEffect(() => {
+    if (!myReview) {
+      setReviewRating(0);
+      setReviewTitle('');
+      setReviewContent('');
+      return;
+    }
+    setReviewRating(myReview.rating || 0);
+    setReviewTitle(myReview.title || '');
+    setReviewContent(myReview.content || '');
+  }, [myReview]);
+
+  const enrollMutation = useMutation({
+    mutationFn: () => createEnrollment({ courseId: course.id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-course-enrollment', course?.id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['course', slugValue] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'approved'] });
+    },
+  });
+
+  const unenrollMutation = useMutation({
+    mutationFn: (enrollmentId: string) => deleteEnrollment(enrollmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-course-enrollment', course?.id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['course', slugValue] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'approved'] });
+    },
+  });
 
   const postDiscussionMutation = useMutation({
     mutationFn: (payload: { lessonId: string; userId: string; content: string }) => createLessonDiscussion(payload),
@@ -264,9 +325,68 @@ const CourseDetail = () => {
     },
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id || !course?.id) {
+        throw new Error('Missing user or course details');
+      }
+      if (reviewRating < 1) {
+        throw new Error('Please select a rating');
+      }
+
+      if (myReview?.id) {
+        return updateReview(myReview.id, {
+          courseId: course.id,
+          studentId: user.id,
+          rating: reviewRating,
+          title: reviewTitle.trim() || undefined,
+          content: reviewContent.trim(),
+        });
+      }
+
+      return createReview({
+        courseId: course.id,
+        studentId: user.id,
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        content: reviewContent.trim(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', course?.id] });
+      setIsReviewDialogOpen(false);
+      toast({ title: myReview ? 'Review updated' : 'Review submitted' });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Unable to submit review.';
+      toast({ title: 'Review failed', description: message, variant: 'destructive' });
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async () => {
+      if (!myReview?.id) {
+        throw new Error('Review not found');
+      }
+      return deleteReview(myReview.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', course?.id] });
+      setReviewRating(0);
+      setReviewTitle('');
+      setReviewContent('');
+      toast({ title: 'Review deleted' });
+    },
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Unable to delete review.';
+      toast({ title: 'Delete failed', description: message, variant: 'destructive' });
+    },
+  });
+
   const isLoading =
     courseByIdQuery.isLoading ||
     coursesQuery.isLoading ||
+    myEnrollmentQuery.isLoading ||
     sectionsQuery.isLoading ||
     lessonsQuery.isLoading ||
     reviewsQuery.isLoading ||
@@ -327,27 +447,60 @@ const CourseDetail = () => {
     .flatMap((section) => section.lessons)
     .find((lesson) => lesson.isFree && lesson.type === 'VIDEO');
 
-  const instructorFullName = `${course.instructor?.user?.firstName || ''} ${course.instructor?.user?.lastName || ''}`.trim() || 'Instructor';
+  const instructorFullName = `${course.instructor?.user?.firstName || ''} ${course.instructor?.user?.lastName || ''}`.trim()
+    || course.instructor?.user?.email?.split('@')[0]
+    || 'Unknown Instructor';
   const instructorInitial = instructorFullName[0]?.toUpperCase() || 'I';
-  const instructorHeadline = course.instructor?.headline || 'Instructor';
+  const instructorHeadline = course.instructor?.headline || instructorFullName;
   const instructorRating = Number(course.instructor?.averageRating ?? 0);
   const instructorTotalStudents = Number(course.instructor?.totalStudents ?? 0);
   const instructorTotalCourses = Number(course.instructor?.totalCourses ?? 0);
+  const instructorAverageEarnings = Number(course.instructor?.totalRevenue ?? 0);
   const instructorBiography = course.instructor?.biography || 'Biography is not available yet.';
+  const canDisplayEnrollCta = !isLoggedIn || user?.role === 'STUDENT';
 
 
-  const handleEnroll = () => {
+  const handleEnroll = async () => {
     if (!isLoggedIn) {
-      toast({ title: 'Please log in', description: 'You need to log in to enroll in this course.' });
+      const redirectTo = `${location.pathname}${location.search}`;
+      navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`);
       return;
     }
-    setIsEnrolled(true);
-    toast({ title: 'Enrolled Successfully! 🎉', description: `You are now enrolled in "${course.title}". Start learning now!` });
+
+    if (user?.role !== 'STUDENT') {
+      toast({
+        title: 'Enrollment not allowed',
+        description: 'Only student accounts can enroll in courses.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await enrollMutation.mutateAsync();
+      setIsEnrolled(true);
+      toast({ title: 'Enrolled Successfully! 🎉', description: `You are now enrolled in "${course.title}". Start learning now!` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to enroll right now.';
+      toast({ title: 'Enrollment failed', description: message, variant: 'destructive' });
+    }
   };
 
-  const handleUnenroll = () => {
-    setIsEnrolled(false);
-    toast({ title: 'Unenrolled', description: 'You have been unenrolled from this course.' });
+  const handleUnenroll = async () => {
+    const enrollmentId = myEnrollmentQuery.data?.id;
+    if (!enrollmentId) {
+      setIsEnrolled(false);
+      return;
+    }
+
+    try {
+      await unenrollMutation.mutateAsync(enrollmentId);
+      setIsEnrolled(false);
+      toast({ title: 'Unenrolled', description: 'You have been unenrolled from this course.' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to unenroll right now.';
+      toast({ title: 'Unenroll failed', description: message, variant: 'destructive' });
+    }
   };
 
   const handlePreview = (lesson: { title: string; id: string; videoUrl?: string }) => {
@@ -529,15 +682,17 @@ const CourseDetail = () => {
                           <Play className="h-4 w-4 mr-2" />
                           Continue Learning
                         </Button>
-                        <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={handleUnenroll}>
+                        <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={handleUnenroll} disabled={unenrollMutation.isPending}>
                           Unenroll
                         </Button>
                       </>
                     ) : (
                       <>
-                        <Button variant="accent" className="w-full" size="lg" onClick={handleEnroll}>
-                          Enroll Now
-                        </Button>
+                        {canDisplayEnrollCta && (
+                          <Button variant="accent" className="w-full" size="lg" onClick={handleEnroll} disabled={enrollMutation.isPending}>
+                            Enroll Now
+                          </Button>
+                        )}
                         <Button variant="outline" className="w-full">
                           Add to Cart
                         </Button>
@@ -612,9 +767,13 @@ const CourseDetail = () => {
                 <Play className="h-4 w-4 mr-2" /> Continue Learning
               </Button>
             ) : (
-              <Button variant="accent" className="flex-1" onClick={handleEnroll}>
-                Enroll Now
-              </Button>
+              canDisplayEnrollCta ? (
+                <Button variant="accent" className="flex-1" onClick={handleEnroll} disabled={enrollMutation.isPending}>
+                  Enroll Now
+                </Button>
+              ) : (
+                <div className="flex-1 text-right text-xs text-muted-foreground">Only students can enroll</div>
+              )
             )}
           </div>
         </div>
@@ -775,6 +934,10 @@ const CourseDetail = () => {
                         <BookOpen className="h-4 w-4" />
                         <span>{instructorTotalCourses.toLocaleString()} courses</span>
                       </div>
+                      {/* <div className="flex items-center gap-1">
+                        <Award className="h-4 w-4" />
+                        <span>{formatPrice(instructorAverageEarnings, course.currency)} earnings</span>
+                      </div> */}
                     </div>
                   </div>
                 </div>
@@ -785,6 +948,103 @@ const CourseDetail = () => {
 
               {/* Reviews Tab */}
               <TabsContent value="reviews" className="space-y-6">
+                {isEnrolled && user?.role === 'STUDENT' && !myReview && (
+                  <div className="bg-card rounded-xl border p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">Leave a review</p>
+                        <p className="text-xs text-muted-foreground">Share your experience with other students.</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setReviewRating(value)}
+                          className={cn(
+                            'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                            reviewRating >= value ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
+                          )}
+                          aria-label={`Rate ${value} star${value > 1 ? 's' : ''}`}
+                        >
+                          <Star className={cn('h-4 w-4', reviewRating >= value && 'fill-warning')} />
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      placeholder="Title (optional)"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                    />
+                    <Textarea
+                      placeholder="Write your review..."
+                      value={reviewContent}
+                      onChange={(e) => setReviewContent(e.target.value)}
+                      rows={4}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="accent"
+                        onClick={() => reviewMutation.mutate()}
+                        disabled={!reviewContent.trim() || reviewMutation.isPending}
+                      >
+                        Submit Review
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {isEnrolled && user?.role === 'STUDENT' && myReview && (
+                  <div className="bg-card rounded-xl border p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">Your review</p>
+                        <div className="flex gap-1 mt-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={cn(
+                                'h-4 w-4',
+                                i < myReview.rating ? 'fill-warning text-warning' : 'text-muted'
+                              )}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setIsReviewDialogOpen(true)}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => deleteReviewMutation.mutate()}
+                          disabled={deleteReviewMutation.isPending}
+                        >
+                          Delete
+                        </Button>
+                      </div>
+                    </div>
+                    {myReview.title && (
+                      <p className="text-sm font-semibold">{myReview.title}</p>
+                    )}
+                    <p className="text-sm text-muted-foreground">{myReview.content}</p>
+                  </div>
+                )}
+
+                {!isEnrolled && (
+                  <div className="bg-muted/50 rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                    Enroll in this course to leave a review.
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4">
                   <div className="text-center">
                     <div className="font-display text-5xl font-bold text-foreground">
@@ -880,8 +1140,8 @@ const CourseDetail = () => {
                         ? 'Enroll in this course to join the discussion and ask questions.'
                         : 'Log in and enroll to join the discussion.'}
                     </p>
-                    {!isEnrolled && isLoggedIn && (
-                      <Button size="sm" variant="accent" onClick={handleEnroll}>
+                    {!isEnrolled && isLoggedIn && user?.role === 'STUDENT' && (
+                      <Button size="sm" variant="accent" onClick={handleEnroll} disabled={enrollMutation.isPending}>
                         Enroll to Discuss
                       </Button>
                     )}
@@ -1023,11 +1283,61 @@ const CourseDetail = () => {
             <p className="text-xs text-muted-foreground mt-1">
               This is a free preview lesson. {!isEnrolled && 'Enroll to access all course content.'}
             </p>
-            {!isEnrolled && (
-              <Button variant="accent" size="sm" className="mt-3" onClick={() => { handleEnroll(); setPreviewOpen(false); }}>
+            {!isEnrolled && canDisplayEnrollCta && (
+              <Button variant="accent" size="sm" className="mt-3" onClick={() => { handleEnroll(); setPreviewOpen(false); }} disabled={enrollMutation.isPending}>
                 Enroll Now — {formatPrice(course.discountPrice || course.price, course.currency)}
               </Button>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Update your review</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setReviewRating(value)}
+                  className={cn(
+                    'h-8 w-8 rounded-full flex items-center justify-center transition-colors',
+                    reviewRating >= value ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
+                  )}
+                  aria-label={`Rate ${value} star${value > 1 ? 's' : ''}`}
+                >
+                  <Star className={cn('h-4 w-4', reviewRating >= value && 'fill-warning')} />
+                </button>
+              ))}
+            </div>
+            <Input
+              placeholder="Title (optional)"
+              value={reviewTitle}
+              onChange={(e) => setReviewTitle(e.target.value)}
+            />
+            <Textarea
+              placeholder="Write your review..."
+              value={reviewContent}
+              onChange={(e) => setReviewContent(e.target.value)}
+              rows={4}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setIsReviewDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="accent"
+                onClick={() => reviewMutation.mutate()}
+                disabled={!reviewContent.trim() || reviewMutation.isPending}
+              >
+                Save Changes
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

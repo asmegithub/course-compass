@@ -38,10 +38,14 @@ const Auth = () => {
 
   useEffect(() => {
     if (!user) return;
+    const redirect = searchParams.get('redirect');
+    const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('/auth')
+      ? redirect
+      : null;
     const role = user.role;
-    const dest = role === 'ADMIN' ? '/admin' : role === 'INSTRUCTOR' ? '/instructor' : '/dashboard';
+    const dest = safeRedirect || (role === 'ADMIN' ? '/admin' : role === 'INSTRUCTOR' ? '/instructor' : '/dashboard');
     navigate(dest, { replace: true });
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   useEffect(() => {
     const accessToken = searchParams.get('accessToken');
