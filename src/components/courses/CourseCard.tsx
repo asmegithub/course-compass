@@ -60,7 +60,7 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
         </h3>
 
         {/* Instructor */}
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <img 
             src={course.instructor?.user?.profileImage} 
             alt={`${course.instructor?.user?.firstName} ${course.instructor?.user?.lastName}`}
@@ -69,7 +69,7 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
           <span className="text-sm text-muted-foreground">
             {course.instructor?.user?.firstName} {course.instructor?.user?.lastName}
           </span>
-        </div>
+        </div> */}
 
         {/* Stats */}
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
