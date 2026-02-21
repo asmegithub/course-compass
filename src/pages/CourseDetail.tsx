@@ -327,6 +327,14 @@ const CourseDetail = () => {
     .flatMap((section) => section.lessons)
     .find((lesson) => lesson.isFree && lesson.type === 'VIDEO');
 
+  const instructorFullName = `${course.instructor?.user?.firstName || ''} ${course.instructor?.user?.lastName || ''}`.trim() || 'Instructor';
+  const instructorInitial = instructorFullName[0]?.toUpperCase() || 'I';
+  const instructorHeadline = course.instructor?.headline || 'Instructor';
+  const instructorRating = Number(course.instructor?.averageRating ?? 0);
+  const instructorTotalStudents = Number(course.instructor?.totalStudents ?? 0);
+  const instructorTotalCourses = Number(course.instructor?.totalCourses ?? 0);
+  const instructorBiography = course.instructor?.biography || 'Biography is not available yet.';
+
 
   const handleEnroll = () => {
     if (!isLoggedIn) {
@@ -426,17 +434,21 @@ const CourseDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <img 
-                    src={course.instructor?.user?.profileImage}
-                    alt={`${course.instructor?.user?.firstName} ${course.instructor?.user?.lastName}`}
-                    className="h-12 w-12 rounded-full object-cover"
-                  />
+                  {course.instructor?.user?.profileImage ? (
+                    <img
+                      src={course.instructor.user.profileImage}
+                      alt={instructorFullName}
+                      className="h-12 w-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-full bg-accent/20 text-accent flex items-center justify-center font-semibold">
+                      {instructorInitial}
+                    </div>
+                  )}
                   <div>
-                    <p className="font-medium">
-                      {course.instructor?.user?.firstName} {course.instructor?.user?.lastName}
-                    </p>
+                    <p className="font-medium">{instructorFullName}</p>
                     <p className="text-sm text-primary-foreground/70">
-                      {course.instructor?.headline}
+                      {instructorHeadline}
                     </p>
                   </div>
                 </div>
@@ -652,11 +664,11 @@ const CourseDetail = () => {
                   <h2 className="font-display text-xl font-bold mb-4">Description</h2>
                   <div className="prose prose-sm max-w-none text-muted-foreground">
                     <p>{course.description}</p>
-                    <p>
+                    {/* <p>
                       This comprehensive course covers everything you need to know to master the subject. 
                       Whether you're a complete beginner or looking to enhance your existing skills, 
                       this course provides practical, hands-on learning experiences.
-                    </p>
+                    </p> */}
                   </div>
                 </div>
               </TabsContent>
@@ -736,34 +748,38 @@ const CourseDetail = () => {
               {/* Instructor Tab */}
               <TabsContent value="instructor" className="space-y-6">
                 <div className="flex items-start gap-6">
-                  <img 
-                    src={course.instructor?.user?.profileImage}
-                    alt={`${course.instructor?.user?.firstName} ${course.instructor?.user?.lastName}`}
-                    className="h-24 w-24 rounded-full object-cover"
-                  />
+                  {course.instructor?.user?.profileImage ? (
+                    <img
+                      src={course.instructor.user.profileImage}
+                      alt={instructorFullName}
+                      className="h-24 w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-24 w-24 rounded-full bg-accent/20 text-accent flex items-center justify-center font-semibold text-3xl">
+                      {instructorInitial}
+                    </div>
+                  )}
                   <div>
-                    <h3 className="font-display text-xl font-bold">
-                      {course.instructor?.user?.firstName} {course.instructor?.user?.lastName}
-                    </h3>
-                    <p className="text-muted-foreground">{course.instructor?.headline}</p>
+                    <h3 className="font-display text-xl font-bold">{instructorFullName}</h3>
+                    <p className="text-muted-foreground">{instructorHeadline}</p>
                     <div className="flex items-center gap-4 mt-3 text-sm">
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 fill-warning text-warning" />
-                        <span>{course.instructor?.averageRating} rating</span>
+                        <span>{instructorRating.toFixed(1)} rating</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4" />
-                        <span>{course.instructor?.totalStudents.toLocaleString()} students</span>
+                        <span>{instructorTotalStudents.toLocaleString()} students</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <BookOpen className="h-4 w-4" />
-                        <span>{course.instructor?.totalCourses} courses</span>
+                        <span>{instructorTotalCourses.toLocaleString()} courses</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 <p className="text-muted-foreground">
-                  {course.instructor?.biography}
+                  {instructorBiography}
                 </p>
               </TabsContent>
 
