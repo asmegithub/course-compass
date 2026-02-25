@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode } fr
 import { User } from '@/types';
 import { login as loginApi, signup as signupApi, logout as logoutApi, me as meApi, LoginPayload, SignupPayload } from '@/lib/auth-api';
 import { clearTokens, getAccessToken, getRefreshToken, getStoredUser, setStoredUser, setTokens } from '@/lib/auth-storage';
+import { enableAdminPushNotifications } from '@/lib/push-api';
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +25,8 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export const useAuth = () => useContext(AuthContext);
+
+const isAdminRole = (role?: string | null) => role === 'ADMIN' || role === 'ROLE_ADMIN';
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => getStoredUser());
@@ -55,6 +58,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       .finally(() => setIsLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!isAdminRole(user?.role)) {
+      return;
+    }
+    enableAdminPushNotifications().catch(() => {
+      // intentionally silent when browser does not support push or permission is denied
+    });
+  }, [user?.id, user?.role]);
 
   const handleAuthSuccess = (response: { accessToken: string; refreshToken: string; user: User }) => {
     setTokens(response.accessToken, response.refreshToken);
