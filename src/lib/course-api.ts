@@ -349,7 +349,7 @@ const toCourse = (course: ApiCourse): Course => {
 
   return {
     id: course.id || '',
-    instructorId: course.instructorId || course.instructor?.id || '',
+    instructorId: course.instructorId || course.instructor?.user?.id || course.instructor?.id || '',
     instructor: normalizedInstructor,
     categoryId: course.categoryId || course.category?.id || '',
     category: normalizedCategory,
