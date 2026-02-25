@@ -8,30 +8,120 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, Landmark, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { createPayout, getInstructorEarnings, getPayouts } from '@/lib/course-api';
+import { formatPrice } from '@/lib/formatters';
 
-const payoutHistory = [
-  { id: '1', amount: 15200, method: 'Bank Transfer', bank: 'CBE', date: '2026-01-15', status: 'COMPLETED' },
-  { id: '2', amount: 12500, method: 'Bank Transfer', bank: 'Awash Bank', date: '2026-01-01', status: 'COMPLETED' },
-  { id: '3', amount: 8700, method: 'Bank Transfer', bank: 'CBE', date: '2026-02-01', status: 'PENDING' },
-  { id: '4', amount: 5000, method: 'Mobile Money', bank: 'Telebirr', date: '2025-12-15', status: 'COMPLETED' },
-  { id: '5', amount: 9200, method: 'Bank Transfer', bank: 'CBE', date: '2025-12-01', status: 'COMPLETED' },
-];
+const formatDate = (value?: string) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+};
 
 const InstructorPayouts = () => {
-  const [payoutMethod, setPayoutMethod] = useState('bank');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [payoutMethod, setPayoutMethod] = useState('BANK_TRANSFER');
   const [payoutAmount, setPayoutAmount] = useState('');
+  const [bankName, setBankName] = useState('Commercial Bank of Ethiopia');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  const { data: earningRows = [], isLoading: isEarningsLoading } = useQuery({
+    queryKey: ['instructor-earnings'],
+    queryFn: getInstructorEarnings,
+    enabled: Boolean(user?.id),
+  });
+
+  const { data: payouts = [], isLoading: isPayoutsLoading } = useQuery({
+    queryKey: ['payouts'],
+    queryFn: getPayouts,
+    enabled: Boolean(user?.id),
+  });
+
+  const earningRow = earningRows.find((row) => row.instructorUserId === user?.id) || null;
+  const availableBalance = earningRow?.currentBalance || 0;
+
+  const myPayouts = payouts
+    .filter((payout) => {
+      if (!user?.id) return false;
+      if (payout.instructorUserId === user.id) return true;
+      if (earningRow?.instructorProfileId && payout.instructorProfileId === earningRow.instructorProfileId) return true;
+      return false;
+    })
+    .sort((left, right) => new Date(right.requestedAt || right.createdAt || 0).getTime() - new Date(left.requestedAt || left.createdAt || 0).getTime());
+
+  const pendingAmount = myPayouts
+    .filter((payout) => payout.status === 'PENDING')
+    .reduce((sum, payout) => sum + payout.amount, 0);
+  const totalWithdrawn = earningRow?.totalWithdrawn || myPayouts
+    .filter((payout) => payout.status === 'COMPLETED')
+    .reduce((sum, payout) => sum + payout.amount, 0);
+
+  const payoutMutation = useMutation({
+    mutationFn: createPayout,
+    onSuccess: () => {
+      toast({
+        title: 'Payout requested',
+        description: `Your payout request of ${formatPrice(Number(payoutAmount || 0))} was submitted successfully.`,
+      });
+      setPayoutAmount('');
+      queryClient.invalidateQueries({ queryKey: ['payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['instructor-earnings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Payout request failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const handleRequestPayout = () => {
     if (!payoutAmount || Number(payoutAmount) <= 0) {
       toast({ title: 'Invalid amount', variant: 'destructive' });
       return;
     }
-    if (Number(payoutAmount) > 26500) {
-      toast({ title: 'Insufficient balance', description: 'Your available balance is ETB 26,500.', variant: 'destructive' });
+    if (Number(payoutAmount) < 100) {
+      toast({ title: 'Invalid amount', description: 'Minimum withdrawal amount is ETB 100.', variant: 'destructive' });
       return;
     }
-    toast({ title: 'Payout requested', description: `ETB ${Number(payoutAmount).toLocaleString()} will be processed within 3-5 business days.` });
-    setPayoutAmount('');
+    if (Number(payoutAmount) > availableBalance) {
+      toast({ title: 'Insufficient balance', description: `Your available balance is ${formatPrice(availableBalance)}.`, variant: 'destructive' });
+      return;
+    }
+    if (!earningRow?.instructorProfileId) {
+      toast({
+        title: 'Instructor profile not ready',
+        description: 'Your instructor earnings profile is not available yet. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (payoutMethod === 'BANK_TRANSFER' && (!bankName || !accountNumber)) {
+      toast({ title: 'Missing bank details', description: 'Please provide bank name and account number.', variant: 'destructive' });
+      return;
+    }
+    if (payoutMethod === 'MOBILE_MONEY' && !phoneNumber) {
+      toast({ title: 'Missing phone number', description: 'Please provide your mobile money number.', variant: 'destructive' });
+      return;
+    }
+
+    const paymentDetails = payoutMethod === 'BANK_TRANSFER'
+      ? JSON.stringify({ bankName, accountNumber })
+      : JSON.stringify({ provider: 'Telebirr', phoneNumber });
+
+    payoutMutation.mutate({
+      instructorProfileId: earningRow.instructorProfileId,
+      amount: Number(payoutAmount),
+      currency: 'ETB',
+      paymentMethod: payoutMethod,
+      paymentDetails,
+    });
   };
 
   return (
@@ -45,13 +135,13 @@ const InstructorPayouts = () => {
         {/* Balance cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { label: 'Available Balance', value: 'ETB 26,500', icon: DollarSign, color: 'text-primary' },
-            { label: 'Pending Payouts', value: 'ETB 8,700', icon: Clock, color: 'text-yellow-600' },
-            { label: 'Total Withdrawn', value: 'ETB 98,500', icon: CheckCircle, color: 'text-green-600' },
+            { label: 'Available Balance', value: formatPrice(availableBalance), icon: DollarSign },
+            { label: 'Pending Payouts', value: formatPrice(pendingAmount), icon: Clock },
+            { label: 'Total Withdrawn', value: formatPrice(totalWithdrawn), icon: CheckCircle },
           ].map((s) => (
             <Card key={s.label}>
               <CardContent className="pt-5 pb-4">
-                <s.icon className={`h-5 w-5 ${s.color} mb-2`} />
+                <s.icon className="h-5 w-5 text-primary mb-2" />
                 <p className="text-2xl font-bold font-display">{s.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{s.label}</p>
               </CardContent>
@@ -73,35 +163,35 @@ const InstructorPayouts = () => {
                 <Select value={payoutMethod} onValueChange={setPayoutMethod}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="bank">Bank Transfer</SelectItem>
-                    <SelectItem value="mobile">Mobile Money (Telebirr)</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                    <SelectItem value="MOBILE_MONEY">Mobile Money (Telebirr)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              {payoutMethod === 'bank' && (
+              {payoutMethod === 'BANK_TRANSFER' && (
                 <>
                   <div className="space-y-2">
                     <Label>Bank Name</Label>
-                    <Select defaultValue="cbe">
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                    <Select value={bankName} onValueChange={setBankName}>
+                      <SelectTrigger><SelectValue placeholder="Select bank" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cbe">Commercial Bank of Ethiopia</SelectItem>
-                        <SelectItem value="awash">Awash Bank</SelectItem>
-                        <SelectItem value="dashen">Dashen Bank</SelectItem>
-                        <SelectItem value="abyssinia">Bank of Abyssinia</SelectItem>
+                        <SelectItem value="Commercial Bank of Ethiopia">Commercial Bank of Ethiopia</SelectItem>
+                        <SelectItem value="Awash Bank">Awash Bank</SelectItem>
+                        <SelectItem value="Dashen Bank">Dashen Bank</SelectItem>
+                        <SelectItem value="Bank of Abyssinia">Bank of Abyssinia</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Account Number</Label>
-                    <Input placeholder="Enter account number" />
+                    <Input placeholder="Enter account number" value={accountNumber} onChange={(event) => setAccountNumber(event.target.value)} />
                   </div>
                 </>
               )}
-              {payoutMethod === 'mobile' && (
+              {payoutMethod === 'MOBILE_MONEY' && (
                 <div className="space-y-2">
                   <Label>Phone Number</Label>
-                  <Input placeholder="+251 9XX XXX XXXX" />
+                  <Input placeholder="+251 9XX XXX XXXX" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} />
                 </div>
               )}
               <div className="space-y-2">
@@ -112,7 +202,9 @@ const InstructorPayouts = () => {
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>Payouts are processed within 3-5 business days. Minimum withdrawal is ETB 100.</span>
               </div>
-              <Button className="w-full" onClick={handleRequestPayout}>Request Payout</Button>
+              <Button className="w-full" onClick={handleRequestPayout} disabled={payoutMutation.isPending || isEarningsLoading}>
+                {payoutMutation.isPending ? 'Requesting...' : 'Request Payout'}
+              </Button>
             </CardContent>
           </Card>
 
@@ -122,11 +214,13 @@ const InstructorPayouts = () => {
               <CardTitle className="text-base">Payout History</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {payoutHistory.map((p) => (
+              {isPayoutsLoading && <p className="text-sm text-muted-foreground">Loading payout history...</p>}
+              {!isPayoutsLoading && myPayouts.length === 0 && <p className="text-sm text-muted-foreground">No payout history yet.</p>}
+              {!isPayoutsLoading && myPayouts.map((p) => (
                 <div key={p.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
                   <div>
-                    <p className="font-semibold text-sm">ETB {p.amount.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{p.method} · {p.bank} · {p.date}</p>
+                    <p className="font-semibold text-sm">{formatPrice(p.amount)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{p.paymentMethod.replace(/_/g, ' ')} · {formatDate(p.requestedAt || p.createdAt)}</p>
                   </div>
                   <Badge variant={p.status === 'COMPLETED' ? 'default' : 'secondary'} className="text-xs">
                     {p.status === 'COMPLETED' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}

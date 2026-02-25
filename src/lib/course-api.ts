@@ -641,8 +641,22 @@ export type CreateQuestionOptionPayload = Omit<QuestionOptionPayload, 'id'>;
 
 type ApiEnrollment = {
   id?: string;
-  student?: { id?: string };
-  course?: { id?: string };
+  student?: {
+    id?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    profileImage?: string;
+  };
+  course?: {
+    id?: string;
+    title?: string;
+    thumbnail?: string;
+    instructor?: {
+      id?: string;
+      user?: { id?: string };
+    };
+  };
   payment?: { id?: string };
   progress?: number | string;
   completedLessonsCount?: number | string;
@@ -657,7 +671,13 @@ type ApiEnrollment = {
 export type EnrollmentPayload = {
   id: string;
   studentId: string;
+  studentName?: string;
+  studentEmail?: string;
+  studentAvatar?: string;
   courseId: string;
+  courseTitle?: string;
+  courseThumbnail?: string;
+  courseInstructorUserId?: string;
   paymentId?: string;
   progress: number;
   completedLessonsCount: number;
@@ -673,6 +693,36 @@ export type InstructorEnrollmentSummary = {
   totalEnrollments: number;
   totalStudents: number;
   totalCourses: number;
+};
+
+export type InstructorEarningPayload = {
+  id: string;
+  instructorProfileId?: string;
+  instructorUserId?: string;
+  totalEarnings: number;
+  totalWithdrawn: number;
+  currentBalance: number;
+  lastMonthEarning: number;
+  lastWithdrawnAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PayoutPayload = {
+  id: string;
+  instructorProfileId?: string;
+  instructorUserId?: string;
+  amount: number;
+  currency: string;
+  status: string;
+  paymentMethod: string;
+  paymentDetails?: string;
+  referenceId?: string;
+  failureReason?: string;
+  requestedAt?: string;
+  processedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ApiNotification = {
@@ -701,10 +751,50 @@ type ApiCertificate = {
   expiresAt?: string;
 };
 
+type ApiInstructorEarning = {
+  id?: string;
+  instructorProfile?: {
+    id?: string;
+    user?: { id?: string; firstName?: string; lastName?: string };
+  };
+  totalEarnings?: number | string;
+  totalWithdrawn?: number | string;
+  currentBalance?: number | string;
+  lastMonthEarning?: number | string;
+  lastWithdrawnAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiPayout = {
+  id?: string;
+  instructorProfile?: {
+    id?: string;
+    user?: { id?: string; firstName?: string; lastName?: string };
+  };
+  amount?: number | string;
+  currency?: string;
+  status?: string;
+  paymentMethod?: string;
+  paymentDetails?: string;
+  referenceId?: string;
+  failureReason?: string;
+  requestedAt?: string;
+  processedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 const toEnrollment = (enrollment: ApiEnrollment): EnrollmentPayload => ({
   id: enrollment.id || '',
   studentId: enrollment.student?.id || '',
+  studentName: [enrollment.student?.firstName, enrollment.student?.lastName].filter(Boolean).join(' ') || undefined,
+  studentEmail: enrollment.student?.email || undefined,
+  studentAvatar: enrollment.student?.profileImage || undefined,
   courseId: enrollment.course?.id || '',
+  courseTitle: enrollment.course?.title || undefined,
+  courseThumbnail: enrollment.course?.thumbnail || undefined,
+  courseInstructorUserId: enrollment.course?.instructor?.user?.id || undefined,
   paymentId: enrollment.payment?.id || undefined,
   progress: toNumber(enrollment.progress, 0),
   completedLessonsCount: toNumber(enrollment.completedLessonsCount, 0),
@@ -752,6 +842,84 @@ export const getMyInstructorEnrollmentSummary = async (): Promise<InstructorEnro
 export const getMyEnrollments = async (): Promise<EnrollmentPayload[]> => {
   const data = await apiFetch<ApiEnrollment[]>('/api/enrollments/me');
   return data.map((enrollment) => toEnrollment(enrollment));
+};
+
+export const getAllEnrollments = async (): Promise<EnrollmentPayload[]> => {
+  const data = await apiFetch<ApiEnrollment[]>('/api/enrollments');
+  return data.map((enrollment) => toEnrollment(enrollment));
+};
+
+export const getInstructorEarnings = async (): Promise<InstructorEarningPayload[]> => {
+  const data = await apiFetch<ApiInstructorEarning[]>('/api/instructor-earnings');
+  return data.map((item) => ({
+    id: item.id || '',
+    instructorProfileId: item.instructorProfile?.id || undefined,
+    instructorUserId: item.instructorProfile?.user?.id || undefined,
+    totalEarnings: toNumber(item.totalEarnings, 0),
+    totalWithdrawn: toNumber(item.totalWithdrawn, 0),
+    currentBalance: toNumber(item.currentBalance, 0),
+    lastMonthEarning: toNumber(item.lastMonthEarning, 0),
+    lastWithdrawnAt: item.lastWithdrawnAt || undefined,
+    createdAt: item.createdAt || undefined,
+    updatedAt: item.updatedAt || undefined,
+  }));
+};
+
+export const getPayouts = async (): Promise<PayoutPayload[]> => {
+  const data = await apiFetch<ApiPayout[]>('/api/payouts');
+  return data.map((item) => ({
+    id: item.id || '',
+    instructorProfileId: item.instructorProfile?.id || undefined,
+    instructorUserId: item.instructorProfile?.user?.id || undefined,
+    amount: toNumber(item.amount, 0),
+    currency: item.currency || 'ETB',
+    status: item.status || 'PENDING',
+    paymentMethod: item.paymentMethod || 'BANK_TRANSFER',
+    paymentDetails: item.paymentDetails || undefined,
+    referenceId: item.referenceId || undefined,
+    failureReason: item.failureReason || undefined,
+    requestedAt: item.requestedAt || undefined,
+    processedAt: item.processedAt || undefined,
+    createdAt: item.createdAt || undefined,
+    updatedAt: item.updatedAt || undefined,
+  }));
+};
+
+export const createPayout = async (payload: {
+  instructorProfileId: string;
+  amount: number;
+  currency?: string;
+  paymentMethod: string;
+  paymentDetails?: string;
+}): Promise<PayoutPayload> => {
+  const data = await apiFetch<ApiPayout>('/api/payouts', {
+    method: 'POST',
+    body: JSON.stringify({
+      instructorProfile: { id: payload.instructorProfileId },
+      amount: payload.amount,
+      currency: payload.currency || 'ETB',
+      status: 'PENDING',
+      paymentMethod: payload.paymentMethod,
+      paymentDetails: payload.paymentDetails,
+    }),
+  });
+
+  return {
+    id: data.id || '',
+    instructorProfileId: data.instructorProfile?.id || undefined,
+    instructorUserId: data.instructorProfile?.user?.id || undefined,
+    amount: toNumber(data.amount, 0),
+    currency: data.currency || 'ETB',
+    status: data.status || 'PENDING',
+    paymentMethod: data.paymentMethod || payload.paymentMethod,
+    paymentDetails: data.paymentDetails || undefined,
+    referenceId: data.referenceId || undefined,
+    failureReason: data.failureReason || undefined,
+    requestedAt: data.requestedAt || undefined,
+    processedAt: data.processedAt || undefined,
+    createdAt: data.createdAt || undefined,
+    updatedAt: data.updatedAt || undefined,
+  };
 };
 
 export const getNotifications = async () => {
