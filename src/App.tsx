@@ -29,14 +29,23 @@ import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
 import AdminSettings from "./pages/dashboard/AdminSettings";
 import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerifications";
 import { ReactNode } from "react";
+import { useContentProtection } from "@/hooks/use-content-protection";
+import ContentProtectionOverlay from "@/components/security/ContentProtectionOverlay";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: string[] }) => {
   const { user, isLoggedIn } = useAuth();
+  const { isContentObscured, isDevtoolsOpen, resumeContent } = useContentProtection({ enabled: isLoggedIn, detectDevtools: true, blockPrint: true, blockSelection: true });
   if (!isLoggedIn) return <Navigate to="/auth" replace />;
-  if (!allowedRoles.includes(user!.role)) return <Navigate to="/" replace />;
-  return <>{children}</>;
+  const normalizedRole = user?.role?.startsWith('ROLE_') ? user.role.slice(5) : user?.role;
+  if (!normalizedRole || !allowedRoles.includes(normalizedRole)) return <Navigate to="/" replace />;
+  return (
+    <>
+      {isContentObscured && <ContentProtectionOverlay onResume={resumeContent} isDevtoolsOpen={isDevtoolsOpen} />}
+      {children}
+    </>
+  );
 };
 
 const AppRoutes = () => (

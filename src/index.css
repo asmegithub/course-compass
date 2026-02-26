@@ -212,3 +212,23 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  body::before {
+    content: 'Printing is disabled for protected learning content.';
+    visibility: visible !important;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #111;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    width: min(600px, 90vw);
+  }
+}

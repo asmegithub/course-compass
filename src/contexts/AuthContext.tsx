@@ -27,9 +27,24 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 const isAdminRole = (role?: string | null) => role === 'ADMIN' || role === 'ROLE_ADMIN';
+const normalizeRole = (role?: string | null): User['role'] => {
+  if (!role) return 'STUDENT';
+  const cleanRole = role.startsWith('ROLE_') ? role.slice(5) : role;
+  if (cleanRole === 'ADMIN' || cleanRole === 'INSTRUCTOR' || cleanRole === 'STUDENT' || cleanRole === 'GUEST') {
+    return cleanRole;
+  }
+  return 'STUDENT';
+};
+const normalizeUser = (user: User | null): User | null => {
+  if (!user) return null;
+  return {
+    ...user,
+    role: normalizeRole(user.role),
+  };
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [user, setUser] = useState<User | null>(() => normalizeUser(getStoredUser()));
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -48,8 +63,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     meApi()
       .then((profile) => {
-        setUser(profile);
-        setStoredUser(profile);
+        const normalizedProfile = normalizeUser(profile);
+        setUser(normalizedProfile);
+        setStoredUser(normalizedProfile);
       })
       .catch(() => {
         clearTokens();
@@ -69,9 +85,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.id, user?.role]);
 
   const handleAuthSuccess = (response: { accessToken: string; refreshToken: string; user: User }) => {
+    const normalizedUser = normalizeUser(response.user);
     setTokens(response.accessToken, response.refreshToken);
-    setUser(response.user);
-    setStoredUser(response.user);
+    setUser(normalizedUser);
+    setStoredUser(normalizedUser);
   };
 
   const login = async (payload: LoginPayload) => {
@@ -99,8 +116,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setTokens(accessToken, refreshToken);
       const profile = await meApi();
-      setUser(profile);
-      setStoredUser(profile);
+      const normalizedProfile = normalizeUser(profile);
+      setUser(normalizedProfile);
+      setStoredUser(normalizedProfile);
     } finally {
       setIsLoading(false);
     }
