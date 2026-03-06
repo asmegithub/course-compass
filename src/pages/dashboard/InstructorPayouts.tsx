@@ -14,14 +14,26 @@ import {
   getMyInstructorPayoutRequests,
   requestInstructorPayout,
 } from '@/lib/course-api';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
+import { createPayout, getInstructorEarnings, getPayouts } from '@/lib/course-api';
+import { formatPrice } from '@/lib/formatters';
+
+const formatDate = (value?: string) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleDateString();
+};
 
 const InstructorPayouts = () => {
-  const [payoutMethod, setPayoutMethod] = useState('bank');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [payoutMethod, setPayoutMethod] = useState('BANK_TRANSFER');
   const [payoutAmount, setPayoutAmount] = useState('');
   const [selectedBankId, setSelectedBankId] = useState<string>('');
 
-  const queryClient = useQueryClient();
   const earningQuery = useQuery({ queryKey: ['instructor-earning'], queryFn: getMyInstructorEarning });
   const bankDetailsQuery = useQuery({ queryKey: ['instructor-bank-details'], queryFn: getMyInstructorBankDetails });
   const payoutRequestsQuery = useQuery({ queryKey: ['instructor-payout-requests'], queryFn: getMyInstructorPayoutRequests });
@@ -56,6 +68,60 @@ const InstructorPayouts = () => {
       toast({ title: 'Invalid amount', variant: 'destructive' });
       return;
     }
+      const [bankName, setBankName] = useState('Commercial Bank of Ethiopia');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+
+  const { data: earningRows = [], isLoading: isEarningsLoading } = useQuery({
+    queryKey: ['instructor-earnings'],
+    queryFn: getInstructorEarnings,
+    enabled: Boolean(user?.id),
+  });
+
+  const { data: payouts = [], isLoading: isPayoutsLoading } = useQuery({
+    queryKey: ['payouts'],
+    queryFn: getPayouts,
+    enabled: Boolean(user?.id),
+  });
+
+  const earningRow = earningRows.find((row) => row.instructorUserId === user?.id) || null;
+  const availableBalance = earningRow?.currentBalance || 0;
+
+  const myPayouts = payouts
+    .filter((payout) => {
+      if (!user?.id) return false;
+      if (payout.instructorUserId === user.id) return true;
+      if (earningRow?.instructorProfileId && payout.instructorProfileId === earningRow.instructorProfileId) return true;
+      return false;
+    })
+    .sort((left, right) => new Date(right.requestedAt || right.createdAt || 0).getTime() - new Date(left.requestedAt || left.createdAt || 0).getTime());
+
+  const pendingAmount = myPayouts
+    .filter((payout) => payout.status === 'PENDING')
+    .reduce((sum, payout) => sum + payout.amount, 0);
+  const totalWithdrawn = earningRow?.totalWithdrawn || myPayouts
+    .filter((payout) => payout.status === 'COMPLETED')
+    .reduce((sum, payout) => sum + payout.amount, 0);
+
+  const payoutMutation = useMutation({
+    mutationFn: createPayout,
+    onSuccess: () => {
+      toast({
+        title: 'Payout requested',
+        description: `Your payout request of ${formatPrice(Number(payoutAmount || 0))} was submitted successfully.`,
+      });
+      setPayoutAmount('');
+      queryClient.invalidateQueries({ queryKey: ['payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['instructor-earnings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Payout request failed',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
     if (amount > availableBalance) {
       toast({
         title: 'Insufficient balance',
@@ -72,6 +138,42 @@ const InstructorPayouts = () => {
       toast({ title: 'Please select a bank account', variant: 'destructive' });
       return;
     }
+     if (Number(payoutAmount) < 100) {
+      toast({ title: 'Invalid amount', description: 'Minimum withdrawal amount is ETB 100.', variant: 'destructive' });
+      return;
+    }
+    if (Number(payoutAmount) > availableBalance) {
+      toast({ title: 'Insufficient balance', description: `Your available balance is ${formatPrice(availableBalance)}.`, variant: 'destructive' });
+      return;
+    }
+    if (!earningRow?.instructorProfileId) {
+      toast({
+        title: 'Instructor profile not ready',
+        description: 'Your instructor earnings profile is not available yet. Please contact support.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (payoutMethod === 'BANK_TRANSFER' && (!bankName || !accountNumber)) {
+      toast({ title: 'Missing bank details', description: 'Please provide bank name and account number.', variant: 'destructive' });
+      return;
+    }
+    if (payoutMethod === 'MOBILE_MONEY' && !phoneNumber) {
+      toast({ title: 'Missing phone number', description: 'Please provide your mobile money number.', variant: 'destructive' });
+      return;
+    }
+
+    const paymentDetails = payoutMethod === 'BANK_TRANSFER'
+      ? JSON.stringify({ bankName, accountNumber })
+      : JSON.stringify({ provider: 'Telebirr', phoneNumber });
+
+    payoutMutation.mutate({
+      instructorProfileId: earningRow.instructorProfileId,
+      amount: Number(payoutAmount),
+      currency: 'ETB',
+      paymentMethod: payoutMethod,
+      paymentDetails,
+    });
     requestPayoutMutation.mutate();
   };
 

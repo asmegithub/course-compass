@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -211,4 +211,24 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  body::before {
+    content: 'Printing is disabled for protected learning content.';
+    visibility: visible !important;
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #111;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    width: min(600px, 90vw);
+  }
 }

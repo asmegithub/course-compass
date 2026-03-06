@@ -1,6 +1,10 @@
 const DEFAULT_API_BASE_URL = 'http://localhost:8080';
 
-import { getAccessToken } from '@/lib/auth-storage';
+import { clearTokens, getAccessToken, getRefreshToken, setStoredUser, setTokens } from '@/lib/auth-storage';
+
+const AUTH_SESSION_EXPIRED_EVENT = 'auth:session-expired';
+
+let refreshInFlight: Promise<string | null> | null = null;
 
 export const getApiBaseUrl = () => {
   const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -15,22 +19,92 @@ const buildUrl = (path: string) => {
   return `${getApiBaseUrl()}${normalizedPath}`;
 };
 
-export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
-  const accessToken = getAccessToken();
-  const baseHeaders: Record<string, string> = {
-    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    ...((init?.headers as Record<string, string> | undefined) || {}),
-  };
+const isAuthPath = (path: string) => {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return normalizedPath.startsWith('/api/auth/');
+};
 
-  const isFormDataBody = typeof FormData !== 'undefined' && init?.body instanceof FormData;
-  if (!isFormDataBody && !baseHeaders['Content-Type']) {
-    baseHeaders['Content-Type'] = 'application/json';
+const emitSessionExpired = () => {
+  clearTokens();
+  setStoredUser(null);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
+  }
+};
+
+const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshInFlight) {
+    return refreshInFlight;
   }
 
-  const response = await fetch(buildUrl(path), {
+  refreshInFlight = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+      return null;
+    }
+
+    const response = await fetch(buildUrl('/api/auth/refresh'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json() as {
+      accessToken?: string;
+      refreshToken?: string;
+    };
+
+    if (!data.accessToken) {
+      return null;
+    }
+
+    setTokens(data.accessToken, data.refreshToken || refreshToken);
+    return data.accessToken;
+  })()
+    .catch(() => null)
+    .finally(() => {
+      refreshInFlight = null;
+    });
+
+  return refreshInFlight;
+};
+
+export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const buildHeaders = (token: string | null) => {
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...((init?.headers as Record<string, string> | undefined) || {}),
+    };
+
+    const isFormDataBody = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+    if (!isFormDataBody && !headers['Content-Type']) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    return headers;
+  };
+
+  const makeRequest = (token: string | null) => fetch(buildUrl(path), {
     ...init,
-    headers: baseHeaders,
+    headers: buildHeaders(token),
   });
+
+  let response = await makeRequest(getAccessToken());
+
+  if (response.status === 401 && !isAuthPath(path)) {
+    const refreshedAccessToken = await refreshAccessToken();
+    if (!refreshedAccessToken) {
+      emitSessionExpired();
+      throw new Error('Session expired. Please sign in again.');
+    }
+    response = await makeRequest(refreshedAccessToken);
+  }
 
   if (!response.ok) {
     let message = 'Request failed.';

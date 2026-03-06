@@ -4,17 +4,33 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs, getCourseApprovals, getUsers } from '@/lib/admin-api';
 import { getCourses } from '@/lib/course-api';
 import { getPendingInstructorProfiles } from '@/lib/instructor-profile-api';
+import { useAuth } from '@/contexts/AuthContext';
+import { enableAdminPushNotifications } from '@/lib/push-api';
 import {
   Users, BookOpen, DollarSign, ShieldCheck, Activity,
   CheckCircle2, XCircle, ArrowUpRight,
   Eye,
 } from 'lucide-react';
 
+const isAdminRole = (role?: string | null) => role === 'ADMIN' || role === 'ROLE_ADMIN';
+
 const AdminDashboard = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!isAdminRole(user?.role)) {
+      return;
+    }
+    enableAdminPushNotifications().catch(() => {
+      // intentionally silent for unsupported devices or denied permissions
+    });
+  }, [user?.role]);
+
   const usersQuery = useQuery({
     queryKey: ['admin-users'],
     queryFn: getUsers,

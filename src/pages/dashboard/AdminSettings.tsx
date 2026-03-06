@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Globe, DollarSign, Mail, ShieldCheck, Palette } from 'lucide-react';
+import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell } from 'lucide-react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { enableAdminPushNotifications, getAdminPushStatus, sendAdminTestPush } from '@/lib/push-api';
 
 const AdminSettings = () => {
   const { toast } = useToast();
@@ -51,6 +52,41 @@ const AdminSettings = () => {
     requireCourseApproval: true,
   });
 
+  const pushStatusQuery = useQuery({
+    queryKey: ['admin-push-status'],
+    queryFn: getAdminPushStatus,
+  });
+
+  const enablePushMutation = useMutation({
+    mutationFn: enableAdminPushNotifications,
+    onSuccess: () => {
+      toast({ title: 'Push notifications enabled', description: 'This browser is now subscribed for admin alerts.' });
+      pushStatusQuery.refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Unable to enable push notifications',
+        description: error instanceof Error ? error.message : 'Please check browser permissions.',
+        variant: 'destructive',
+      });
+      pushStatusQuery.refetch();
+    },
+  });
+
+  const testPushMutation = useMutation({
+    mutationFn: sendAdminTestPush,
+    onSuccess: () => {
+      toast({ title: 'Test notification sent', description: 'Check your device notification tray.' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to send test notification',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const save = (section: string) => {
     toast({ title: `${section} settings saved`, description: 'Changes have been applied.' });
   };
@@ -69,6 +105,7 @@ const AdminSettings = () => {
             <TabsTrigger value="financial" className="gap-1"><DollarSign className="h-3.5 w-3.5" /> Financial</TabsTrigger>
             <TabsTrigger value="email" className="gap-1"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
             <TabsTrigger value="security" className="gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Security</TabsTrigger>
+            <TabsTrigger value="push" className="gap-1"><Bell className="h-3.5 w-3.5" /> Push</TabsTrigger>
           </TabsList>
 
           {/* General */}
@@ -166,6 +203,52 @@ const AdminSettings = () => {
                   <div className="flex items-center justify-between"><Label>Require Course Approval</Label><Switch checked={security.requireCourseApproval} onCheckedChange={v => setSecurity(s => ({ ...s, requireCourseApproval: v }))} /></div>
                 </div>
                 <Button variant="accent" className="gap-1" onClick={() => save('Security')}><Save className="h-4 w-4" /> Save Changes</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="push">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Push Notifications</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  <p className="text-muted-foreground">
+                    Default behavior: admins are auto-subscribed after login (browser permission required).
+                  </p>
+                  {pushStatusQuery.isLoading && <p className="text-muted-foreground">Checking push status...</p>}
+                  {!pushStatusQuery.isLoading && pushStatusQuery.data && (
+                    <>
+                      <p>
+                        <span className="font-medium">Browser Support:</span> {pushStatusQuery.data.supported ? 'Supported' : 'Not supported'}
+                      </p>
+                      <p>
+                        <span className="font-medium">Permission:</span> {pushStatusQuery.data.permission}
+                      </p>
+                      <p>
+                        <span className="font-medium">Subscribed:</span> {pushStatusQuery.data.subscribed ? 'Yes' : 'No'}
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="accent"
+                    onClick={() => enablePushMutation.mutate()}
+                    disabled={enablePushMutation.isPending}
+                  >
+                    {enablePushMutation.isPending ? 'Enabling...' : 'Enable / Re-subscribe'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => testPushMutation.mutate()}
+                    disabled={testPushMutation.isPending || !pushStatusQuery.data?.subscribed}
+                  >
+                    {testPushMutation.isPending ? 'Sending...' : 'Send Test Notification'}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -56,6 +56,9 @@ import { cn } from '@/lib/utils';
 import { getLocalizedTitle, getLocalizedDescription } from '@/lib/localized-content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useContentProtection } from '@/hooks/use-content-protection';
+import ContentProtectionOverlay from '@/components/security/ContentProtectionOverlay';
+import SecureVideoPlayer from '@/components/security/SecureVideoPlayer';
 
 interface DiscussionReplyView {
   id: string;
@@ -277,6 +280,7 @@ const CourseDetail = () => {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const { isContentObscured, isDevtoolsOpen } = useContentProtection({ enabled: true, detectDevtools: true, blockPrint: true, blockSelection: true });
 
   const wishlistCheckQuery = useQuery({
     queryKey: ['wishlist-check', course?.id],
@@ -660,6 +664,7 @@ const CourseDetail = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {isContentObscured && <ContentProtectionOverlay isDevtoolsOpen={isDevtoolsOpen} />}
       <Navbar />
 
       <main className="flex-1">
@@ -1379,11 +1384,9 @@ const CourseDetail = () => {
           </DialogHeader>
           <div className="aspect-video bg-black relative flex items-center justify-center">
             {previewLesson?.videoUrl ? (
-              <video
+              <SecureVideoPlayer
                 src={previewLesson.videoUrl}
                 className="w-full h-full"
-                controls
-                playsInline
               />
             ) : (
               <>

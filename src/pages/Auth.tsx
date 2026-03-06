@@ -44,7 +44,8 @@ const Auth = () => {
       ? redirect
       : null;
     const role = user.role;
-    const dest = safeRedirect || (role === 'ADMIN' ? '/admin' : role === 'INSTRUCTOR' ? '/instructor' : '/dashboard');
+    const normalizedRole = role === 'ROLE_ADMIN' ? 'ADMIN' : role;
+    const dest = safeRedirect || (normalizedRole === 'ADMIN' ? '/admin' : normalizedRole === 'INSTRUCTOR' ? '/instructor' : '/dashboard');
     navigate(dest, { replace: true });
   }, [user, navigate, searchParams]);
 
