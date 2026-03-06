@@ -36,13 +36,13 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: string[] }) => {
   const { user, isLoggedIn } = useAuth();
-  const { isContentObscured, isDevtoolsOpen, resumeContent } = useContentProtection({ enabled: isLoggedIn, detectDevtools: true, blockPrint: true, blockSelection: true });
+  const { isContentObscured, isDevtoolsOpen } = useContentProtection({ enabled: isLoggedIn, detectDevtools: true, blockPrint: true, blockSelection: true });
   if (!isLoggedIn) return <Navigate to="/auth" replace />;
   const normalizedRole = user?.role?.startsWith('ROLE_') ? user.role.slice(5) : user?.role;
   if (!normalizedRole || !allowedRoles.includes(normalizedRole)) return <Navigate to="/" replace />;
   return (
     <>
-      {isContentObscured && <ContentProtectionOverlay onResume={resumeContent} isDevtoolsOpen={isDevtoolsOpen} />}
+      {isContentObscured && <ContentProtectionOverlay isDevtoolsOpen={isDevtoolsOpen} />}
       {children}
     </>
   );

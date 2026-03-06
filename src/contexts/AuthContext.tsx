@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { User } from '@/types';
 import { login as loginApi, signup as signupApi, logout as logoutApi, me as meApi, LoginPayload, SignupPayload } from '@/lib/auth-api';
 import { clearTokens, getAccessToken, getRefreshToken, getStoredUser, setStoredUser, setTokens } from '@/lib/auth-storage';
 import { enableAdminPushNotifications } from '@/lib/push-api';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -43,15 +44,41 @@ const normalizeUser = (user: User | null): User | null => {
   };
 };
 
+const AUTH_SESSION_EXPIRED_EVENT = 'auth:session-expired';
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(() => normalizeUser(getStoredUser()));
   const [isLoading, setIsLoading] = useState(false);
+  const lastSessionExpiredToastAtRef = useRef(0);
 
   useEffect(() => {
     if (!getAccessToken()) {
       setUser(null);
       setStoredUser(null);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearTokens();
+      setStoredUser(null);
+      setUser(null);
+
+      const now = Date.now();
+      if (now - lastSessionExpiredToastAtRef.current > 2000) {
+        lastSessionExpiredToastAtRef.current = now;
+        toast({
+          title: 'Session expired',
+          description: 'Your session has expired. Please sign in again.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => {
+      window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
   }, []);
 
   useEffect(() => {

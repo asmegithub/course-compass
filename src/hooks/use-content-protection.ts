@@ -142,7 +142,10 @@ export const useContentProtection = ({
 
     const handleWindowBlur = () => hideContent();
     const handleWindowFocus = () => {
-      // keep protected content hidden until user explicitly resumes
+      revealContentIfSafe();
+      window.setTimeout(() => {
+        revealContentIfSafe();
+      }, 120);
     };
     const handlePageHide = () => hideContent();
 

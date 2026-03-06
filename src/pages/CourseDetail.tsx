@@ -270,7 +270,7 @@ const CourseDetail = () => {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
-  const { isContentObscured, isDevtoolsOpen, resumeContent } = useContentProtection({ enabled: true, detectDevtools: true, blockPrint: true, blockSelection: true });
+  const { isContentObscured, isDevtoolsOpen } = useContentProtection({ enabled: true, detectDevtools: true, blockPrint: true, blockSelection: true });
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -546,7 +546,7 @@ const CourseDetail = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {isContentObscured && <ContentProtectionOverlay onResume={resumeContent} isDevtoolsOpen={isDevtoolsOpen} />}
+      {isContentObscured && <ContentProtectionOverlay isDevtoolsOpen={isDevtoolsOpen} />}
       <Navbar />
 
       <main className="flex-1">
