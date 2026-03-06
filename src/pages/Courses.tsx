@@ -21,6 +21,7 @@ import {
   Star,
   Grid3X3,
   List,
+  Loader2,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getApprovedCourses, getCategories } from '@/lib/course-api';
@@ -287,7 +288,10 @@ const Courses = () => {
               </div>
 
                 {(coursesQuery.isLoading || categoriesQuery.isLoading) && (
-                  <div className="text-muted-foreground">Loading courses...</div>
+                  <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                    <span>Loading courses...</span>
+                  </div>
                 )}
 
                 {(coursesQuery.isError || categoriesQuery.isError) && (

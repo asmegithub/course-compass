@@ -196,6 +196,30 @@ const createSection = (): SectionForm => ({
   isExpanded: true,
 });
 
+/** Get video duration in minutes from a File using the browser's video element. */
+function getVideoDurationMinutes(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      const seconds = video.duration;
+      if (Number.isFinite(seconds)) {
+        const minutes = Math.max(0, Math.round(seconds / 60));
+        resolve(minutes);
+      } else {
+        resolve(0);
+      }
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read video duration'));
+    };
+    video.src = url;
+  });
+}
+
 const createListItem = (): ListItem => ({
   id: crypto.randomUUID(),
   text: '',
@@ -956,6 +980,9 @@ const InstructorCourseCreate = () => {
     if (file) {
       updateLesson(sectionId, lessonId, 'videoFile', file);
       setPendingLessonUploads((prev) => prev + 1);
+      getVideoDurationMinutes(file)
+        .then((minutes) => updateLesson(sectionId, lessonId, 'duration', minutes))
+        .catch(() => { /* duration stays 0 or previous value */ });
       try {
         const uploaded = await uploadCourseMedia(file);
         updateLesson(sectionId, lessonId, 'videoUrl', uploaded.url);
@@ -967,6 +994,7 @@ const InstructorCourseCreate = () => {
         setPendingLessonUploads((prev) => Math.max(prev - 1, 0));
       }
     }
+    e.target.value = '';
   };
 
   const handleLessonDocument = async (sectionId: string, lessonId: string, e: React.ChangeEvent<HTMLInputElement>) => {

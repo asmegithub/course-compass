@@ -40,6 +40,7 @@ const instructorNav: NavItem[] = [
 
 const adminNav: NavItem[] = [
   { label: 'Dashboard', href: '/admin', icon: Activity },
+  { label: 'Notifications', href: '/admin/notifications', icon: Bell },
   { label: 'Users', href: '/admin/users', icon: Users },
   { label: 'Course Approvals', href: '/admin/approvals', icon: ShieldCheck },
   { label: 'Instructor Verify', href: '/admin/instructor-verifications', icon: ShieldCheck },

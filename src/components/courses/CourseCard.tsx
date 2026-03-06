@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Star, Clock, Users, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Course } from '@/types';
 import { formatDuration, formatPrice } from '@/lib/formatters';
+import { getLocalizedTitle } from '@/lib/localized-content';
 import { cn } from '@/lib/utils';
 
 interface CourseCardProps {
@@ -11,6 +13,8 @@ interface CourseCardProps {
 }
 
 const CourseCard = ({ course, className }: CourseCardProps) => {
+  const { t } = useTranslation();
+  const displayTitle = getLocalizedTitle(course);
   const discount = course.discountPrice 
     ? Math.round((1 - course.discountPrice / course.price) * 100) 
     : 0;
@@ -27,12 +31,12 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
       <div className="relative aspect-video overflow-hidden">
         <img 
           src={course.thumbnail} 
-          alt={course.title}
+          alt={displayTitle || course.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         {course.isFeatured && (
           <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0">
-            Featured
+            {t('home.featured')}
           </Badge>
         )}
         {discount > 0 && (
@@ -56,7 +60,7 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
 
         {/* Title */}
         <h3 className="font-display font-semibold text-card-foreground line-clamp-2 group-hover:text-accent transition-colors">
-          {course.title}
+          {displayTitle || course.title}
         </h3>
 
         {/* Instructor */}

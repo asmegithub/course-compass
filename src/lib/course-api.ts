@@ -716,12 +716,19 @@ const toEnrollment = (enrollment: ApiEnrollment): EnrollmentPayload => ({
   updatedAt: enrollment.updatedAt || undefined,
 });
 
-export const createEnrollment = async (payload: { courseId: string; paymentId?: string }): Promise<EnrollmentPayload> => {
+export const createEnrollment = async (payload: {
+  courseId: string;
+  paymentId?: string;
+  referrerId?: string;
+  useBalance?: boolean;
+}): Promise<EnrollmentPayload> => {
   const data = await apiFetch<ApiEnrollment>('/api/enrollments', {
     method: 'POST',
     body: JSON.stringify({
       course: { id: payload.courseId },
       ...(payload.paymentId ? { payment: { id: payload.paymentId } } : {}),
+      ...(payload.referrerId ? { referrerId: payload.referrerId } : {}),
+      ...(payload.useBalance ? { useBalance: true } : {}),
     }),
   });
 
@@ -740,6 +747,61 @@ export const deleteEnrollment = async (enrollmentId: string): Promise<void> => {
   await apiFetch<void>(`/api/enrollments/${enrollmentId}`, { method: 'DELETE' });
 };
 
+// Referral balance (share course → friend enrolls → 5% credit; balance can be used for enrollment or withdrawn)
+export type ReferralBalancePayload = {
+  balance: number;
+  totalEarned: number;
+  totalWithdrawn: number;
+  totalUsed: number;
+};
+
+export const getReferralBalance = async (): Promise<ReferralBalancePayload> => {
+  const data = await apiFetch<{
+    balance?: number | string;
+    totalEarned?: number | string;
+    totalWithdrawn?: number | string;
+    totalUsed?: number | string;
+  }>('/api/referral-balance/me');
+  return {
+    balance: Number(data.balance ?? 0),
+    totalEarned: Number(data.totalEarned ?? 0),
+    totalWithdrawn: Number(data.totalWithdrawn ?? 0),
+    totalUsed: Number(data.totalUsed ?? 0),
+  };
+};
+
+export type WithdrawalRequestPayload = {
+  id: string;
+  amount: number;
+  status: string;
+  createdAt?: string;
+};
+
+export const requestWithdrawal = async (amount: number): Promise<WithdrawalRequestPayload> => {
+  const data = await apiFetch<{ id?: string; amount?: number; status?: string; createdAt?: string }>(
+    '/api/referral-balance/withdraw',
+    { method: 'POST', body: JSON.stringify({ amount }) }
+  );
+  return {
+    id: data.id ?? '',
+    amount: Number(data.amount ?? 0),
+    status: data.status ?? 'PENDING',
+    createdAt: data.createdAt,
+  };
+};
+
+export const getMyWithdrawals = async (): Promise<WithdrawalRequestPayload[]> => {
+  const data = await apiFetch<Array<{ id?: string; amount?: number; status?: string; createdAt?: string }>>(
+    '/api/referral-balance/withdrawals'
+  );
+  return (Array.isArray(data) ? data : []).map((w) => ({
+    id: w.id ?? '',
+    amount: Number(w.amount ?? 0),
+    status: w.status ?? 'PENDING',
+    createdAt: w.createdAt,
+  }));
+};
+
 export const getMyInstructorEnrollmentSummary = async (): Promise<InstructorEnrollmentSummary> => {
   const data = await apiFetch<Partial<InstructorEnrollmentSummary>>('/api/enrollments/me/instructor-summary');
   return {
@@ -754,9 +816,259 @@ export const getMyEnrollments = async (): Promise<EnrollmentPayload[]> => {
   return data.map((enrollment) => toEnrollment(enrollment));
 };
 
+export type InstructorEnrollmentPayload = EnrollmentPayload & {
+  studentName?: string;
+  courseTitle?: string;
+  studentEmail?: string;
+};
+
+export const getMyInstructorEnrollments = async (): Promise<InstructorEnrollmentPayload[]> => {
+  const data = await apiFetch<Array<ApiEnrollment & { student?: { id?: string; firstName?: string; lastName?: string; email?: string }; course?: { id?: string; title?: string } }>>('/api/enrollments/me/instructor-enrollments');
+  return (Array.isArray(data) ? data : []).map((e) => ({
+    ...toEnrollment(e),
+    studentName: e.student ? [e.student.firstName, e.student.lastName].filter(Boolean).join(' ') || undefined : undefined,
+    studentEmail: e.student?.email,
+    courseTitle: e.course?.title,
+  }));
+};
+
+export type LessonProgressPayload = {
+  id: string;
+  enrollmentId: string;
+  lessonId: string;
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  completedAt?: string;
+};
+
+export const getLessonProgresses = async (enrollmentId: string): Promise<LessonProgressPayload[]> => {
+  const data = await apiFetch<Array<{ id?: string; enrollment?: { id?: string }; lesson?: { id?: string }; status?: string; completedAt?: string }>>(
+    `/api/lesson-progresses?enrollmentId=${encodeURIComponent(enrollmentId)}`
+  );
+  return data.map((p) => ({
+    id: p.id || '',
+    enrollmentId: p.enrollment?.id || '',
+    lessonId: p.lesson?.id || '',
+    status: (p.status || 'NOT_STARTED') as LessonProgressPayload['status'],
+    completedAt: p.completedAt,
+  }));
+};
+
+export const recordLessonProgress = async (
+  enrollmentId: string,
+  lessonId: string,
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+): Promise<LessonProgressPayload> => {
+  const data = await apiFetch<{ id?: string; enrollment?: { id?: string }; lesson?: { id?: string }; status?: string; completedAt?: string }>(
+    '/api/lesson-progresses/record',
+    {
+      method: 'POST',
+      body: JSON.stringify({ enrollmentId, lessonId, status }),
+    }
+  );
+  return {
+    id: data.id || '',
+    enrollmentId: data.enrollment?.id || enrollmentId,
+    lessonId: data.lesson?.id || lessonId,
+    status: (data.status || status) as LessonProgressPayload['status'],
+    completedAt: data.completedAt,
+  };
+};
+
+export const getVideoProgress = async (
+  enrollmentId: string,
+  lessonId: string
+): Promise<{ lastWatchedPosition?: number; watchedDuration?: number } | null> => {
+  try {
+    const data = await apiFetch<{ lastWatchedPosition?: number; watchedDuration?: number }>(
+      `/api/video-progresses/by-enrollment-lesson?enrollmentId=${encodeURIComponent(enrollmentId)}&lessonId=${encodeURIComponent(lessonId)}`
+    );
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+export const getBookmarks = async (lessonId?: string): Promise<Array<{ id: string; lessonId?: string; timestamp?: number; note?: string; createdAt?: string }>> => {
+  const url = lessonId
+    ? `/api/bookmarks/me?lessonId=${encodeURIComponent(lessonId)}`
+    : '/api/bookmarks/me';
+  const data = await apiFetch<Array<{ id?: string; lesson?: { id?: string }; timestamp?: number; note?: string; createdAt?: string }>>(url);
+  return (Array.isArray(data) ? data : []).map((b) => ({
+    id: b.id ?? '',
+    lessonId: b.lesson?.id,
+    timestamp: b.timestamp,
+    note: b.note,
+    createdAt: b.createdAt,
+  }));
+};
+
+export const createBookmark = async (payload: { courseId: string; lessonId: string; timestamp?: number; note?: string }): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>('/api/bookmarks', {
+    method: 'POST',
+    body: JSON.stringify({
+      course: { id: payload.courseId },
+      lesson: { id: payload.lessonId },
+      timestamp: payload.timestamp ?? 0,
+      note: payload.note ?? '',
+    }),
+  });
+  return { id: data.id ?? '' };
+};
+
+export const deleteBookmark = async (bookmarkId: string): Promise<void> => {
+  await apiFetch<void>(`/api/bookmarks/${bookmarkId}`, { method: 'DELETE' });
+};
+
+export const upsertVideoProgress = async (
+  enrollmentId: string,
+  lessonId: string,
+  lastWatchedPosition: number,
+  watchedDuration: number,
+  totalDuration: number
+): Promise<void> => {
+  await apiFetch<void>('/api/video-progresses/upsert', {
+    method: 'POST',
+    body: JSON.stringify({
+      enrollmentId,
+      lessonId,
+      lastWatchedPosition,
+      watchedDuration,
+      totalDuration,
+    }),
+  });
+};
+
+export type MyPaymentPayload = {
+  id: string;
+  transactionId?: string;
+  courseId?: string;
+  courseTitle?: string;
+  amount?: number;
+  currency?: string;
+  gateway?: string;
+  status?: string;
+  paidAt?: string;
+  createdAt?: string;
+};
+
+export const getMyPayments = async (): Promise<MyPaymentPayload[]> => {
+  const data = await apiFetch<Array<{ id?: string; transactionId?: string; course?: { id?: string; title?: string }; amount?: number; currency?: string; gateway?: string; status?: string; paidAt?: string; createdAt?: string }>>('/api/payments/me');
+  return (Array.isArray(data) ? data : []).map((p) => ({
+    id: p.id || '',
+    transactionId: p.transactionId,
+    courseId: p.course?.id,
+    courseTitle: p.course?.title,
+    amount: p.amount != null ? Number(p.amount) : undefined,
+    currency: p.currency,
+    gateway: p.gateway,
+    status: p.status,
+    paidAt: p.paidAt,
+    createdAt: p.createdAt,
+  }));
+};
+
+/** Get a single payment by ID (e.g. to check status after Chapa redirect). */
+export const getPayment = async (paymentId: string): Promise<{ id: string; status?: string; course?: { id?: string } }> => {
+  const data = await apiFetch<{ id?: string; status?: string; course?: { id?: string } }>(`/api/payments/${paymentId}`);
+  return { id: data.id ?? paymentId, status: data.status, course: data.course };
+};
+
+/** Create a payment (e.g. TEST gateway for checkout). Student is set by backend from auth. */
+export const createPayment = async (payload: {
+  courseId: string;
+  amount: number;
+  currency: string;
+  gateway?: string;
+  status?: string;
+}): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>('/api/payments', {
+    method: 'POST',
+    body: JSON.stringify({
+      course: { id: payload.courseId },
+      amount: payload.amount,
+      currency: payload.currency,
+      gateway: payload.gateway ?? 'TEST',
+      status: payload.status ?? 'COMPLETED',
+    }),
+  });
+  return { id: data.id ?? '' };
+};
+
+/** Instructor: get my earning (balance). */
+export const getMyInstructorEarning = async (): Promise<{
+  currentBalance?: number;
+  totalEarnings?: number;
+  totalWithdrawn?: number;
+  lastMonthEarning?: number;
+} | null> => {
+  try {
+    const data = await apiFetch<{ currentBalance?: number; totalEarnings?: number; totalWithdrawn?: number; lastMonthEarning?: number }>('/api/instructor-earnings/me');
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+/** Instructor: get my bank details. */
+export const getMyInstructorBankDetails = async (): Promise<Array<{ id: string; bankName?: string; accountName?: string; accountNumber?: string; isPrimary?: boolean }>> => {
+  const data = await apiFetch<Array<{ id?: string; bankName?: string; accountName?: string; accountNumber?: string; isPrimary?: boolean }>>('/api/instructor-bank-details/me');
+  return (Array.isArray(data) ? data : []).map((b) => ({
+    id: b.id ?? '',
+    bankName: b.bankName,
+    accountName: b.accountName,
+    accountNumber: b.accountNumber,
+    isPrimary: b.isPrimary,
+  }));
+};
+
+/** Instructor: get my payout requests. */
+export const getMyInstructorPayoutRequests = async (): Promise<Array<{ id: string; amount: number; status: string; createdAt?: string; bankDetail?: { bankName?: string } }>> => {
+  const data = await apiFetch<Array<{ id?: string; amount?: number; status?: string; createdAt?: string; bankDetail?: { bankName?: string } }>>('/api/instructor-payouts/me');
+  return (Array.isArray(data) ? data : []).map((p) => ({
+    id: p.id ?? '',
+    amount: Number(p.amount ?? 0),
+    status: p.status ?? 'PENDING',
+    createdAt: p.createdAt,
+    bankDetail: p.bankDetail,
+  }));
+};
+
+/** Instructor: request payout. */
+export const requestInstructorPayout = async (amount: number, bankDetailId?: string): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>('/api/instructor-payouts/request', {
+    method: 'POST',
+    body: JSON.stringify({ amount, bankDetailId: bankDetailId ?? null }),
+  });
+  return { id: data.id ?? '' };
+};
+
+/** Initialize Chapa payment; returns checkout URL to redirect the user. */
+export const initializeChapaPayment = async (payload: {
+  courseId: string;
+  slug: string;
+  referrerId?: string;
+}): Promise<{ checkoutUrl: string; paymentId: string; txRef: string }> => {
+  const data = await apiFetch<{ checkoutUrl?: string; paymentId?: string; txRef?: string }>(
+    '/api/payments/chapa/initialize',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        courseId: payload.courseId,
+        slug: payload.slug,
+        referrerId: payload.referrerId ?? undefined,
+      }),
+    }
+  );
+  return {
+    checkoutUrl: data.checkoutUrl ?? '',
+    paymentId: data.paymentId ?? '',
+    txRef: data.txRef ?? '',
+  };
+};
+
 export const getNotifications = async () => {
-  const data = await apiFetch<ApiNotification[]>('/api/notifications');
-  return data.map((notification) => ({
+  const data = await apiFetch<ApiNotification[]>('/api/notifications/me');
+  return (Array.isArray(data) ? data : []).map((notification) => ({
     id: notification.id || '',
     userId: notification.user?.id || '',
     type: notification.type || 'SYSTEM',
@@ -768,6 +1080,38 @@ export const getNotifications = async () => {
     actionUrl: notification.actionUrl || undefined,
     createdAt: notification.createdAt || undefined,
   }));
+};
+
+export const getNotificationUnreadCount = async (): Promise<number> => {
+  const n = await apiFetch<number>('/api/notifications/me/unread-count');
+  return typeof n === 'number' ? n : 0;
+};
+
+export type WishlistItemPayload = { id: string; courseId: string };
+
+export const getMyWishlist = async (): Promise<WishlistItemPayload[]> => {
+  const data = await apiFetch<Array<{ id?: string; course?: { id?: string } }>>('/api/wishlists/me');
+  return (Array.isArray(data) ? data : []).map((w) => ({
+    id: w.id || '',
+    courseId: w.course?.id || '',
+  }));
+};
+
+export const addToWishlist = async (courseId: string): Promise<WishlistItemPayload> => {
+  const data = await apiFetch<{ id?: string; course?: { id?: string } }>(
+    `/api/wishlists/add?courseId=${encodeURIComponent(courseId)}`,
+    { method: 'POST' }
+  );
+  return { id: data.id || '', courseId: data.course?.id || courseId };
+};
+
+export const removeFromWishlist = async (courseId: string): Promise<void> => {
+  await apiFetch<void>(`/api/wishlists/remove?courseId=${encodeURIComponent(courseId)}`, { method: 'DELETE' });
+};
+
+export const checkInWishlist = async (courseId: string): Promise<boolean> => {
+  const result = await apiFetch<boolean>(`/api/wishlists/check?courseId=${encodeURIComponent(courseId)}`);
+  return Boolean(result);
 };
 
 export const getCertificates = async () => {
@@ -786,8 +1130,9 @@ export const getCertificates = async () => {
   }));
 };
 
-export const getCourseSections = async (): Promise<CourseSectionPayload[]> => {
-  const data = await apiFetch<ApiCourseSection[]>('/api/course-sections');
+export const getCourseSections = async (courseId?: string): Promise<CourseSectionPayload[]> => {
+  const url = courseId ? `/api/course-sections?courseId=${encodeURIComponent(courseId)}` : '/api/course-sections';
+  const data = await apiFetch<ApiCourseSection[]>(url);
   return data.map((section) => ({
     id: section.id || '',
     courseId: section.course?.id || '',
@@ -826,8 +1171,9 @@ export const createCourseSection = async (payload: CreateCourseSectionPayload): 
   };
 };
 
-export const getLessons = async (): Promise<LessonPayload[]> => {
-  const data = await apiFetch<ApiLesson[]>('/api/lessons');
+export const getLessons = async (courseId?: string): Promise<LessonPayload[]> => {
+  const url = courseId ? `/api/lessons?courseId=${encodeURIComponent(courseId)}` : '/api/lessons';
+  const data = await apiFetch<ApiLesson[]>(url);
   return data.map((lesson) => ({
     id: lesson.id || '',
     sectionId: lesson.section?.id || '',

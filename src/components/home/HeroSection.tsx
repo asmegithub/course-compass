@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Users, BookOpen, Award, Globe } from 'lucide-react';
 
 const HeroSection = () => {
+  const { t } = useTranslation();
   return (
     <section className="relative overflow-hidden gradient-hero text-primary-foreground">
       {/* Background Pattern */}
@@ -17,29 +19,28 @@ const HeroSection = () => {
           <div className="space-y-8 animate-slide-up">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-foreground/10 rounded-full text-sm">
               <Globe className="h-4 w-4 text-accent" />
-              <span>Learn in your language • English • አማርኛ • Oromoo • ግዕዝ</span>
+              <span>{t('home.heroLanguages')}</span>
             </div>
 
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-              Unlock Your Potential with{' '}
-              <span className="text-accent">Quality Education</span>
+              {t('home.heroTitle')}{' '}
+              <span className="text-accent">{t('home.heroTitleHighlight')}</span>
             </h1>
 
             <p className="text-lg text-primary-foreground/80 max-w-xl">
-              Join thousands of learners across Africa. Master in-demand skills with expert-led courses, 
-              earn certificates, and transform your career.
+              {t('home.heroSubtitle')}
             </p>
 
             <div className="flex flex-wrap gap-4">
               <Button variant="hero" asChild>
                 <Link to="/courses">
-                  Explore Courses
+                  {t('home.exploreCoursesCta')}
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
                 <Play className="h-5 w-5 mr-2" />
-                Watch Demo
+                {t('home.watchDemo')}
               </Button>
             </div>
 
@@ -50,21 +51,21 @@ const HeroSection = () => {
                   <Users className="h-5 w-5 text-accent" />
                   <span className="font-display text-2xl font-bold">50K+</span>
                 </div>
-                <p className="text-sm text-primary-foreground/60">Active Learners</p>
+                <p className="text-sm text-primary-foreground/60">{t('home.activeLearners')}</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2">
                   <BookOpen className="h-5 w-5 text-accent" />
                   <span className="font-display text-2xl font-bold">500+</span>
                 </div>
-                <p className="text-sm text-primary-foreground/60">Courses</p>
+                <p className="text-sm text-primary-foreground/60">{t('home.courses')}</p>
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center gap-2">
                   <Award className="h-5 w-5 text-accent" />
                   <span className="font-display text-2xl font-bold">10K+</span>
                 </div>
-                <p className="text-sm text-primary-foreground/60">Certificates Issued</p>
+                <p className="text-sm text-primary-foreground/60">{t('home.certificatesIssued')}</p>
               </div>
             </div>
           </div>

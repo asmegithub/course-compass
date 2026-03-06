@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { GraduationCap, Facebook, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
 
 const Footer = () => {
+  const { t } = useTranslation();
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container py-12 md:py-16">
@@ -12,10 +14,10 @@ const Footer = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                 <GraduationCap className="h-6 w-6 text-accent-foreground" />
               </div>
-              <span className="font-display text-xl font-bold">BeteGubae</span>
+              <span className="font-display text-xl font-bold">{t('common.brand')}</span>
             </Link>
             <p className="text-sm text-primary-foreground/70 mb-4">
-              Empowering Africa through quality education. Learn skills that matter, in your language.
+              {t('home.footerTagline')}
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
@@ -38,45 +40,45 @@ const Footer = () => {
 
           {/* Explore */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Explore</h4>
+            <h4 className="font-display font-semibold mb-4">{t('common.explore')}</h4>
             <ul className="space-y-2 text-sm text-primary-foreground/70">
-              <li><Link to="/courses" className="hover:text-accent transition-colors">All Courses</Link></li>
-              <li><Link to="/categories" className="hover:text-accent transition-colors">Categories</Link></li>
-              <li><Link to="/instructors" className="hover:text-accent transition-colors">Instructors</Link></li>
-              <li><Link to="/certificates" className="hover:text-accent transition-colors">Certificates</Link></li>
+              <li><Link to="/courses" className="hover:text-accent transition-colors">{t('common.allCourses')}</Link></li>
+              <li><Link to="/categories" className="hover:text-accent transition-colors">{t('common.categories')}</Link></li>
+              <li><Link to="/instructors" className="hover:text-accent transition-colors">{t('common.instructors')}</Link></li>
+              <li><Link to="/certificates" className="hover:text-accent transition-colors">{t('common.certificates')}</Link></li>
             </ul>
           </div>
 
           {/* For Students */}
           <div>
-            <h4 className="font-display font-semibold mb-4">For Students</h4>
+            <h4 className="font-display font-semibold mb-4">{t('common.forStudents')}</h4>
             <ul className="space-y-2 text-sm text-primary-foreground/70">
-              <li><Link to="/dashboard" className="hover:text-accent transition-colors">My Learning</Link></li>
-              <li><Link to="/help" className="hover:text-accent transition-colors">Help Center</Link></li>
-              <li><Link to="/referrals" className="hover:text-accent transition-colors">Refer & Earn</Link></li>
-              <li><Link to="/mobile-app" className="hover:text-accent transition-colors">Mobile App</Link></li>
+              <li><Link to="/dashboard" className="hover:text-accent transition-colors">{t('common.myLearning')}</Link></li>
+              <li><Link to="/help" className="hover:text-accent transition-colors">{t('common.helpCenter')}</Link></li>
+              <li><Link to="/referrals" className="hover:text-accent transition-colors">{t('common.referAndEarn')}</Link></li>
+              <li><Link to="/mobile-app" className="hover:text-accent transition-colors">{t('common.mobileApp')}</Link></li>
             </ul>
           </div>
 
           {/* For Instructors */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Teach</h4>
+            <h4 className="font-display font-semibold mb-4">{t('common.teach')}</h4>
             <ul className="space-y-2 text-sm text-primary-foreground/70">
-              <li><Link to="/dashboard/become-instructor" className="hover:text-accent transition-colors">Become an Instructor</Link></li>
-              <li><Link to="/dashboard/instructor-help" className="hover:text-accent transition-colors">Instructor Resources</Link></li>
-              <li><Link to="/dashboard/instructor-community" className="hover:text-accent transition-colors">Community</Link></li>
-              <li><Link to="/dashboard/instructor-guidelines" className="hover:text-accent transition-colors">Guidelines</Link></li>
+              <li><Link to="/dashboard/become-instructor" className="hover:text-accent transition-colors">{t('common.becomeInstructor')}</Link></li>
+              <li><Link to="/dashboard/instructor-help" className="hover:text-accent transition-colors">{t('common.instructorResources')}</Link></li>
+              <li><Link to="/dashboard/instructor-community" className="hover:text-accent transition-colors">{t('common.community')}</Link></li>
+              <li><Link to="/dashboard/instructor-guidelines" className="hover:text-accent transition-colors">{t('common.guidelines')}</Link></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="font-display font-semibold mb-4">Company</h4>
+            <h4 className="font-display font-semibold mb-4">{t('common.company')}</h4>
             <ul className="space-y-2 text-sm text-primary-foreground/70">
-              <li><Link to="/about" className="hover:text-accent transition-colors">About Us</Link></li>
-              <li><Link to="/careers" className="hover:text-accent transition-colors">Careers</Link></li>
-              <li><Link to="/blog" className="hover:text-accent transition-colors">Blog</Link></li>
-              <li><Link to="/contact" className="hover:text-accent transition-colors">Contact</Link></li>
+              <li><Link to="/about" className="hover:text-accent transition-colors">{t('common.aboutUs')}</Link></li>
+              <li><Link to="/careers" className="hover:text-accent transition-colors">{t('common.careers')}</Link></li>
+              <li><Link to="/blog" className="hover:text-accent transition-colors">{t('common.blog')}</Link></li>
+              <li><Link to="/contact" className="hover:text-accent transition-colors">{t('common.contact')}</Link></li>
             </ul>
           </div>
         </div>
@@ -84,12 +86,12 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/60">
-            © {new Date().getFullYear()} BeteGubae. All rights reserved.
+            © {new Date().getFullYear()} {t('common.brand')}. {t('common.allRightsReserved')}
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-primary-foreground/60">
-            <Link to="/privacy" className="hover:text-accent transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-accent transition-colors">Terms of Service</Link>
-            <Link to="/cookies" className="hover:text-accent transition-colors">Cookie Policy</Link>
+            <Link to="/privacy" className="hover:text-accent transition-colors">{t('common.privacyPolicy')}</Link>
+            <Link to="/terms" className="hover:text-accent transition-colors">{t('common.termsOfService')}</Link>
+            <Link to="/cookies" className="hover:text-accent transition-colors">{t('common.cookiePolicy')}</Link>
           </div>
         </div>
       </div>

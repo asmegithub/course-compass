@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ import {
 import { 
   Star, Clock, Users, BookOpen, Globe, Award, Play, FileText,
   Lock, Check, Heart, Share2, Download, ChevronRight, PlayCircle,
-  MessageSquare, Send, ThumbsUp, CheckCircle2, X,
+  MessageSquare, Send, ThumbsUp, CheckCircle2, X, Loader2,
 } from 'lucide-react';
 import { formatDuration, formatPrice } from '@/lib/formatters';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,11 +44,16 @@ import {
   getLessons,
   getReviews,
   updateReview,
+  checkInWishlist,
+  addToWishlist,
+  removeFromWishlist,
+  getReferralBalance,
   CourseOutcomePayload,
   CourseRequirementPayload,
   LessonPayload,
 } from '@/lib/course-api';
 import { cn } from '@/lib/utils';
+import { getLocalizedTitle, getLocalizedDescription } from '@/lib/localized-content';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -77,15 +82,20 @@ interface DiscussionView {
 
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
+const REFERRAL_STORAGE_KEY = 'referralRef';
+const REFERRAL_COURSE_KEY = 'referralCourseId';
+
 const CourseDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slugValue = slug || '';
   const isUuidSlug = isUuid(slugValue);
+  const refFromUrl = searchParams.get('ref');
 
   const courseByIdQuery = useQuery({
     queryKey: ['course', slugValue],
@@ -94,9 +104,10 @@ const CourseDetail = () => {
   });
 
   const coursesQuery = useQuery({
-    queryKey: ['courses', 'approved'],
+    queryKey: ['course-detail', slugValue],
     queryFn: getApprovedCourses,
     enabled: Boolean(slugValue) && !isUuidSlug,
+    refetchOnMount: true,
   });
 
   const course = isUuidSlug
@@ -104,14 +115,14 @@ const CourseDetail = () => {
     : coursesQuery.data?.find(c => c.slug === slugValue);
 
   const sectionsQuery = useQuery({
-    queryKey: ['course-sections'],
-    queryFn: getCourseSections,
+    queryKey: ['course-sections', course?.id],
+    queryFn: () => getCourseSections(course!.id),
     enabled: Boolean(course?.id),
   });
 
   const lessonsQuery = useQuery({
-    queryKey: ['lessons'],
-    queryFn: getLessons,
+    queryKey: ['lessons', course?.id],
+    queryFn: () => getLessons(course!.id),
     enabled: Boolean(course?.id),
   });
 
@@ -254,7 +265,6 @@ const CourseDetail = () => {
     });
   }, [discussionQuery.data, course?.instructorId]);
 
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<{ title: string; id: string; videoUrl?: string } | null>(null);
@@ -267,6 +277,54 @@ const CourseDetail = () => {
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+
+  const wishlistCheckQuery = useQuery({
+    queryKey: ['wishlist-check', course?.id],
+    queryFn: () => checkInWishlist(course!.id),
+    enabled: Boolean(isLoggedIn && course?.id),
+  });
+
+  const referralBalanceQuery = useQuery({
+    queryKey: ['referral-balance'],
+    queryFn: getReferralBalance,
+    enabled: Boolean(isLoggedIn && user?.role === 'STUDENT'),
+  });
+
+  const referralBalance = referralBalanceQuery.data?.balance ?? 0;
+  const coursePrice = course ? Number(course.discountPrice ?? course.price ?? 0) : 0;
+  const canUseBalance = !isEnrolled && isLoggedIn && user?.role === 'STUDENT' && referralBalance >= coursePrice && coursePrice > 0;
+
+  useEffect(() => {
+    if (refFromUrl && course?.id) {
+      try {
+        localStorage.setItem(REFERRAL_STORAGE_KEY, refFromUrl);
+        localStorage.setItem(REFERRAL_COURSE_KEY, course.id);
+      } catch (_) {}
+    }
+  }, [refFromUrl, course?.id]);
+
+  const referrerIdForEnrollment = useMemo(() => {
+    if (!course?.id) return null;
+    const fromUrl = refFromUrl;
+    const fromStorage = (() => { try { return localStorage.getItem(REFERRAL_STORAGE_KEY); } catch { return null; } })();
+    const storedCourse = (() => { try { return localStorage.getItem(REFERRAL_COURSE_KEY); } catch { return null; } })();
+    const id = fromUrl || (storedCourse === course.id ? fromStorage : null);
+    return id && /^[0-9a-f-]{36}$/i.test(id) ? id : null;
+  }, [refFromUrl, course?.id]);
+
+  const isWishlisted = Boolean(wishlistCheckQuery.data);
+
+  const wishlistMutation = useMutation({
+    mutationFn: async () => {
+      if (!course?.id) return;
+      if (isWishlisted) await removeFromWishlist(course.id);
+      else await addToWishlist(course.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist-check', course?.id] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist-me'] });
+    },
+  });
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -294,11 +352,24 @@ const CourseDetail = () => {
   }, [myReview]);
 
   const enrollMutation = useMutation({
-    mutationFn: () => createEnrollment({ courseId: course.id }),
+    mutationFn: () =>
+      createEnrollment({
+        courseId: course.id,
+        referrerId: referrerIdForEnrollment ?? undefined,
+        useBalance: canUseBalance ? true : undefined,
+      }),
     onSuccess: () => {
+      try {
+        if (localStorage.getItem(REFERRAL_COURSE_KEY) === course?.id) {
+          localStorage.removeItem(REFERRAL_STORAGE_KEY);
+          localStorage.removeItem(REFERRAL_COURSE_KEY);
+        }
+      } catch (_) {}
       queryClient.invalidateQueries({ queryKey: ['my-course-enrollment', course?.id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['course', slugValue] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'approved'] });
+      queryClient.invalidateQueries({ queryKey: ['course-detail', slugValue] });
+      queryClient.invalidateQueries({ queryKey: ['referral-balance'] });
     },
   });
 
@@ -308,6 +379,7 @@ const CourseDetail = () => {
       queryClient.invalidateQueries({ queryKey: ['my-course-enrollment', course?.id, user?.id] });
       queryClient.invalidateQueries({ queryKey: ['course', slugValue] });
       queryClient.invalidateQueries({ queryKey: ['courses', 'approved'] });
+      queryClient.invalidateQueries({ queryKey: ['course-detail', slugValue] });
     },
   });
 
@@ -383,44 +455,58 @@ const CourseDetail = () => {
     },
   });
 
-  const isLoading =
-    courseByIdQuery.isLoading ||
-    coursesQuery.isLoading ||
-    myEnrollmentQuery.isLoading ||
-    sectionsQuery.isLoading ||
-    lessonsQuery.isLoading ||
-    reviewsQuery.isLoading ||
-    outcomesQuery.isLoading ||
-    requirementsQuery.isLoading ||
-    discussionQuery.isLoading;
-  const isError =
-    courseByIdQuery.isError ||
-    coursesQuery.isError ||
-    sectionsQuery.isError ||
-    lessonsQuery.isError ||
-    reviewsQuery.isError ||
-    outcomesQuery.isError ||
-    requirementsQuery.isError ||
-    discussionQuery.isError;
+  const isCourseLoading = isUuidSlug ? courseByIdQuery.isLoading : coursesQuery.isLoading;
+  const isCourseError = isUuidSlug ? courseByIdQuery.isError : coursesQuery.isError;
+  const isCourseFetched = isUuidSlug ? courseByIdQuery.isFetched : coursesQuery.isFetched;
+  const showCourseLoading = isCourseLoading || (Boolean(slugValue) && !isCourseFetched && !isCourseError);
+  const isDetailsLoading = Boolean(
+    course?.id &&
+    (myEnrollmentQuery.isLoading ||
+      sectionsQuery.isLoading ||
+      lessonsQuery.isLoading ||
+      reviewsQuery.isLoading ||
+      outcomesQuery.isLoading ||
+      requirementsQuery.isLoading ||
+      discussionQuery.isLoading)
+  );
+  const isDetailsError = Boolean(
+    course?.id &&
+    (sectionsQuery.isError ||
+      lessonsQuery.isError ||
+      reviewsQuery.isError ||
+      outcomesQuery.isError ||
+      requirementsQuery.isError ||
+      discussionQuery.isError)
+  );
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-1">
-          <div className="container py-16 text-muted-foreground">Loading course...</div>
-        </main>
-        <Footer />
-      </div>
-    );
+  const LoadingScreen = () => (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4 text-foreground">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading course...</p>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+
+  if (showCourseLoading) {
+    return <LoadingScreen />;
   }
 
-  if (isError) {
+  if (isCourseError) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
-        <main className="flex-1">
-          <div className="container py-16 text-destructive">Failed to load course.</div>
+        <main className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <div className="container flex flex-col items-center gap-4 text-center">
+            <p className="text-destructive font-medium">Failed to load course.</p>
+            <Button variant="outline" asChild>
+              <Link to="/courses">Browse courses</Link>
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>
@@ -431,17 +517,44 @@ const CourseDetail = () => {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
-        <main className="flex-1">
-          <div className="container py-16 text-muted-foreground">Course not found.</div>
+        <main className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <div className="container flex flex-col items-center gap-4 text-center">
+            <p className="text-muted-foreground">Course not found.</p>
+            <Button variant="outline" asChild>
+              <Link to="/courses">Browse courses</Link>
+            </Button>
+          </div>
         </main>
         <Footer />
       </div>
     );
   }
 
-  const discount = course.discountPrice 
-    ? Math.round((1 - course.discountPrice / course.price) * 100) 
-    : 0;
+  if (isDetailsLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (isDetailsError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center min-h-[60vh]">
+          <div className="container flex flex-col items-center gap-4 text-center">
+            <p className="text-destructive font-medium">Failed to load course details.</p>
+            <Button variant="outline" asChild>
+              <Link to={`/courses/${slugValue}`}>Back to course</Link>
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  const discount =
+    course.discountPrice != null && Number(course.price) > 0
+      ? Math.round((1 - Number(course.discountPrice) / Number(course.price)) * 100)
+      : 0;
 
   const firstPreviewLesson = curriculumSections
     .flatMap((section) => section.lessons)
@@ -460,9 +573,9 @@ const CourseDetail = () => {
   const canDisplayEnrollCta = !isLoggedIn || user?.role === 'STUDENT';
 
 
-  const handleEnroll = async () => {
+  const handleEnroll = () => {
     if (!isLoggedIn) {
-      const redirectTo = `${location.pathname}${location.search}`;
+      const redirectTo = `${location.pathname}/checkout${location.search}`;
       navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`);
       return;
     }
@@ -476,14 +589,7 @@ const CourseDetail = () => {
       return;
     }
 
-    try {
-      await enrollMutation.mutateAsync();
-      setIsEnrolled(true);
-      toast({ title: 'Enrolled Successfully! 🎉', description: `You are now enrolled in "${course.title}". Start learning now!` });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to enroll right now.';
-      toast({ title: 'Enrollment failed', description: message, variant: 'destructive' });
-    }
+    navigate(`/courses/${slugValue}/checkout${location.search}`);
   };
 
   const handleUnenroll = async () => {
@@ -500,6 +606,18 @@ const CourseDetail = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to unenroll right now.';
       toast({ title: 'Unenroll failed', description: message, variant: 'destructive' });
+    }
+  };
+
+  const handleShare = async () => {
+    const base = window.location.origin + location.pathname;
+    const sep = base.includes('?') ? '&' : '?';
+    const url = user?.id ? `${base}${sep}ref=${user.id}` : base;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Link copied!', description: 'Share this link. When a friend enrolls, you earn 5% of the course price.' });
+    } catch {
+      toast({ title: 'Could not copy', variant: 'destructive' });
     }
   };
 
@@ -560,11 +678,11 @@ const CourseDetail = () => {
                 </div>
 
                 <h1 className="font-display text-3xl md:text-4xl font-bold">
-                  {course.title}
+                  {(getLocalizedTitle(course) || course.title) ?? 'Course'}
                 </h1>
 
                 <p className="text-lg text-primary-foreground/80">
-                  {course.description}
+                  {(getLocalizedDescription(course) || course.description) ?? ''}
                 </p>
 
                 {isEnrolled && (
@@ -577,13 +695,13 @@ const CourseDetail = () => {
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="flex items-center gap-1">
                     <Star className="h-5 w-5 fill-warning text-warning" />
-                    <span className="font-bold">{course.averageRating.toFixed(1)}</span>
+                    <span className="font-bold">{(Number(course.averageRating) ?? 0).toFixed(1)}</span>
                     <span className="text-primary-foreground/70">
-                      ({course.totalReviews.toLocaleString()} reviews)
+                      ({(Number(course.totalReviews) ?? 0).toLocaleString()} reviews)
                     </span>
                   </div>
                   <span className="text-primary-foreground/50">•</span>
-                  <span>{course.enrollmentCount.toLocaleString()} students</span>
+                  <span>{(Number(course.enrollmentCount) ?? 0).toLocaleString()} students</span>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -609,11 +727,11 @@ const CourseDetail = () => {
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    <span>{formatDuration(course.totalDuration)} total</span>
+                    <span>{formatDuration(Number(course.totalDuration) ?? 0)} total</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <BookOpen className="h-4 w-4" />
-                    <span>{course.totalLessons} lessons</span>
+                    <span>{Number(course.totalLessons) ?? 0} lessons</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Globe className="h-4 w-4" />
@@ -643,8 +761,8 @@ const CourseDetail = () => {
                     }}
                   >
                     <img 
-                      src={course.thumbnail}
-                      alt={course.title}
+                      src={course.thumbnail || ''}
+                      alt={getLocalizedTitle(course) || course.title || 'Course'}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 transition-colors group">
@@ -661,12 +779,12 @@ const CourseDetail = () => {
                     {/* Price */}
                     <div className="flex items-center gap-3">
                       <span className="font-display text-3xl font-bold">
-                        {formatPrice(course.discountPrice || course.price, course.currency)}
+                        {formatPrice(Number(course.discountPrice ?? course.price) || 0, course.currency ?? 'ETB')}
                       </span>
-                      {course.discountPrice && (
+                      {course.discountPrice != null && Number(course.discountPrice) > 0 && (
                         <>
                           <span className="text-lg text-muted-foreground line-through">
-                            {formatPrice(course.price, course.currency)}
+                            {formatPrice(Number(course.price) || 0, course.currency ?? 'ETB')}
                           </span>
                           <Badge className="bg-success text-success-foreground">
                             {discount}% OFF
@@ -678,9 +796,11 @@ const CourseDetail = () => {
                     {/* CTA Buttons */}
                     {isEnrolled ? (
                       <>
-                        <Button variant="accent" className="w-full" size="lg">
-                          <Play className="h-4 w-4 mr-2" />
-                          Continue Learning
+                        <Button variant="accent" className="w-full" size="lg" asChild>
+                          <Link to={`/courses/${slugValue}/learn`}>
+                            <Play className="h-4 w-4 mr-2" />
+                            Continue Learning
+                          </Link>
                         </Button>
                         <Button variant="outline" className="w-full text-destructive hover:text-destructive" onClick={handleUnenroll} disabled={unenrollMutation.isPending}>
                           Unenroll
@@ -689,7 +809,7 @@ const CourseDetail = () => {
                     ) : (
                       <>
                         {canDisplayEnrollCta && (
-                          <Button variant="accent" className="w-full" size="lg" onClick={handleEnroll} disabled={enrollMutation.isPending}>
+                          <Button variant="accent" className="w-full" size="lg" onClick={handleEnroll}>
                             Enroll Now
                           </Button>
                         )}
@@ -709,7 +829,7 @@ const CourseDetail = () => {
                       <ul className="space-y-2 text-sm">
                         <li className="flex items-center gap-2">
                           <Play className="h-4 w-4 text-muted-foreground" />
-                          {formatDuration(course.totalDuration)} on-demand video
+                          {formatDuration(Number(course.totalDuration) ?? 0)} on-demand video
                         </li>
                         <li className="flex items-center gap-2">
                           <FileText className="h-4 w-4 text-muted-foreground" />
@@ -732,12 +852,13 @@ const CourseDetail = () => {
                         variant="outline" 
                         size="sm" 
                         className="flex-1"
-                        onClick={() => setIsWishlisted(!isWishlisted)}
+                        disabled={!isLoggedIn || wishlistMutation.isPending}
+                        onClick={() => wishlistMutation.mutate()}
                       >
                         <Heart className={cn("h-4 w-4 mr-2", isWishlisted && "fill-destructive text-destructive")} />
                         Wishlist
                       </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={handleShare}>
                         <Share2 className="h-4 w-4 mr-2" />
                         Share
                       </Button>
@@ -752,29 +873,31 @@ const CourseDetail = () => {
         {/* Mobile Purchase Bar */}
         <div className="lg:hidden sticky bottom-0 z-40 bg-card border-t p-4">
           <div className="flex items-center gap-4">
-            <div>
-              <span className="font-display text-xl font-bold">
-                {formatPrice(course.discountPrice || course.price, course.currency)}
-              </span>
-              {course.discountPrice && (
-                <span className="text-sm text-muted-foreground line-through ml-2">
-                  {formatPrice(course.price, course.currency)}
+              <div>
+                <span className="font-display text-xl font-bold">
+                  {formatPrice(Number(course.discountPrice ?? course.price) || 0, course.currency ?? 'ETB')}
                 </span>
-              )}
-            </div>
-            {isEnrolled ? (
-              <Button variant="accent" className="flex-1">
-                <Play className="h-4 w-4 mr-2" /> Continue Learning
-              </Button>
-            ) : (
-              canDisplayEnrollCta ? (
-                <Button variant="accent" className="flex-1" onClick={handleEnroll} disabled={enrollMutation.isPending}>
-                  Enroll Now
+                {course.discountPrice != null && Number(course.discountPrice) > 0 && (
+                  <span className="text-sm text-muted-foreground line-through ml-2">
+                    {formatPrice(Number(course.price) || 0, course.currency ?? 'ETB')}
+                  </span>
+                )}
+              </div>
+              {isEnrolled ? (
+                <Button variant="accent" className="flex-1" asChild>
+                  <Link to={`/courses/${slugValue}/learn`}>
+                    <Play className="h-4 w-4 mr-2" /> Continue Learning
+                  </Link>
                 </Button>
               ) : (
-                <div className="flex-1 text-right text-xs text-muted-foreground">Only students can enroll</div>
-              )
-            )}
+                canDisplayEnrollCta ? (
+                  <Button variant="accent" className="flex-1" onClick={handleEnroll}>
+                    Enroll Now
+                  </Button>
+                ) : (
+                  <div className="flex-1 text-right text-xs text-muted-foreground">Only students can enroll</div>
+                )
+              )}
           </div>
         </div>
 
@@ -836,7 +959,7 @@ const CourseDetail = () => {
               <TabsContent value="curriculum" className="space-y-4">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-sm text-muted-foreground">
-                    {curriculumSections.length} sections • {course.totalLessons} lessons • {formatDuration(course.totalDuration)} total
+                    {curriculumSections.length} sections • {Number(course.totalLessons) ?? 0} lessons • {formatDuration(Number(course.totalDuration) ?? 0)} total
                   </span>
                 </div>
 
@@ -936,7 +1059,7 @@ const CourseDetail = () => {
                       </div>
                       {/* <div className="flex items-center gap-1">
                         <Award className="h-4 w-4" />
-                        <span>{formatPrice(instructorAverageEarnings, course.currency)} earnings</span>
+                        <span>{formatPrice(instructorAverageEarnings, course.currency ?? 'ETB')} earnings</span>
                       </div> */}
                     </div>
                   </div>
@@ -1048,7 +1171,7 @@ const CourseDetail = () => {
                 <div className="flex items-center gap-4">
                   <div className="text-center">
                     <div className="font-display text-5xl font-bold text-foreground">
-                      {course.averageRating.toFixed(1)}
+                      {(Number(course.averageRating) ?? 0).toFixed(1)}
                     </div>
                     <div className="flex gap-1 justify-center my-2">
                       {[...Array(5)].map((_, i) => (
@@ -1056,7 +1179,7 @@ const CourseDetail = () => {
                           key={i}
                           className={cn(
                             "h-5 w-5",
-                            i < Math.round(course.averageRating) 
+                            i < Math.round(Number(course.averageRating) ?? 0)
                               ? "fill-warning text-warning" 
                               : "text-muted"
                           )}
@@ -1064,7 +1187,7 @@ const CourseDetail = () => {
                       ))}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {course.totalReviews.toLocaleString()} reviews
+                      {(Number(course.totalReviews) ?? 0).toLocaleString()} reviews
                     </p>
                   </div>
                 </div>
@@ -1141,7 +1264,7 @@ const CourseDetail = () => {
                         : 'Log in and enroll to join the discussion.'}
                     </p>
                     {!isEnrolled && isLoggedIn && user?.role === 'STUDENT' && (
-                      <Button size="sm" variant="accent" onClick={handleEnroll} disabled={enrollMutation.isPending}>
+                      <Button size="sm" variant="accent" onClick={handleEnroll} >
                         Enroll to Discuss
                       </Button>
                     )}
@@ -1265,7 +1388,7 @@ const CourseDetail = () => {
             ) : (
               <>
                 <img
-                  src={course.thumbnail}
+                  src={course.thumbnail || ''}
                   alt="Video preview"
                   className="w-full h-full object-cover opacity-40"
                 />
@@ -1284,8 +1407,8 @@ const CourseDetail = () => {
               This is a free preview lesson. {!isEnrolled && 'Enroll to access all course content.'}
             </p>
             {!isEnrolled && canDisplayEnrollCta && (
-              <Button variant="accent" size="sm" className="mt-3" onClick={() => { handleEnroll(); setPreviewOpen(false); }} disabled={enrollMutation.isPending}>
-                Enroll Now — {formatPrice(course.discountPrice || course.price, course.currency)}
+              <Button variant="accent" size="sm" className="mt-3" onClick={() => { handleEnroll(); setPreviewOpen(false); }} >
+                Enroll Now — {formatPrice(Number(course.discountPrice ?? course.price) || 0, course.currency ?? 'ETB')}
               </Button>
             )}
           </div>

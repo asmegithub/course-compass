@@ -7,9 +7,17 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import Checkout from "./pages/Checkout";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
+import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
+import StudentPaymentHistory from "./pages/dashboard/StudentPaymentHistory";
+import StudentCertificates from "./pages/dashboard/StudentCertificates";
+import StudentWishlist from "./pages/dashboard/StudentWishlist";
+import StudentNotifications from "./pages/dashboard/StudentNotifications";
 import StudentInstructorApplication from "./pages/dashboard/StudentInstructorApplication";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
 import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
@@ -28,6 +36,7 @@ import AdminAuditLogs from "./pages/dashboard/AdminAuditLogs";
 import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
 import AdminSettings from "./pages/dashboard/AdminSettings";
 import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerifications";
+import AdminNotifications from "./pages/dashboard/AdminNotifications";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -44,10 +53,18 @@ const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/courses" element={<Courses />} />
     <Route path="/courses/:slug" element={<CourseDetail />} />
+    <Route path="/courses/:slug/checkout" element={<Checkout />} />
+    <Route path="/courses/:slug/checkout/success" element={<CheckoutSuccess />} />
+    <Route path="/courses/:slug/learn" element={<Learn />} />
     <Route path="/auth" element={<Auth />} />
+    <Route path="/referrals" element={<Referrals />} />
 
     {/* Student routes */}
     <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+    <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentPaymentHistory /></ProtectedRoute>} />
+    <Route path="/dashboard/certificates" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentCertificates /></ProtectedRoute>} />
+    <Route path="/dashboard/wishlist" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentWishlist /></ProtectedRoute>} />
+    <Route path="/dashboard/notifications" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentNotifications /></ProtectedRoute>} />
     <Route path="/dashboard/become-instructor" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentInstructorApplication /></ProtectedRoute>} />
     <Route path="/dashboard/*" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
 
@@ -64,6 +81,7 @@ const AppRoutes = () => (
 
     {/* Admin routes */}
     <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+    <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminNotifications /></ProtectedRoute>} />
     <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminUsers /></ProtectedRoute>} />
     <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminApprovals /></ProtectedRoute>} />
     <Route path="/admin/instructor-verifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminInstructorVerifications /></ProtectedRoute>} />

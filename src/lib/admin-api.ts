@@ -88,3 +88,39 @@ export const updateCourseApproval = async (id: string, payload: CourseApproval):
 export const getAuditLogs = async (): Promise<AuditLog[]> => {
   return apiFetch<AuditLog[]>('/api/audit-logs');
 };
+
+export interface EmailLog {
+  id: string;
+  recipient?: { id?: string; email?: string };
+  email?: string;
+  subject?: string;
+  type?: string;
+  status?: string;
+  errorMessage?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export const getEmailLogs = async (): Promise<EmailLog[]> => {
+  return apiFetch<EmailLog[]>('/api/email-logs');
+};
+
+export interface AdminPayment {
+  id: string;
+  transactionId?: string;
+  student?: { id?: string };
+  course?: { id?: string; title?: string };
+  amount?: number;
+  currency?: string;
+  gateway?: string;
+  status?: string;
+  platformShare?: number;
+  instructorShare?: number;
+  paidAt?: string;
+  createdAt?: string;
+}
+
+export const getPayments = async (): Promise<AdminPayment[]> => {
+  const data = await apiFetch<AdminPayment[]>('/api/payments');
+  return Array.isArray(data) ? data : [];
+};

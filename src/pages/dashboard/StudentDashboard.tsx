@@ -1,17 +1,30 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, Award, Clock, TrendingUp, Play, Bell, CreditCard, GraduationCap } from 'lucide-react';
+import { BookOpen, Award, Clock, TrendingUp, Play, Bell, CreditCard, GraduationCap, Share2, Banknote } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getCertificates, getCourses, getLessons, getMyEnrollments, getNotifications } from '@/lib/course-api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getCertificates, getCourses, getLessons, getMyEnrollments, getNotifications, getReferralBalance, getMyWithdrawals, requestWithdrawal } from '@/lib/course-api';
+import { useToast } from '@/hooks/use-toast';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
 
   const enrollmentsQuery = useQuery({
     queryKey: ['my-enrollments', user?.id],
@@ -41,6 +54,49 @@ const StudentDashboard = () => {
     queryFn: getCertificates,
     enabled: Boolean(user?.id),
   });
+
+  const referralBalanceQuery = useQuery({
+    queryKey: ['referral-balance'],
+    queryFn: getReferralBalance,
+    enabled: Boolean(user?.id),
+  });
+
+  const withdrawalsQuery = useQuery({
+    queryKey: ['referral-withdrawals'],
+    queryFn: getMyWithdrawals,
+    enabled: Boolean(user?.id),
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: (amount: number) => requestWithdrawal(amount),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['referral-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['referral-withdrawals'] });
+      setWithdrawOpen(false);
+      setWithdrawAmount('');
+      toast({ title: 'Withdrawal requested', description: 'Your request has been submitted. You will be notified when it is processed.' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Withdrawal failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const balance = referralBalanceQuery.data?.balance ?? 0;
+  const totalEarned = referralBalanceQuery.data?.totalEarned ?? 0;
+  const withdrawals = withdrawalsQuery.data ?? [];
+
+  const handleWithdraw = () => {
+    const num = parseFloat(withdrawAmount);
+    if (Number.isNaN(num) || num <= 0) {
+      toast({ title: 'Invalid amount', variant: 'destructive' });
+      return;
+    }
+    if (num > balance) {
+      toast({ title: 'Insufficient balance', variant: 'destructive' });
+      return;
+    }
+    withdrawMutation.mutate(num);
+  };
 
   const formatTimeAgo = (value?: string) => {
     if (!value) return '';
@@ -193,9 +249,9 @@ const StudentDashboard = () => {
                         {course.completedLessons}/{course.totalLessons} lessons
                       </span>
                       <Button size="sm" variant="accent" className="h-7 text-xs gap-1" asChild>
-                        <Link to={`/courses/${course.slug}`}>
+                        <Link to={`/courses/${course.slug}/learn`}>
                           <Play className="h-3 w-3" />
-                          Resume
+                          {course.progress > 0 ? 'Continue' : 'Start'}
                         </Link>
                       </Button>
                     </div>
@@ -207,6 +263,58 @@ const StudentDashboard = () => {
 
           {/* Sidebar */}
           <div className="space-y-4">
+            {/* Referral Balance */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Referral Balance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-2xl font-bold font-display">
+                  {referralBalanceQuery.isLoading ? '...' : `ETB ${balance.toFixed(2)}`}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Earned from referrals: ETB {totalEarned.toFixed(2)}. Share a course; when a friend enrolls, you get 5%.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    asChild
+                  >
+                    <Link to="/courses">
+                      <Share2 className="h-3.5 w-3.5 mr-1" /> Use for course
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    disabled={balance <= 0 || withdrawMutation.isPending}
+                    onClick={() => setWithdrawOpen(true)}
+                  >
+                    Withdraw
+                  </Button>
+                </div>
+                {withdrawals.length > 0 && (
+                  <div className="pt-2 border-t space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">Recent withdrawals</p>
+                    {withdrawals.slice(0, 3).map((w) => (
+                      <div key={w.id} className="flex justify-between text-xs">
+                        <span>ETB {w.amount.toFixed(2)}</span>
+                        <Badge variant={w.status === 'COMPLETED' ? 'default' : 'secondary'} className="text-[10px]">
+                          {w.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Notifications */}
             <Card>
               <CardHeader className="pb-3">
@@ -263,6 +371,31 @@ const StudentDashboard = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw referral balance</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Available: ETB {balance.toFixed(2)}. Enter the amount you want to withdraw. Requests are processed by the team.
+          </p>
+          <Input
+            type="number"
+            min={0}
+            step={0.01}
+            placeholder="Amount"
+            value={withdrawAmount}
+            onChange={(e) => setWithdrawAmount(e.target.value)}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>Cancel</Button>
+            <Button onClick={handleWithdraw} disabled={withdrawMutation.isPending}>
+              {withdrawMutation.isPending ? 'Submitting...' : 'Request withdrawal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
