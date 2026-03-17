@@ -103,5 +103,32 @@
     "WITHDRAWAL_REQUEST": "Withdrawal request",
     "INSTRUCTOR_PAYOUT_REQUEST": "Instructor payout request",
     "ADMIN_ALERT": "Admin alert"
+  },
+  "courses": {
+    "exploreTitle": "Explore Courses",
+    "exploreSubtitle": "Discover thousands of courses taught by expert instructors. Learn at your own pace and earn certificates.",
+    "filters": {
+      "category": "Category",
+      "level": "Level"
+    },
+    "levels": {
+      "BEGINNER": "Beginner",
+      "INTERMEDIATE": "Intermediate",
+      "ADVANCED": "Advanced",
+      "ALL_LEVELS": "All levels"
+    },
+    "resultsCount": "Showing {{count}} results",
+    "actions": {
+      "addToWishlist": "Add to wishlist",
+      "removeFromWishlist": "Remove from wishlist",
+      "addToCart": "Add to cart",
+      "inCart": "In cart"
+    },
+    "cart": {
+      "addedTitle": "Added to cart",
+      "addedDescription": "We saved this course to your cart.",
+      "removedTitle": "Removed from cart",
+      "removedDescription": "This course was removed from your cart."
+    }
   }
 }

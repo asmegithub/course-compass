@@ -129,3 +129,33 @@ export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> 
 
   return response.json() as Promise<T>;
 };
+
+/** Fetch response as Blob (e.g. for receipt images) with same auth as apiFetch. */
+export const apiFetchBlob = async (path: string): Promise<Blob> => {
+  const buildHeaders = (token: string | null) => {
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    return headers;
+  };
+
+  const makeRequest = (token: string | null) =>
+    fetch(buildUrl(path), { headers: buildHeaders(token) });
+
+  let response = await makeRequest(getAccessToken());
+
+  if (response.status === 401 && !isAuthPath(path)) {
+    const refreshedAccessToken = await refreshAccessToken();
+    if (!refreshedAccessToken) {
+      emitSessionExpired();
+      throw new Error('Session expired. Please sign in again.');
+    }
+    response = await makeRequest(refreshedAccessToken);
+  }
+
+  if (!response.ok) {
+    throw new Error(`API ${response.status} ${response.statusText}`);
+  }
+
+  return response.blob();
+};

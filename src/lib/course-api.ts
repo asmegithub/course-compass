@@ -482,6 +482,133 @@ export const uploadCourseMedia = async (
   });
 };
 
+export type PaymentAccount = {
+  id: string;
+  providerName: string;
+  type: string;
+  accountName?: string;
+  accountNumber?: string;
+  ussdCode?: string;
+  instructions?: string;
+  isActive?: boolean;
+};
+
+export const getActivePaymentAccounts = async (): Promise<PaymentAccount[]> => {
+  const data = await apiFetch<Array<{
+    id?: string;
+    providerName?: string;
+    type?: string;
+    accountName?: string;
+    accountNumber?: string;
+    ussdCode?: string;
+    instructions?: string;
+    isActive?: boolean;
+  }>>("/api/payment-accounts/active");
+  return (Array.isArray(data) ? data : []).map((a) => ({
+    id: a.id ?? "",
+    providerName: a.providerName ?? "",
+    type: a.type ?? "BANK",
+    accountName: a.accountName ?? undefined,
+    accountNumber: a.accountNumber ?? undefined,
+    ussdCode: a.ussdCode ?? undefined,
+    instructions: a.instructions ?? undefined,
+    isActive: a.isActive ?? true,
+  }));
+};
+
+export const submitPaymentProofForOrder = async (payload: {
+  orderId: string;
+  paymentAccountId: string;
+  amount?: string;
+  currency?: string;
+  note?: string;
+  file: File;
+}): Promise<{ id: string; status?: string }> => {
+  const form = new FormData();
+  form.append("paymentAccountId", payload.paymentAccountId);
+  if (payload.amount) form.append("amount", payload.amount);
+  if (payload.currency) form.append("currency", payload.currency);
+  if (payload.note) form.append("note", payload.note);
+  form.append("file", payload.file);
+  const data = await apiFetch<{ id?: string; status?: string }>(`/api/payment-proofs/order/${payload.orderId}`, {
+    method: "POST",
+    body: form,
+  });
+  return { id: data.id ?? "", status: data.status };
+};
+
+export const createManualCartOrder = async (payload: { courseIds: string[] }): Promise<{ id: string; totalAmount?: number; currency?: string }> => {
+  const data = await apiFetch<{ id?: string; totalAmount?: number; currency?: string }>("/api/orders/cart", {
+    method: "POST",
+    body: JSON.stringify({ courseIds: payload.courseIds }),
+  });
+  return { id: data.id ?? "", totalAmount: data.totalAmount, currency: data.currency };
+};
+
+export type PaymentProofPayload = {
+  id: string;
+  status?: string;
+  amount?: number;
+  currency?: string;
+  note?: string;
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reviewedAt?: string;
+  originalFileName?: string;
+  courseTitle?: string;
+  orderCourseTitles?: string[];
+};
+
+export const getMyPaymentProofs = async (): Promise<PaymentProofPayload[]> => {
+  const data = await apiFetch<Array<{
+    id?: string;
+    status?: string;
+    amount?: number | string;
+    currency?: string;
+    note?: string;
+    rejectionReason?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    reviewedAt?: string;
+    originalFileName?: string;
+    course?: { title?: string };
+    order?: { items?: Array<{ course?: { title?: string } }> };
+  }>>("/api/payment-proofs/me");
+
+  return (Array.isArray(data) ? data : []).map((p) => ({
+    id: p.id ?? "",
+    status: p.status ?? undefined,
+    amount: p.amount != null ? Number(p.amount) : undefined,
+    currency: p.currency ?? undefined,
+    note: p.note ?? undefined,
+    rejectionReason: p.rejectionReason ?? undefined,
+    createdAt: p.createdAt ?? undefined,
+    updatedAt: p.updatedAt ?? undefined,
+    reviewedAt: p.reviewedAt ?? undefined,
+    originalFileName: p.originalFileName ?? undefined,
+    courseTitle: p.course?.title ?? undefined,
+    orderCourseTitles: (p.order?.items ?? [])
+      .map((i) => i.course?.title)
+      .filter(Boolean) as string[],
+  }));
+};
+
+export const resubmitPaymentProof = async (payload: {
+  proofId: string;
+  note?: string;
+  file: File;
+}): Promise<{ id: string; status?: string }> => {
+  const form = new FormData();
+  if (payload.note) form.append("note", payload.note);
+  form.append("file", payload.file);
+  const data = await apiFetch<{ id?: string; status?: string }>(`/api/payment-proofs/${payload.proofId}/resubmit`, {
+    method: "POST",
+    body: form,
+  });
+  return { id: data.id ?? "", status: data.status ?? undefined };
+};
+
 export type CourseSectionPayload = {
   id: string;
   courseId: string;
@@ -1388,23 +1515,113 @@ export const requestInstructorPayout = async (
   return { id: data.id ?? "" };
 };
 
-/** Initialize Chapa payment; returns checkout URL to redirect the user. */
+export type PayoutMethodOptionPayload = {
+  id: string;
+  name: string;
+  type: string;
+  fieldsJson?: string;
+};
+
+export const getActivePayoutMethodOptions = async (): Promise<PayoutMethodOptionPayload[]> => {
+  const data = await apiFetch<Array<{ id?: string; name?: string; type?: string; fieldsJson?: string }>>('/api/payout-method-options/active');
+  return (Array.isArray(data) ? data : []).map((m) => ({
+    id: m.id ?? '',
+    name: m.name ?? '',
+    type: m.type ?? '',
+    fieldsJson: m.fieldsJson ?? undefined,
+  }));
+};
+
+export type InstructorPayoutRequestPayloadV2 = {
+  id: string;
+  amount: number;
+  status: string;
+  payoutDetailsJson?: string;
+  methodOption?: { id?: string; name?: string; type?: string; fieldsJson?: string };
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reviewedAt?: string;
+  receiptOriginalFileName?: string;
+  hasReceipt?: boolean;
+};
+
+export const getMyInstructorPayoutRequestsV2 = async (): Promise<InstructorPayoutRequestPayloadV2[]> => {
+  const data = await apiFetch<Array<any>>('/api/instructor-payouts/me');
+  return (Array.isArray(data) ? data : []).map((r) => ({
+    id: r.id ?? '',
+    amount: Number(r.amount ?? 0),
+    status: r.status ?? 'PENDING',
+    payoutDetailsJson: r.payoutDetailsJson ?? undefined,
+    methodOption: r.methodOption ?? undefined,
+    rejectionReason: r.rejectionReason ?? undefined,
+    createdAt: r.createdAt ?? undefined,
+    updatedAt: r.updatedAt ?? undefined,
+    reviewedAt: r.reviewedAt ?? undefined,
+    receiptOriginalFileName: r.receiptOriginalFileName ?? undefined,
+    hasReceipt: Boolean(r.receiptUrl),
+  }));
+};
+
+export const requestInstructorPayoutV2 = async (payload: {
+  amount: number;
+  methodOptionId: string;
+  payoutDetails: Record<string, unknown>;
+}): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>('/api/instructor-payouts/request', {
+    method: 'POST',
+    body: JSON.stringify({
+      amount: payload.amount,
+      methodOptionId: payload.methodOptionId,
+      payoutDetailsJson: JSON.stringify(payload.payoutDetails ?? {}),
+      bankDetailId: null,
+    }),
+  });
+  return { id: data.id ?? '' };
+};
+
+export const resubmitInstructorPayoutRequest = async (payload: {
+  requestId: string;
+  amount: number;
+  methodOptionId: string;
+  payoutDetails: Record<string, unknown>;
+}): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>(`/api/instructor-payouts/resubmit/${payload.requestId}`, {
+    method: 'POST',
+    body: JSON.stringify({
+      amount: payload.amount,
+      methodOptionId: payload.methodOptionId,
+      payoutDetailsJson: JSON.stringify(payload.payoutDetails ?? {}),
+    }),
+  });
+  return { id: data.id ?? '' };
+};
+
+/** Initialize Chapa payment; returns checkout URL to redirect the user.
+ * Use courseId (and slug) for single-course checkout, or courseIds for cart/multi-course checkout. */
 export const initializeChapaPayment = async (payload: {
-  courseId: string;
-  slug: string;
+  courseId?: string;
+  /** Multiple course IDs for cart checkout (single transaction). */
+  courseIds?: string[];
+  slug?: string;
   referrerId?: string;
 }): Promise<{ checkoutUrl: string; paymentId: string; txRef: string }> => {
+  const body: Record<string, unknown> = {
+    slug: payload.slug ?? undefined,
+    referrerId: payload.referrerId ?? undefined,
+  };
+  if (payload.courseIds != null && payload.courseIds.length > 0) {
+    body.courseIds = payload.courseIds;
+  } else if (payload.courseId) {
+    body.courseId = payload.courseId;
+  }
   const data = await apiFetch<{
     checkoutUrl?: string;
     paymentId?: string;
     txRef?: string;
   }>("/api/payments/chapa/initialize", {
     method: "POST",
-    body: JSON.stringify({
-      courseId: payload.courseId,
-      slug: payload.slug,
-      referrerId: payload.referrerId ?? undefined,
-    }),
+    body: JSON.stringify(body),
   });
   return {
     checkoutUrl: data.checkoutUrl ?? "",

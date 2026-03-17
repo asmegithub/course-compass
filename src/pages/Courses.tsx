@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import CourseCard from '@/components/courses/CourseCard';
@@ -14,25 +15,172 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Search, 
-  SlidersHorizontal, 
-  X, 
+import {
+  Search,
+  SlidersHorizontal,
+  X,
   Star,
   Grid3X3,
   List,
+  Heart,
+  ShoppingCart,
   Loader2,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { getApprovedCourses, getCategories } from '@/lib/course-api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  getApprovedCourses,
+  getCategories,
+  addToWishlist,
+  removeFromWishlist,
+  checkInWishlist,
+} from '@/lib/course-api';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import type { Course } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
-const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'];
+const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'] as const;
+
+const getLocalizedCategoryName = (
+  cat: { name: string; nameAm?: string; nameOm?: string; nameGz?: string },
+  currentLang: string,
+) => {
+  switch (currentLang) {
+    case 'am':
+      return cat.nameAm || cat.name;
+    case 'om':
+      return cat.nameOm || cat.name;
+    case 'gez':
+    case 'gz':
+      return cat.nameGz || cat.name;
+    default:
+      return cat.name;
+  }
+};
+
+const getLevelLabel = (level: (typeof levels)[number], t: (key: string) => string) => {
+  const key = `courses.levels.${level}`;
+  const translated = t(key);
+  if (translated && translated !== key) return translated;
+  return level.toLowerCase().replace('_', ' ');
+};
+
+const CourseCardWithWishlist = ({ course }: { course: Course }) => {
+  const { user, isLoggedIn } = useAuth();
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const wishlistCheckQuery = useQuery({
+    queryKey: ['wishlist-check', course.id],
+    queryFn: () => checkInWishlist(course.id),
+    enabled: Boolean(isLoggedIn && course.id),
+  });
+
+  const isWishlisted = Boolean(wishlistCheckQuery.data);
+
+  const { isInCart, addToCart: addToCartContext, removeFromCart: removeFromCartContext } = useCart();
+  const inCart = isInCart(course.slug ?? '');
+
+  const wishlistMutation = useMutation({
+    mutationFn: async () => {
+      if (!course.id) return;
+      if (isWishlisted) {
+        await removeFromWishlist(course.id);
+      } else {
+        await addToWishlist(course.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['wishlist-check', course.id] });
+      queryClient.invalidateQueries({ queryKey: ['wishlist-me'] });
+    },
+  });
+
+  const handleToggleWishlist: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isLoggedIn || wishlistMutation.isPending) return;
+    wishlistMutation.mutate();
+  };
+
+  const handleAddToCart: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!course.slug) return;
+
+    // Only students can keep a cart; others go to auth first
+    if (!isLoggedIn || user?.role !== 'STUDENT') {
+      navigate(`/auth?redirect=${encodeURIComponent(`/courses/${course.slug}/checkout`)}`);
+      return;
+    }
+
+    if (inCart) {
+      removeFromCartContext(course.slug);
+      toast({
+        title: t('courses.cart.removedTitle', 'Removed from cart'),
+        description: t('courses.cart.removedDescription', 'This course was removed from your cart.'),
+      });
+    } else {
+      addToCartContext(course.slug);
+      toast({
+        title: t('courses.cart.addedTitle', 'Added to cart'),
+        description: t('courses.cart.addedDescription', 'We saved this course to your cart.'),
+      });
+    }
+  };
+
+  return (
+    <div className="relative">
+      <CourseCard course={course} />
+      <button
+        type="button"
+        onClick={handleAddToCart}
+        aria-label={t('courses.actions.addToCart', 'Add to cart')}
+        className={cn(
+          'absolute left-3 top-3 z-10 inline-flex h-8 items-center justify-center rounded-full px-2.5 text-xs font-medium shadow-md',
+          inCart
+            ? 'bg-accent text-accent-foreground hover:bg-accent/90'
+            : 'bg-background/80 text-foreground hover:bg-background',
+        )}
+      >
+        <ShoppingCart className="mr-1 h-3.5 w-3.5" />
+        {inCart
+          ? t('courses.actions.inCart', 'In cart')
+          : t('courses.actions.addToCart', 'Add to cart')}
+      </button>
+      {isLoggedIn && (
+        <button
+          type="button"
+          onClick={handleToggleWishlist}
+          aria-label={
+            isWishlisted
+              ? t('courses.actions.removeFromWishlist', 'Remove from wishlist')
+              : t('courses.actions.addToWishlist', 'Add to wishlist')
+          }
+          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-md hover:bg-background"
+        >
+          <Heart
+            className={cn(
+              'h-4 w-4',
+              isWishlisted ? 'fill-red-500 text-red-500' : 'text-muted-foreground',
+            )}
+          />
+        </button>
+      )}
+    </div>
+  );
+};
 
 const Courses = () => {
+  const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const currentLang = (i18n.language || 'en').split('-')[0];
 
   const coursesQuery = useQuery({
     queryKey: ['courses', 'approved'],
@@ -105,11 +253,13 @@ const Courses = () => {
         <div className="bg-primary text-primary-foreground py-12">
           <div className="container">
             <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Explore Courses
+              {t('courses.exploreTitle', 'Explore Courses')}
             </h1>
             <p className="text-primary-foreground/80 max-w-2xl">
-              Discover thousands of courses taught by expert instructors. 
-              Learn at your own pace and earn certificates.
+              {t(
+                'courses.exploreSubtitle',
+                'Discover thousands of courses taught by expert instructors. Learn at your own pace and earn certificates.',
+              )}
             </p>
           </div>
         </div>
@@ -198,7 +348,9 @@ const Courses = () => {
 
               {/* Categories */}
               <div className="space-y-3">
-                <h3 className="font-semibold">Category</h3>
+                <h3 className="font-semibold">
+                  {t('courses.filters.category', 'Category')}
+                </h3>
                 <div className="space-y-2">
                   {categories.map((cat) => (
                     <label
@@ -220,7 +372,9 @@ const Courses = () => {
                         className="sr-only"
                       />
                       <span>{cat.icon}</span>
-                      <span className="text-sm">{cat.name}</span>
+                      <span className="text-sm">
+                        {getLocalizedCategoryName(cat, currentLang)}
+                      </span>
                     </label>
                   ))}
                 </div>
@@ -228,7 +382,9 @@ const Courses = () => {
 
               {/* Level */}
               <div className="space-y-3">
-                <h3 className="font-semibold">Level</h3>
+                <h3 className="font-semibold">
+                  {t('courses.filters.level', 'Level')}
+                </h3>
                 <div className="space-y-2">
                   {levels.map((level) => (
                     <label key={level} className="flex items-center gap-2 cursor-pointer">
@@ -243,7 +399,7 @@ const Courses = () => {
                         }}
                       />
                       <span className="text-sm capitalize">
-                        {level.toLowerCase().replace('_', ' ')}
+                        {getLevelLabel(level, t)}
                       </span>
                     </label>
                   ))}
@@ -284,7 +440,9 @@ const Courses = () => {
             {/* Course Grid */}
             <div className="flex-1">
               <div className="mb-4 text-sm text-muted-foreground">
-                  Showing {sortedCourses.length} results
+                  {t('courses.resultsCount', 'Showing {{count}} results', {
+                    count: sortedCourses.length,
+                  })}
               </div>
 
                 {(coursesQuery.isLoading || categoriesQuery.isLoading) && (
@@ -306,7 +464,7 @@ const Courses = () => {
                       : "grid-cols-1"
                   )}>
                     {sortedCourses.map((course) => (
-                      <CourseCard key={course.id} course={course} />
+                      <CourseCardWithWishlist key={course.id} course={course} />
                     ))}
                   </div>
                 )}

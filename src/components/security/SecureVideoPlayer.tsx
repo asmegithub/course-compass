@@ -31,8 +31,11 @@ const SecureVideoPlayer = ({ src, drm, className }: SecureVideoPlayerProps) => {
 
     const initializeDrm = async () => {
       try {
-        const shakaModule = await import('shaka-player/dist/shaka-player.compiled.js');
-        const shaka = (shakaModule as unknown as { default?: any }).default || (shakaModule as unknown as any);
+        const shakaModule = await import('shaka-player');
+        const shaka = ((shakaModule as unknown as { default?: unknown }).default ?? shakaModule) as {
+          polyfill: { installAll: () => void };
+          Player: { isBrowserSupported: () => boolean; new (el: HTMLVideoElement): { destroy: () => void; configure: (c: object) => void; load: (url: string) => Promise<void> } };
+        };
         shaka.polyfill.installAll();
         if (!shaka.Player.isBrowserSupported()) {
           setDrmError('This browser does not support DRM playback.');

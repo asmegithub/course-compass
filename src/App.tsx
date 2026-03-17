@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { CartProvider } from "@/contexts/CartContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
@@ -13,6 +14,7 @@ import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
 import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
+import Cart from "./pages/Cart";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import StudentPaymentHistory from "./pages/dashboard/StudentPaymentHistory";
 import StudentCertificates from "./pages/dashboard/StudentCertificates";
@@ -26,6 +28,7 @@ import InstructorStudents from "./pages/dashboard/InstructorStudents";
 import InstructorEarnings from "./pages/dashboard/InstructorEarnings";
 import InstructorPayouts from "./pages/dashboard/InstructorPayouts";
 import InstructorSettings from "./pages/dashboard/InstructorSettings";
+import InstructorReviews from "./pages/dashboard/InstructorReviews";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import AdminUsers from "./pages/dashboard/AdminUsers";
 import AdminApprovals from "./pages/dashboard/AdminApprovals";
@@ -37,6 +40,7 @@ import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
 import AdminSettings from "./pages/dashboard/AdminSettings";
 import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerifications";
 import AdminNotifications from "./pages/dashboard/AdminNotifications";
+import AdminPayouts from "./pages/dashboard/AdminPayouts";
 import { ReactNode } from "react";
 import { useContentProtection } from "@/hooks/use-content-protection";
 import ContentProtectionOverlay from "@/components/security/ContentProtectionOverlay";
@@ -61,6 +65,8 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/courses" element={<Courses />} />
+    <Route path="/cart" element={<Cart />} />
+    <Route path="/cart/checkout/success" element={<CheckoutSuccess />} />
     <Route path="/courses/:slug" element={<CourseDetail />} />
     <Route path="/courses/:slug/checkout" element={<Checkout />} />
     <Route path="/courses/:slug/checkout/success" element={<CheckoutSuccess />} />
@@ -83,6 +89,7 @@ const AppRoutes = () => (
     <Route path="/instructor/courses/:courseId" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseDetail /></ProtectedRoute>} />
     <Route path="/instructor/courses/:courseId/edit" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
     <Route path="/instructor/students" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorStudents /></ProtectedRoute>} />
+    <Route path="/instructor/reviews" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorReviews /></ProtectedRoute>} />
     <Route path="/instructor/earnings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorEarnings /></ProtectedRoute>} />
     <Route path="/instructor/payouts" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorPayouts /></ProtectedRoute>} />
     <Route path="/instructor/settings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorSettings /></ProtectedRoute>} />
@@ -97,6 +104,7 @@ const AppRoutes = () => (
     <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
     <Route path="/admin/coupons" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCoupons /></ProtectedRoute>} />
     <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />
+    <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayouts /></ProtectedRoute>} />
     <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
     <Route path="/admin/email-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminEmailLogs /></ProtectedRoute>} />
     <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
@@ -113,7 +121,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <CartProvider>
+            <AppRoutes />
+          </CartProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

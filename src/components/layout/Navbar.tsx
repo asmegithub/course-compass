@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { getNotificationUnreadCount } from '@/lib/course-api';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -23,6 +24,7 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { user, isLoggedIn, logout } = useAuth();
+  const { cartCount } = useCart();
 
   const setLanguage = (lng: Locale) => {
     void i18n.changeLanguage(lng);
@@ -41,6 +43,15 @@ const Navbar = () => {
   };
 
   const dashboardPath = user?.role === 'ADMIN' ? '/admin' : user?.role === 'INSTRUCTOR' ? '/instructor' : '/dashboard';
+
+  const handleCartClick = () => {
+    // Only students can manage cart; others go to auth
+    if (!isLoggedIn || user?.role !== 'STUDENT') {
+      navigate('/auth?redirect=/cart');
+      return;
+    }
+    navigate('/cart');
+  };
 
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ['notification-unread-count'],
@@ -97,9 +108,13 @@ const Navbar = () => {
 
           {isLoggedIn ? (
             <>
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" onClick={handleCartClick}>
                 <ShoppingCart className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-accent text-xs text-accent-foreground flex items-center justify-center font-semibold">2</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-accent-foreground">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
               </Button>
               <Button variant="ghost" size="icon" className="relative" asChild>
                 <Link to={`${dashboardPath}/notifications`}>

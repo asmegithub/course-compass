@@ -103,5 +103,32 @@
     "WITHDRAWAL_REQUEST": "ሕቶ ምውሳድ",
     "INSTRUCTOR_PAYOUT_REQUEST": "ሕቶ ክፍሊ መምህር",
     "ADMIN_ALERT": "ሓበሬታ ኣስተዳዳሪ"
+  },
+  "courses": {
+    "exploreTitle": "ኮርሶታ ተዘርዝሩ",
+    "exploreSubtitle": "ብመምህራን ሙያውያን ዝተዘጋጁ ብዙ ኮርሶታት ርአዩ። ብጊዜኩም መሰረት ተዛረቡ እምበር ሰርቲፊኬት ተቐብሉ።",
+    "filters": {
+      "category": "ምድብ",
+      "level": "ደረጃ"
+    },
+    "levels": {
+      "BEGINNER": "ጀማሪ",
+      "INTERMEDIATE": "መካከለኛ",
+      "ADVANCED": "የላቀ",
+      "ALL_LEVELS": "ኩሉ ደረጃታት"
+    },
+    "resultsCount": "{{count}} ውጤታት ተረኺቡ",
+    "actions": {
+      "addToWishlist": "ገና ትፈልጉዎ ዝበለ ዝርዝር ኣእትዉ",
+      "removeFromWishlist": "ካብ ዝፈልጉዎ ዝርዝር ኣውጡ",
+      "addToCart": "ናብ ጋሪ ኣእትዉ",
+      "inCart": "ብጋሪ ውሽጢ ዘሎ"
+    },
+    "cart": {
+      "addedTitle": "ናብ ጋሪ ተደሊዩ",
+      "addedDescription": "እዚ ኮርስ ናብ መሸጣ ጋሪኻ ኣናዲናዮናዮ።",
+      "removedTitle": "ካብ ጋሪ ተወፂኡ",
+      "removedDescription": "እዚ ኮርስ ካብ መሸጣ ጋሪኻ ተወፂኡ ኣሎ።"
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,13 +10,12 @@ import { DollarSign, Landmark, Clock, CheckCircle, AlertCircle, Loader2 } from '
 import { toast } from '@/hooks/use-toast';
 import {
   getMyInstructorEarning,
-  getMyInstructorBankDetails,
-  getMyInstructorPayoutRequests,
-  requestInstructorPayout,
+  getActivePayoutMethodOptions,
+  getMyInstructorPayoutRequestsV2,
+  requestInstructorPayoutV2,
+  resubmitInstructorPayoutRequest,
 } from '@/lib/course-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { createPayout, getInstructorEarnings, getPayouts } from '@/lib/course-api';
 import { formatPrice } from '@/lib/formatters';
 
 const formatDate = (value?: string) => {
@@ -26,34 +25,85 @@ const formatDate = (value?: string) => {
   return date.toLocaleDateString();
 };
 
+type MethodField = { key: string; label: string; required?: boolean; placeholder?: string; type?: 'text' | 'number' };
+
+const parseFields = (fieldsJson?: string): MethodField[] => {
+  if (!fieldsJson) return [];
+  try {
+    const parsed = JSON.parse(fieldsJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((f) => ({
+        key: String(f.key ?? ''),
+        label: String(f.label ?? ''),
+        required: Boolean(f.required),
+        placeholder: f.placeholder ? String(f.placeholder) : undefined,
+        type: f.type === 'number' ? 'number' : 'text',
+      }))
+      .filter((f) => f.key && f.label);
+  } catch {
+    return [];
+  }
+};
+
 const InstructorPayouts = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const [payoutMethod, setPayoutMethod] = useState('BANK_TRANSFER');
   const [payoutAmount, setPayoutAmount] = useState('');
-  const [selectedBankId, setSelectedBankId] = useState<string>('');
+  const [selectedMethodId, setSelectedMethodId] = useState<string>('');
+  const [details, setDetails] = useState<Record<string, string>>({});
+  const [resubmitTargetId, setResubmitTargetId] = useState<string | null>(null);
 
   const earningQuery = useQuery({ queryKey: ['instructor-earning'], queryFn: getMyInstructorEarning });
-  const bankDetailsQuery = useQuery({ queryKey: ['instructor-bank-details'], queryFn: getMyInstructorBankDetails });
-  const payoutRequestsQuery = useQuery({ queryKey: ['instructor-payout-requests'], queryFn: getMyInstructorPayoutRequests });
+  const methodsQuery = useQuery({ queryKey: ['payout-method-options', 'active'], queryFn: getActivePayoutMethodOptions });
+  const payoutRequestsQuery = useQuery({ queryKey: ['instructor-payout-requests'], queryFn: getMyInstructorPayoutRequestsV2 });
 
   const requestPayoutMutation = useMutation({
-    mutationFn: () => requestInstructorPayout(Number(payoutAmount), selectedBankId || undefined),
+    mutationFn: () => requestInstructorPayoutV2({
+      amount: Number(payoutAmount),
+      methodOptionId: selectedMethodId,
+      payoutDetails: details,
+    }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instructor-earning'] });
       queryClient.invalidateQueries({ queryKey: ['instructor-payout-requests'] });
       toast({ title: 'Payout requested', description: 'Your request will be processed within 3-5 business days.' });
       setPayoutAmount('');
-      setSelectedBankId('');
+      setSelectedMethodId('');
+      setDetails({});
+      setResubmitTargetId(null);
     },
     onError: (err: Error) => {
       toast({ title: 'Request failed', description: err.message, variant: 'destructive' });
     },
   });
 
+  const resubmitMutation = useMutation({
+    mutationFn: () => {
+      if (!resubmitTargetId) throw new Error('Missing request');
+      return resubmitInstructorPayoutRequest({
+        requestId: resubmitTargetId,
+        amount: Number(payoutAmount),
+        methodOptionId: selectedMethodId,
+        payoutDetails: details,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instructor-earning'] });
+      queryClient.invalidateQueries({ queryKey: ['instructor-payout-requests'] });
+      toast({ title: 'Request resubmitted', description: 'Your request is pending review again.' });
+      setPayoutAmount('');
+      setSelectedMethodId('');
+      setDetails({});
+      setResubmitTargetId(null);
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Resubmit failed', description: err.message, variant: 'destructive' });
+    },
+  });
+
   const earning = earningQuery.data ?? null;
-  const bankDetails = bankDetailsQuery.data ?? [];
+  const methods = methodsQuery.data ?? [];
   const payoutHistory = payoutRequestsQuery.data ?? [];
 
   const availableBalance = earning?.currentBalance ?? 0;
@@ -68,60 +118,6 @@ const InstructorPayouts = () => {
       toast({ title: 'Invalid amount', variant: 'destructive' });
       return;
     }
-      const [bankName, setBankName] = useState('Commercial Bank of Ethiopia');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-
-  const { data: earningRows = [], isLoading: isEarningsLoading } = useQuery({
-    queryKey: ['instructor-earnings'],
-    queryFn: getInstructorEarnings,
-    enabled: Boolean(user?.id),
-  });
-
-  const { data: payouts = [], isLoading: isPayoutsLoading } = useQuery({
-    queryKey: ['payouts'],
-    queryFn: getPayouts,
-    enabled: Boolean(user?.id),
-  });
-
-  const earningRow = earningRows.find((row) => row.instructorUserId === user?.id) || null;
-  const availableBalance = earningRow?.currentBalance || 0;
-
-  const myPayouts = payouts
-    .filter((payout) => {
-      if (!user?.id) return false;
-      if (payout.instructorUserId === user.id) return true;
-      if (earningRow?.instructorProfileId && payout.instructorProfileId === earningRow.instructorProfileId) return true;
-      return false;
-    })
-    .sort((left, right) => new Date(right.requestedAt || right.createdAt || 0).getTime() - new Date(left.requestedAt || left.createdAt || 0).getTime());
-
-  const pendingAmount = myPayouts
-    .filter((payout) => payout.status === 'PENDING')
-    .reduce((sum, payout) => sum + payout.amount, 0);
-  const totalWithdrawn = earningRow?.totalWithdrawn || myPayouts
-    .filter((payout) => payout.status === 'COMPLETED')
-    .reduce((sum, payout) => sum + payout.amount, 0);
-
-  const payoutMutation = useMutation({
-    mutationFn: createPayout,
-    onSuccess: () => {
-      toast({
-        title: 'Payout requested',
-        description: `Your payout request of ${formatPrice(Number(payoutAmount || 0))} was submitted successfully.`,
-      });
-      setPayoutAmount('');
-      queryClient.invalidateQueries({ queryKey: ['payouts'] });
-      queryClient.invalidateQueries({ queryKey: ['instructor-earnings'] });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Payout request failed',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    },
-  });
     if (amount > availableBalance) {
       toast({
         title: 'Insufficient balance',
@@ -134,50 +130,31 @@ const InstructorPayouts = () => {
       toast({ title: 'Minimum withdrawal is ETB 100', variant: 'destructive' });
       return;
     }
-    if (payoutMethod === 'bank' && bankDetails.length > 0 && !selectedBankId) {
-      toast({ title: 'Please select a bank account', variant: 'destructive' });
-      return;
-    }
-     if (Number(payoutAmount) < 100) {
-      toast({ title: 'Invalid amount', description: 'Minimum withdrawal amount is ETB 100.', variant: 'destructive' });
-      return;
-    }
-    if (Number(payoutAmount) > availableBalance) {
-      toast({ title: 'Insufficient balance', description: `Your available balance is ${formatPrice(availableBalance)}.`, variant: 'destructive' });
-      return;
-    }
-    if (!earningRow?.instructorProfileId) {
-      toast({
-        title: 'Instructor profile not ready',
-        description: 'Your instructor earnings profile is not available yet. Please contact support.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    if (payoutMethod === 'BANK_TRANSFER' && (!bankName || !accountNumber)) {
-      toast({ title: 'Missing bank details', description: 'Please provide bank name and account number.', variant: 'destructive' });
-      return;
-    }
-    if (payoutMethod === 'MOBILE_MONEY' && !phoneNumber) {
-      toast({ title: 'Missing phone number', description: 'Please provide your mobile money number.', variant: 'destructive' });
+    if (!selectedMethodId) {
+      toast({ title: 'Select payout method', variant: 'destructive' });
       return;
     }
 
-    const paymentDetails = payoutMethod === 'BANK_TRANSFER'
-      ? JSON.stringify({ bankName, accountNumber })
-      : JSON.stringify({ provider: 'Telebirr', phoneNumber });
+    const selected = methods.find((m) => m.id === selectedMethodId);
+    const fields = parseFields(selected?.fieldsJson);
+    for (const f of fields) {
+      if (f.required && !details[f.key]) {
+        toast({ title: `Missing ${f.label}`, variant: 'destructive' });
+        return;
+      }
+    }
 
-    payoutMutation.mutate({
-      instructorProfileId: earningRow.instructorProfileId,
-      amount: Number(payoutAmount),
-      currency: 'ETB',
-      paymentMethod: payoutMethod,
-      paymentDetails,
-    });
-    requestPayoutMutation.mutate();
+    if (resubmitTargetId) {
+      resubmitMutation.mutate();
+    } else {
+      requestPayoutMutation.mutate();
+    }
   };
 
-  const isLoading = earningQuery.isLoading || bankDetailsQuery.isLoading;
+  const selectedMethod = useMemo(() => methods.find((m) => m.id === selectedMethodId) ?? null, [methods, selectedMethodId]);
+  const methodFields = useMemo(() => parseFields(selectedMethod?.fieldsJson), [selectedMethod?.fieldsJson]);
+
+  const isLoading = earningQuery.isLoading || methodsQuery.isLoading;
 
   return (
     <DashboardLayout>
@@ -229,36 +206,36 @@ const InstructorPayouts = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Payout Method</Label>
-                    <Select value={payoutMethod} onValueChange={setPayoutMethod}>
+                    <Label>Payout method</Label>
+                    <Select value={selectedMethodId} onValueChange={setSelectedMethodId}>
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select method" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="bank">Bank Transfer</SelectItem>
-                        <SelectItem value="mobile">Mobile Money (Telebirr)</SelectItem>
+                        {methods.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>
+                            {m.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  {payoutMethod === 'bank' && bankDetails.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Bank Account</Label>
-                      <Select value={selectedBankId} onValueChange={setSelectedBankId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankDetails.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.bankName ?? 'Bank'} · {b.accountNumber ?? b.id}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  {selectedMethod && methodFields.length > 0 && (
+                    <div className="space-y-3">
+                      {methodFields.map((f) => (
+                        <div key={f.key} className="space-y-2">
+                          <Label>
+                            {f.label}{f.required ? ' *' : ''}
+                          </Label>
+                          <Input
+                            type={f.type === 'number' ? 'number' : 'text'}
+                            value={details[f.key] ?? ''}
+                            placeholder={f.placeholder}
+                            onChange={(e) => setDetails((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  {payoutMethod === 'bank' && bankDetails.length === 0 && (
-                    <p className="text-sm text-muted-foreground">Add a bank account in Settings to request payouts.</p>
                   )}
                   <div className="space-y-2">
                     <Label>Amount (ETB)</Label>
@@ -277,9 +254,9 @@ const InstructorPayouts = () => {
                   <Button
                     className="w-full"
                     onClick={handleRequestPayout}
-                    disabled={requestPayoutMutation.isPending || (payoutMethod === 'bank' && bankDetails.length > 0 && !selectedBankId)}
+                    disabled={requestPayoutMutation.isPending || resubmitMutation.isPending || !selectedMethodId}
                   >
-                    {requestPayoutMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Request Payout'}
+                    {(requestPayoutMutation.isPending || resubmitMutation.isPending) ? <Loader2 className="h-4 w-4 animate-spin" /> : (resubmitTargetId ? 'Resubmit Request' : 'Request Payout')}
                   </Button>
                 </CardContent>
               </Card>
@@ -299,17 +276,42 @@ const InstructorPayouts = () => {
                   )}
                   {!payoutRequestsQuery.isLoading &&
                     payoutHistory.map((p) => (
-                      <div key={p.id} className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                      <div key={p.id} className="flex items-start justify-between gap-3 p-4 rounded-lg border bg-muted/30">
                         <div>
                           <p className="font-semibold text-sm">ETB {p.amount.toLocaleString()}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {p.bankDetail?.bankName ?? 'Bank'} · {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—'}
+                            {p.methodOption?.name ?? 'Method'} · {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—'}
                           </p>
+                          {p.status === 'REJECTED' && p.rejectionReason && (
+                            <p className="text-xs text-destructive mt-2">
+                              Rejected: {p.rejectionReason}
+                            </p>
+                          )}
                         </div>
-                        <Badge variant={p.status === 'COMPLETED' ? 'default' : 'secondary'} className="text-xs">
-                          {p.status === 'COMPLETED' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-                          {p.status}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={p.status === 'COMPLETED' ? 'default' : p.status === 'REJECTED' ? 'destructive' : 'secondary'} className="text-xs">
+                            {p.status === 'COMPLETED' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
+                            {p.status}
+                          </Badge>
+                          {p.status === 'REJECTED' && (
+                            <Button
+                              size="sm"
+                              variant="accent"
+                              onClick={() => {
+                                setResubmitTargetId(p.id);
+                                setPayoutAmount(String(p.amount));
+                                setSelectedMethodId(p.methodOption?.id ?? '');
+                                try {
+                                  setDetails(p.payoutDetailsJson ? JSON.parse(p.payoutDetailsJson) : {});
+                                } catch {
+                                  setDetails({});
+                                }
+                              }}
+                            >
+                              Resubmit
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                 </CardContent>

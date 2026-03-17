@@ -12,6 +12,7 @@ const CheckoutSuccess = () => {
   const [searchParams] = useSearchParams();
   const paymentId = searchParams.get('paymentId');
   const slugValue = slug || '';
+  const isCartFlow = slugValue === '' || slugValue === 'cart';
 
   const paymentQuery = useQuery({
     queryKey: ['payment', paymentId],
@@ -46,10 +47,12 @@ const CheckoutSuccess = () => {
                 <CheckCircle2 className="h-16 w-16 text-green-600 mx-auto mb-4" />
                 <h1 className="text-xl font-semibold mb-2">Payment successful</h1>
                 <p className="text-muted-foreground mb-6">
-                  You are enrolled. You can start learning now.
+                  {isCartFlow ? 'You are enrolled. Check your dashboard to start learning.' : 'You are enrolled. You can start learning now.'}
                 </p>
                 <Button asChild size="lg">
-                  <Link to={`/courses/${slugValue}/learn`}>Go to course</Link>
+                  <Link to={isCartFlow ? '/dashboard' : `/courses/${slugValue}/learn`}>
+                    {isCartFlow ? 'Go to dashboard' : 'Go to course'}
+                  </Link>
                 </Button>
               </>
             )}
@@ -69,7 +72,9 @@ const CheckoutSuccess = () => {
                   If you completed payment, you should be enrolled. Check your dashboard or go to the course.
                 </p>
                 <Button asChild size="lg">
-                  <Link to={`/courses/${slugValue}/learn`}>Go to course</Link>
+                  <Link to={isCartFlow ? '/dashboard' : `/courses/${slugValue}/learn`}>
+                    {isCartFlow ? 'Go to dashboard' : 'Go to course'}
+                  </Link>
                 </Button>
               </>
             )}

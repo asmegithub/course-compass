@@ -47,6 +47,7 @@ const adminNav: NavItem[] = [
   { label: 'Categories', href: '/admin/categories', icon: FolderOpen },
   { label: 'Coupons', href: '/admin/coupons', icon: Tag },
   { label: 'Payments', href: '/admin/payments', icon: CreditCard },
+  { label: 'Payouts', href: '/admin/payouts', icon: Landmark },
   { label: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
   { label: 'Email Logs', href: '/admin/email-logs', icon: Mail },
   { label: 'System Settings', href: '/admin/settings', icon: Cog },

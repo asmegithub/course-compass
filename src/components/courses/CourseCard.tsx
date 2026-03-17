@@ -19,6 +19,13 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
     ? Math.round((1 - course.discountPrice / course.price) * 100) 
     : 0;
 
+  const levelKey = `courses.levels.${course.level}`;
+  const translatedLevel = t(levelKey);
+  const displayLevel =
+    translatedLevel && translatedLevel !== levelKey
+      ? translatedLevel
+      : course.level.toLowerCase().replace('_', ' ');
+
   return (
     <Link 
       to={`/courses/${course.slug}`}
@@ -54,7 +61,7 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
             {course.category?.icon} {course.category?.name}
           </span>
           <Badge variant="outline" className="text-xs capitalize">
-            {course.level.toLowerCase().replace('_', ' ')}
+            {displayLevel}
           </Badge>
         </div>
 

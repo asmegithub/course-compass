@@ -103,5 +103,32 @@
     "WITHDRAWAL_REQUEST": "Gaafatama baasii",
     "INSTRUCTOR_PAYOUT_REQUEST": "Gaafatama kaffaltii barsiisaa",
     "ADMIN_ALERT": "Beellama bulchiinsa"
+  },
+  "courses": {
+    "exploreTitle": "Koorsii Qorii",
+    "exploreSubtitle": "Koorsii baay'ee barsiisota muuxannoo qaban irraa baradhaa. Yeroo keessan ittiin toftaa'aa baradhaa fi sertifikeetii argadhaa.",
+    "filters": {
+      "category": "Gosa",
+      "level": "Sadarkaa"
+    },
+    "levels": {
+      "BEGINNER": "Duraa jalqabaa",
+      "INTERMEDIATE": "Giddugaleessa",
+      "ADVANCED": "Sadarkaa olii",
+      "ALL_LEVELS": "Sadarkaa hundaa"
+    },
+    "resultsCount": "{{count}} bu'aa ni agarsiisa",
+    "actions": {
+      "addToWishlist": "Gara fe'ee fe'uu barbaadutti ida'i",
+      "removeFromWishlist": "Irra haqi fe'ee fe'uu barbaadutti",
+      "addToCart": "Gara kaartii ida'i",
+      "inCart": "Kaartii irratti jira"
+    },
+    "cart": {
+      "addedTitle": "Kaartii irratti ida'ame",
+      "addedDescription": "Korsiin kun kaartii keessan keessatti ni eeggata.",
+      "removedTitle": "Irra kaafame",
+      "removedDescription": "Korsiin kun kaartii keessan irraa kaafame."
+    }
   }
 }

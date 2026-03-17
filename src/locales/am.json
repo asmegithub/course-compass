@@ -103,5 +103,32 @@
     "WITHDRAWAL_REQUEST": "የመውጫ ጥያቄ",
     "INSTRUCTOR_PAYOUT_REQUEST": "የአስተማሪ ክፍያ ጥያቄ",
     "ADMIN_ALERT": "የአስተዳዳሪ ማሳወቂያ"
+  },
+  "courses": {
+    "exploreTitle": "ኮርሶችን ይመልከቱ",
+    "exploreSubtitle": "በባለሙያ አስተማሪዎች የሚዘጋጁ ብዙ ኮርሶችን ያግኙ። በጊዜዎ መሰረት ይማሩ እና ሰርቲፊኬት ያግኙ።",
+    "filters": {
+      "category": "ምድብ",
+      "level": "ደረጃ"
+    },
+    "levels": {
+      "BEGINNER": "ጀማሪ",
+      "INTERMEDIATE": "መካከለኛ",
+      "ADVANCED": "የላቀ",
+      "ALL_LEVELS": "ሁሉም ደረጃዎች"
+    },
+    "resultsCount": "{{count}} ውጤቶች ታይተዋል",
+    "actions": {
+      "addToWishlist": "ወደ የምፈልገው ዝርዝር አክል",
+      "removeFromWishlist": "ከየምፈልገው ዝርዝር አስወግድ",
+      "addToCart": "ወደ ጋሪ አክል",
+      "inCart": "በጋሪ ውስጥ ነው"
+    },
+    "cart": {
+      "addedTitle": "ወደ ጋሪ ታክሏል",
+      "addedDescription": "ይህን ኮርስ በመሸጫ ጋሪዎ ውስጥ ሰርተናል።",
+      "removedTitle": "ከጋሪው ተወግዷል",
+      "removedDescription": "ይህ ኮርስ ከመሸጫ ጋሪዎ ተወግዷል።"
+    }
   }
 }
