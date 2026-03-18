@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { FirstLoginTour } from '@/components/onboarding/FirstLoginTour';
 import {
   GraduationCap, BookOpen, Award, CreditCard, Bell, Heart, Settings, LogOut,
   BarChart3, Users, PlusCircle, DollarSign, Landmark, Star,
@@ -69,6 +70,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen flex bg-background">
+      <FirstLoginTour />
       {/* Sidebar overlay mobile */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-foreground/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -110,6 +112,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 key={item.href}
                 to={item.href}
                 onClick={() => setSidebarOpen(false)}
+                data-tour={`nav:${item.href}`}
                  className={cn(
                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                    isActive
@@ -164,7 +167,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center">3</span>
             </Button>
             <Link to="/">
-              <Button variant="outline" size="sm">Back to Site</Button>
+              <Button variant="outline" size="sm" data-tour="back-to-site">Back to Site</Button>
             </Link>
           </div>
         </header>

@@ -196,6 +196,14 @@ export const getPaymentProofReceiptBlob = async (proofId: string): Promise<Blob>
   return apiFetchBlob(`/api/payment-proofs/${proofId}/receipt`);
 };
 
+/** Admin: feature/unfeature a course for the homepage. */
+export const setCourseFeatured = async (courseId: string, isFeatured: boolean) => {
+  return apiFetch(`/api/courses/${courseId}/featured`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isFeatured }),
+  });
+};
+
 export type AdminPayoutRequest = {
   id: string;
   amount: number;

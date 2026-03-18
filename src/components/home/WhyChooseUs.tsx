@@ -1,49 +1,52 @@
 import { Globe, Award, Users, Clock, Download, Shield } from 'lucide-react';
-
-const features = [
-  {
-    icon: Globe,
-    title: 'Multilingual Content',
-    description: 'Learn in English, Amharic, Oromo, or Geez. Education in your native language.',
-  },
-  {
-    icon: Award,
-    title: 'Verified Certificates',
-    description: 'Earn industry-recognized certificates to boost your career and credibility.',
-  },
-  {
-    icon: Users,
-    title: 'Expert Instructors',
-    description: 'Learn from verified professionals with real-world experience.',
-  },
-  {
-    icon: Clock,
-    title: 'Learn at Your Pace',
-    description: 'Lifetime access to courses. Study whenever and wherever you want.',
-  },
-  {
-    icon: Download,
-    title: 'Offline Access',
-    description: 'Download lessons and learn without internet. Perfect for on-the-go.',
-  },
-  {
-    icon: Shield,
-    title: 'Money-Back Guarantee',
-    description: '30-day refund policy. Not satisfied? Get your money back, no questions.',
-  },
-];
+import { useTranslation } from 'react-i18next';
 
 const WhyChooseUs = () => {
+  const { t } = useTranslation();
+
+  const features = [
+    {
+      icon: Globe,
+      title: t('home.whyLearn.features.multilingual.title'),
+      description: t('home.whyLearn.features.multilingual.description'),
+    },
+    {
+      icon: Award,
+      title: t('home.whyLearn.features.certificates.title'),
+      description: t('home.whyLearn.features.certificates.description'),
+    },
+    {
+      icon: Users,
+      title: t('home.whyLearn.features.instructors.title'),
+      description: t('home.whyLearn.features.instructors.description'),
+    },
+    {
+      icon: Clock,
+      title: t('home.whyLearn.features.pace.title'),
+      description: t('home.whyLearn.features.pace.description'),
+    },
+    {
+      icon: Download,
+      title: t('home.whyLearn.features.offline.title'),
+      description: t('home.whyLearn.features.offline.description'),
+    },
+    {
+      icon: Shield,
+      title: t('home.whyLearn.features.guarantee.title'),
+      description: t('home.whyLearn.features.guarantee.description'),
+    },
+  ];
+
   return (
     <section className="py-16 lg:py-24 bg-background">
       <div className="container">
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Why Learn with BeteGubae?
+            {t('home.whyLearn.title')}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            We're committed to making quality education accessible to everyone across Africa
+            {t('home.whyLearn.subtitle')}
           </p>
         </div>
 

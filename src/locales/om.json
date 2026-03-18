@@ -88,7 +88,41 @@
     "loadingFeatured": "Koorsii filatamaa fe'amaa jira...",
     "noFeatured": "Koorsii filatamaa hin argamu.",
     "featured": "Filatame",
-    "footerTagline": "Afrikaa barumsa gaarii keessatti dandeettii kennuu. Afaan keessan keessatti barbaachisumaa qabu baradhaa."
+    "footerTagline": "Afrikaa barumsa gaarii keessatti dandeettii kennuu. Afaan keessan keessatti barbaachisumaa qabu baradhaa.",
+    "whyLearn": {
+      "title": "Maaliif BeteGubae waliin barattu?",
+      "subtitle": "Barumsa qulqulluu Afrikaa keessatti nama hundaaf dhaqqabsiisuuf hojjenna",
+      "features": {
+        "multilingual": {
+          "title": "Qabiyyee Afaan Hedduu",
+          "description": "Afaan Ingilizii, Amaaraa, Oromoo ykn Geez keessatti baradhaa. Barumsa afaan keessanitti."
+        },
+        "certificates": {
+          "title": "Sertifikeetii Mirkanaa'e",
+          "description": "Sertifikeetii hojii keessatti beekamtii qabu argachuun hojii fi amanamummaa keessan cimsaa."
+        },
+        "instructors": {
+          "title": "Barsiisota Muuxannoo Qaban",
+          "description": "Ogeeyyii hojii irratti muuxannoo qaban fi mirkanaa'an irraa baradhaa."
+        },
+        "pace": {
+          "title": "Akka Filannoo Keessanitti Baradhaa",
+          "description": "Koorsii irratti yeroo hundaaf seensa qabaatu. Yeroo fi bakka barbaaddanitti baradhaa."
+        },
+        "offline": {
+          "title": "Seensa Offline",
+          "description": "Barnoota buusaa fi intarneetii malee baradhaa. Imala irratti baay’ee mijataa."
+        },
+        "guarantee": {
+          "title": "Waadaa Deebii Qarshii",
+          "description": "Seera deebii guyyaa 30. Yoo hin gammaddan qarshiin ni deebi'a."
+        }
+      }
+    },
+    "testimonialsSection": {
+      "title": "Ragaa isaanii",
+      "subtitle": "Baraataota kumaatamaan lakkaa'aman kan hojii isaanii jijjiiran waliin hirmaadhaa"
+    }
   },
   "language": {
     "english": "Ingilizii",

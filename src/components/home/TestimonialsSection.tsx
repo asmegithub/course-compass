@@ -1,17 +1,20 @@
 import { Star, Quote } from 'lucide-react';
 import { mockReviews } from '@/lib/mock-data';
+import { useTranslation } from 'react-i18next';
 
 const TestimonialsSection = () => {
+  const { t } = useTranslation();
+
   return (
     <section className="py-16 lg:py-24 bg-muted/50">
       <div className="container">
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl lg:text-4xl font-bold text-foreground mb-4">
-            Testimonials
+            {t('home.testimonialsSection.title')}
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Join thousands of satisfied students who have transformed their careers
+            {t('home.testimonialsSection.subtitle')}
           </p>
         </div>
 

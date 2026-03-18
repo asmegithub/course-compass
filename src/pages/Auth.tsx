@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { getApiBaseUrl } from '@/lib/api';
@@ -36,6 +37,13 @@ const Auth = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [agreeTerms, setAgreeTerms] = useState(false);
+  const [concurrentOpen, setConcurrentOpen] = useState(false);
+  const [lastLoginAttempt, setLastLoginAttempt] = useState<{ email: string; password: string } | null>(null);
+
+  const concurrentMessage = useMemo(
+    () => "You have already logged in in an other device.",
+    []
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -70,6 +78,7 @@ const Auth = () => {
     e.preventDefault();
     try {
       if (mode === 'signin') {
+        setLastLoginAttempt({ email, password });
         await login({ email, password });
       } else {
         if (!agreeTerms) {
@@ -85,6 +94,11 @@ const Auth = () => {
         });
       }
     } catch (error) {
+      const err = error as (Error & { status?: number; code?: string });
+      if (mode === 'signin' && err?.status === 409 && err?.code === 'ALREADY_LOGGED_IN') {
+        setConcurrentOpen(true);
+        return;
+      }
       const message = error instanceof Error ? error.message : 'Authentication failed.';
       toast({ title: 'Auth error', description: message });
     }
@@ -96,6 +110,39 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex">
+      <Dialog open={concurrentOpen} onOpenChange={setConcurrentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Already signed in</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">{concurrentMessage}</p>
+            <p className="text-sm text-muted-foreground">
+              If you continue with <span className="font-medium text-foreground">Force login</span>, your first session will be terminated.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setConcurrentOpen(false)}>Cancel</Button>
+            <Button
+              variant="accent"
+              disabled={isLoading}
+              onClick={async () => {
+                try {
+                  const attempt = lastLoginAttempt ?? { email, password };
+                  setConcurrentOpen(false);
+                  await login({ ...attempt, forceLogin: true });
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : 'Authentication failed.';
+                  toast({ title: 'Auth error', description: message });
+                }
+              }}
+            >
+              Force login
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Left Panel - Form */}
       <div className="flex-1 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24 bg-card">
         <div className="mx-auto w-full max-w-sm">

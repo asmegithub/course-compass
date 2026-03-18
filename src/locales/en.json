@@ -88,7 +88,41 @@
     "loadingFeatured": "Loading featured courses...",
     "noFeatured": "No featured courses available.",
     "featured": "Featured",
-    "footerTagline": "Empowering Africa through quality education. Learn skills that matter, in your language."
+    "footerTagline": "Empowering Africa through quality education. Learn skills that matter, in your language.",
+    "whyLearn": {
+      "title": "Why Learn with BeteGubae?",
+      "subtitle": "We're committed to making quality education accessible to everyone across Africa",
+      "features": {
+        "multilingual": {
+          "title": "Multilingual Content",
+          "description": "Learn in English, Amharic, Oromo, or Geez. Education in your native language."
+        },
+        "certificates": {
+          "title": "Verified Certificates",
+          "description": "Earn industry-recognized certificates to boost your career and credibility."
+        },
+        "instructors": {
+          "title": "Expert Instructors",
+          "description": "Learn from verified professionals with real-world experience."
+        },
+        "pace": {
+          "title": "Learn at Your Pace",
+          "description": "Lifetime access to courses. Study whenever and wherever you want."
+        },
+        "offline": {
+          "title": "Offline Access",
+          "description": "Download lessons and learn without internet. Perfect for on-the-go."
+        },
+        "guarantee": {
+          "title": "Money-Back Guarantee",
+          "description": "30-day refund policy. Not satisfied? Get your money back, no questions."
+        }
+      }
+    },
+    "testimonialsSection": {
+      "title": "Testimonials",
+      "subtitle": "Join thousands of satisfied students who have transformed their careers"
+    }
   },
   "language": {
     "english": "English",

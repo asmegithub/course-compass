@@ -108,11 +108,13 @@ export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> 
 
   if (!response.ok) {
     let message = 'Request failed.';
+    let code: string | undefined;
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       try {
         const data = await response.json();
         message = data?.message || JSON.stringify(data);
+        code = typeof data?.code === 'string' ? data.code : undefined;
       } catch {
         message = 'Request failed.';
       }
@@ -120,7 +122,14 @@ export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> 
       const errorText = await response.text();
       message = errorText || 'Request failed.';
     }
-    throw new Error(`API ${response.status} ${response.statusText}: ${message}`);
+
+    const err = new Error(`API ${response.status} ${response.statusText}: ${message}`) as Error & {
+      status?: number;
+      code?: string;
+    };
+    err.status = response.status;
+    err.code = code;
+    throw err;
   }
 
   if (response.status === 204) {

@@ -4,6 +4,7 @@ import { User } from '@/types';
 export interface LoginPayload {
   email: string;
   password: string;
+  forceLogin?: boolean;
 }
 
 export interface SignupPayload {

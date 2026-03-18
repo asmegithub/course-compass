@@ -8,11 +8,13 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet } from 'lucide-react';
+import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet, Star } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { enableAdminPushNotifications, getAdminPushStatus, sendAdminTestPush } from '@/lib/push-api';
-import { createPaymentAccount, deletePaymentAccount, getPaymentAccounts, PaymentAccount, updatePaymentAccount } from '@/lib/admin-api';
+import { createPaymentAccount, deletePaymentAccount, getPaymentAccounts, PaymentAccount, setCourseFeatured, updatePaymentAccount } from '@/lib/admin-api';
 import { createPayoutMethodOption, deletePayoutMethodOption, getPayoutMethodOptions, PayoutMethodOption, updatePayoutMethodOption } from '@/lib/admin-api';
+import { getCourses } from '@/lib/course-api';
+import type { Course } from '@/types';
 
 const AdminSettings = () => {
   const { toast } = useToast();
@@ -67,6 +69,11 @@ const AdminSettings = () => {
   const payoutMethodsQuery = useQuery({
     queryKey: ['admin-payout-method-options'],
     queryFn: getPayoutMethodOptions,
+  });
+
+  const approvedCoursesQuery = useQuery({
+    queryKey: ['admin-approved-courses'],
+    queryFn: getCourses,
   });
 
   const [newAccount, setNewAccount] = useState<Partial<PaymentAccount>>({
@@ -127,6 +134,25 @@ const AdminSettings = () => {
 
   const paymentAccounts = useMemo(() => paymentAccountsQuery.data ?? [], [paymentAccountsQuery.data]);
   const payoutMethods = useMemo(() => payoutMethodsQuery.data ?? [], [payoutMethodsQuery.data]);
+  const approvedCourses = useMemo(
+    () => (approvedCoursesQuery.data ?? []).filter((c) => c.status === 'APPROVED' || c.status === 'PUBLISHED'),
+    [approvedCoursesQuery.data],
+  );
+
+  const toggleFeaturedMutation = useMutation({
+    mutationFn: async (payload: { courseId: string; isFeatured: boolean }) => setCourseFeatured(payload.courseId, payload.isFeatured),
+    onSuccess: () => {
+      toast({ title: 'Featured courses updated' });
+      approvedCoursesQuery.refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to update featured flag',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   const [newPayoutMethod, setNewPayoutMethod] = useState<Partial<PayoutMethodOption>>({
     name: '',
@@ -217,6 +243,7 @@ const AdminSettings = () => {
             <TabsTrigger value="financial" className="gap-1"><DollarSign className="h-3.5 w-3.5" /> Financial</TabsTrigger>
             <TabsTrigger value="email" className="gap-1"><Mail className="h-3.5 w-3.5" /> Email</TabsTrigger>
             <TabsTrigger value="security" className="gap-1"><ShieldCheck className="h-3.5 w-3.5" /> Security</TabsTrigger>
+            <TabsTrigger value="featured" className="gap-1"><Star className="h-3.5 w-3.5" /> Featured Courses</TabsTrigger>
             <TabsTrigger value="payment" className="gap-1"><Landmark className="h-3.5 w-3.5" /> Payment Accounts</TabsTrigger>
             <TabsTrigger value="payout-methods" className="gap-1"><Wallet className="h-3.5 w-3.5" /> Payout Methods</TabsTrigger>
             <TabsTrigger value="push" className="gap-1"><Bell className="h-3.5 w-3.5" /> Push</TabsTrigger>
@@ -317,6 +344,47 @@ const AdminSettings = () => {
                   <div className="flex items-center justify-between"><Label>Require Course Approval</Label><Switch checked={security.requireCourseApproval} onCheckedChange={v => setSecurity(s => ({ ...s, requireCourseApproval: v }))} /></div>
                 </div>
                 <Button variant="accent" className="gap-1" onClick={() => save('Security')}><Save className="h-4 w-4" /> Save Changes</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="featured">
+            <Card>
+              <CardHeader><CardTitle className="text-lg">Featured Courses (Homepage)</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Toggle which approved courses appear in the homepage featured section.
+                </p>
+
+                {approvedCoursesQuery.isLoading && (
+                  <p className="text-sm text-muted-foreground">Loading courses…</p>
+                )}
+                {approvedCoursesQuery.isError && (
+                  <p className="text-sm text-destructive">Failed to load courses.</p>
+                )}
+
+                {!approvedCoursesQuery.isLoading && !approvedCoursesQuery.isError && approvedCourses.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No approved courses found.</p>
+                )}
+
+                <div className="space-y-3">
+                  {approvedCourses.map((c: Course) => (
+                    <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{c.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{c.category?.name ?? ''}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Featured</span>
+                        <Switch
+                          checked={Boolean(c.isFeatured)}
+                          disabled={toggleFeaturedMutation.isPending}
+                          onCheckedChange={(v) => toggleFeaturedMutation.mutate({ courseId: c.id, isFeatured: v })}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
