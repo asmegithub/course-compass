@@ -4,6 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Award, ExternalLink } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getCertificates } from '@/lib/course-api';
+import { getApiBaseUrl } from '@/lib/api';
+
+const toAbsoluteUrl = (maybeUrl?: string) => {
+  if (!maybeUrl) return '';
+  if (maybeUrl.startsWith('http://') || maybeUrl.startsWith('https://')) return maybeUrl;
+  if (maybeUrl.startsWith('/')) return `${getApiBaseUrl()}${maybeUrl}`;
+  return maybeUrl;
+};
 
 const StudentCertificates = () => {
   const { data: certificates, isLoading, error } = useQuery({
@@ -52,7 +60,7 @@ const StudentCertificates = () => {
                       </p>
                       {c.certificateUrl && (
                         <Button variant="link" size="sm" className="h-auto p-0 mt-2 text-xs" asChild>
-                          <a href={c.certificateUrl} target="_blank" rel="noopener noreferrer">
+                          <a href={toAbsoluteUrl(c.certificateUrl)} target="_blank" rel="noopener noreferrer">
                             View / Download <ExternalLink className="h-3 w-3 ml-0.5 inline" />
                           </a>
                         </Button>

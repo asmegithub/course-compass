@@ -142,9 +142,27 @@
     "exploreTitle": "Explore Courses",
     "exploreSubtitle": "Discover thousands of courses taught by expert instructors. Learn at your own pace and earn certificates.",
     "filters": {
+      "title": "Filters",
+      "active": "Active Filters",
+      "clear": "Clear Filters",
+      "clearAll": "Clear All",
+      "rating": "Rating",
+      "ratingUp": "{{rating}}+ & up",
       "category": "Category",
       "level": "Level"
     },
+    "searchPlaceholder": "Search courses...",
+    "sort": {
+      "placeholder": "Sort by",
+      "popular": "Most Popular",
+      "rating": "Highest Rated",
+      "newest": "Newest",
+      "priceLow": "Price: Low to High",
+      "priceHigh": "Price: High to Low"
+    },
+    "loading": "Loading courses...",
+    "errorLoading": "Failed to load courses.",
+    "noResults": "No courses found matching your criteria.",
     "levels": {
       "BEGINNER": "Beginner",
       "INTERMEDIATE": "Intermediate",

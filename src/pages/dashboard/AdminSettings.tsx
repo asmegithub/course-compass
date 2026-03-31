@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet, Star } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { enableAdminPushNotifications, getAdminPushStatus, sendAdminTestPush } from '@/lib/push-api';
-import { createPaymentAccount, deletePaymentAccount, getPaymentAccounts, PaymentAccount, setCourseFeatured, updatePaymentAccount } from '@/lib/admin-api';
+import { createPaymentAccount, createSystemSetting, deletePaymentAccount, getPaymentAccounts, getSystemSettings, PaymentAccount, setCourseFeatured, updatePaymentAccount, updateSystemSetting } from '@/lib/admin-api';
 import { createPayoutMethodOption, deletePayoutMethodOption, getPayoutMethodOptions, PayoutMethodOption, updatePayoutMethodOption } from '@/lib/admin-api';
 import { getCourses } from '@/lib/course-api';
 import type { Course } from '@/types';
@@ -30,6 +30,7 @@ const AdminSettings = () => {
 
   const [financial, setFinancial] = useState({
     platformFee: 15,
+    referralRewardPercent: 5,
     minPayout: 500,
     payoutSchedule: 'MONTHLY',
     currency: 'ETB',
@@ -74,6 +75,78 @@ const AdminSettings = () => {
   const approvedCoursesQuery = useQuery({
     queryKey: ['admin-approved-courses'],
     queryFn: getCourses,
+  });
+
+  const systemSettingsQuery = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: getSystemSettings,
+  });
+
+  const platformFeeSetting = useMemo(
+    () => (systemSettingsQuery.data ?? []).find((s) => s.key === 'PLATFORM_FEE_PERCENT' || s.key === 'PLATFORM_FEE'),
+    [systemSettingsQuery.data],
+  );
+  const referralRewardSetting = useMemo(
+    () => (systemSettingsQuery.data ?? []).find((s) => s.key === 'REFERRAL_REWARD_PERCENT' || s.key === 'REFERRAL_PERCENT'),
+    [systemSettingsQuery.data],
+  );
+
+  useEffect(() => {
+    const raw = platformFeeSetting?.value;
+    if (raw == null || String(raw).trim() === '') return;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return;
+    setFinancial((f) => ({ ...f, platformFee: parsed }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platformFeeSetting?.value]);
+
+  useEffect(() => {
+    const raw = referralRewardSetting?.value;
+    if (raw == null || String(raw).trim() === '') return;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return;
+    setFinancial((f) => ({ ...f, referralRewardPercent: parsed }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [referralRewardSetting?.value]);
+
+  const upsertPlatformFeeMutation = useMutation({
+    mutationFn: async () => {
+      const platformPayload = {
+        key: 'PLATFORM_FEE_PERCENT',
+        value: String(financial.platformFee),
+        description: 'Platform fee percentage applied to course payments',
+        isPublic: false,
+      };
+      const referralPayload = {
+        key: 'REFERRAL_REWARD_PERCENT',
+        value: String(financial.referralRewardPercent),
+        description: 'Referral reward percentage credited to a user when a referred friend enrolls',
+        isPublic: false,
+      };
+
+      if (platformFeeSetting?.id) {
+        await updateSystemSetting(platformFeeSetting.id, platformPayload);
+      } else {
+        await createSystemSetting(platformPayload);
+      }
+      if (referralRewardSetting?.id) {
+        await updateSystemSetting(referralRewardSetting.id, referralPayload);
+      } else {
+        await createSystemSetting(referralPayload);
+      }
+      return true;
+    },
+    onSuccess: () => {
+      toast({ title: 'Financial settings saved' });
+      systemSettingsQuery.refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to save financial settings',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const [newAccount, setNewAccount] = useState<Partial<PaymentAccount>>({
@@ -135,7 +208,9 @@ const AdminSettings = () => {
   const paymentAccounts = useMemo(() => paymentAccountsQuery.data ?? [], [paymentAccountsQuery.data]);
   const payoutMethods = useMemo(() => payoutMethodsQuery.data ?? [], [payoutMethodsQuery.data]);
   const approvedCourses = useMemo(
-    () => (approvedCoursesQuery.data ?? []).filter((c) => c.status === 'APPROVED' || c.status === 'PUBLISHED'),
+    () => (approvedCoursesQuery.data ?? []).filter(
+      (c) => (c.status === 'APPROVED' || c.status === 'PUBLISHED') && c.isPublished !== false,
+    ),
     [approvedCoursesQuery.data],
   );
 
@@ -288,6 +363,7 @@ const AdminSettings = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div><Label>Platform Fee (%)</Label><Input type="number" value={financial.platformFee} onChange={e => setFinancial(f => ({ ...f, platformFee: Number(e.target.value) }))} /></div>
+                  <div><Label>Referral Reward (%)</Label><Input type="number" value={financial.referralRewardPercent} onChange={e => setFinancial(f => ({ ...f, referralRewardPercent: Number(e.target.value) }))} /></div>
                   <div><Label>Min Payout Amount (ETB)</Label><Input type="number" value={financial.minPayout} onChange={e => setFinancial(f => ({ ...f, minPayout: Number(e.target.value) }))} /></div>
                   <div>
                     <Label>Payout Schedule</Label>
@@ -302,7 +378,15 @@ const AdminSettings = () => {
                   </div>
                   <div><Label>Refund Window (days)</Label><Input type="number" value={financial.refundWindow} onChange={e => setFinancial(f => ({ ...f, refundWindow: Number(e.target.value) }))} /></div>
                 </div>
-                <Button variant="accent" className="gap-1" onClick={() => save('Financial')}><Save className="h-4 w-4" /> Save Changes</Button>
+                <Button
+                  variant="accent"
+                  className="gap-1"
+                  onClick={() => upsertPlatformFeeMutation.mutate()}
+                  disabled={upsertPlatformFeeMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {upsertPlatformFeeMutation.isPending ? 'Saving…' : 'Save Changes'}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

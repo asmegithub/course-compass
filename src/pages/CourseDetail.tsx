@@ -55,10 +55,13 @@ import {
 import { cn } from '@/lib/utils';
 import { getLocalizedTitle, getLocalizedDescription } from '@/lib/localized-content';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { useContentProtection } from '@/hooks/use-content-protection';
 import ContentProtectionOverlay from '@/components/security/ContentProtectionOverlay';
 import SecureVideoPlayer from '@/components/security/SecureVideoPlayer';
+
+const POST_LOGIN_REDIRECT_KEY = 'postLoginRedirect';
 
 interface DiscussionReplyView {
   id: string;
@@ -94,6 +97,7 @@ const CourseDetail = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
+  const { isInCart, addToCart, removeFromCart } = useCart();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const slugValue = slug || '';
@@ -575,11 +579,17 @@ const CourseDetail = () => {
   const instructorAverageEarnings = Number(course.instructor?.totalRevenue ?? 0);
   const instructorBiography = course.instructor?.biography || 'Biography is not available yet.';
   const canDisplayEnrollCta = !isLoggedIn || user?.role === 'STUDENT';
+  const inCart = isInCart(slugValue);
 
 
   const handleEnroll = () => {
     if (!isLoggedIn) {
       const redirectTo = `${location.pathname}/checkout${location.search}`;
+      try {
+        localStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo);
+      } catch {
+        // ignore storage errors
+      }
       navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`);
       return;
     }
@@ -594,6 +604,27 @@ const CourseDetail = () => {
     }
 
     navigate(`/courses/${slugValue}/checkout${location.search}`);
+  };
+
+  const handleAddToCart = () => {
+    if (!slugValue) return;
+    if (!isLoggedIn) {
+      const redirectTo = `${location.pathname}${location.search}`;
+      try {
+        localStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirectTo);
+      } catch {
+        // ignore storage errors
+      }
+      navigate(`/auth?redirect=${encodeURIComponent(redirectTo)}`);
+      return;
+    }
+    if (inCart) {
+      removeFromCart(slugValue);
+      toast({ title: 'Removed from cart', description: 'This course was removed from your cart.' });
+    } else {
+      addToCart(slugValue);
+      toast({ title: 'Added to cart', description: 'This course was added to your cart.' });
+    }
   };
 
   const handleUnenroll = async () => {
@@ -619,7 +650,7 @@ const CourseDetail = () => {
     const url = user?.id ? `${base}${sep}ref=${user.id}` : base;
     try {
       await navigator.clipboard.writeText(url);
-      toast({ title: 'Link copied!', description: 'Share this link. When a friend enrolls, you earn 5% of the course price.' });
+      toast({ title: 'Link copied!', description: 'Share this link. When a friend enrolls, referral reward will be credited to your balance.' });
     } catch {
       toast({ title: 'Could not copy', variant: 'destructive' });
     }
@@ -818,8 +849,8 @@ const CourseDetail = () => {
                             Enroll Now
                           </Button>
                         )}
-                        <Button variant="outline" className="w-full">
-                          Add to Cart
+                        <Button variant="outline" className="w-full" onClick={handleAddToCart}>
+                          {inCart ? 'In Cart' : 'Add to Cart'}
                         </Button>
                       </>
                     )}

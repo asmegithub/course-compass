@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,9 +50,10 @@ import {
 } from '@/lib/course-api';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { generateCourseTemplateFromPrompt, toSlug } from '@/lib/ai-course-template';
 import {
   Upload, Image, Video, PlusCircle, Trash2, GripVertical,
-  ChevronDown, ChevronUp, Save, Send, ArrowLeft, FileText, Globe,
+  ChevronDown, ChevronUp, Save, Send, ArrowLeft, FileText, Globe, Sparkles,
 } from 'lucide-react';
 
 interface SectionForm {
@@ -196,36 +198,13 @@ const createSection = (): SectionForm => ({
   isExpanded: true,
 });
 
-/** Get video duration in minutes from a File using the browser's video element. */
-function getVideoDurationMinutes(file: File): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
-    video.preload = 'metadata';
-    const url = URL.createObjectURL(file);
-    video.onloadedmetadata = () => {
-      URL.revokeObjectURL(url);
-      const seconds = video.duration;
-      if (Number.isFinite(seconds)) {
-        const minutes = Math.max(0, Math.round(seconds / 60));
-        resolve(minutes);
-      } else {
-        resolve(0);
-      }
-    };
-    video.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Could not read video duration'));
-    };
-    video.src = url;
-  });
-}
-
 const createListItem = (): ListItem => ({
   id: crypto.randomUUID(),
   text: '',
 });
 
 const InstructorCourseCreate = () => {
+  const { i18n } = useTranslation();
   const navigate = useNavigate();
   const { courseId } = useParams();
   const isEditMode = Boolean(courseId);
@@ -241,6 +220,10 @@ const InstructorCourseCreate = () => {
   const [pendingLessonUploads, setPendingLessonUploads] = useState(0);
   const [isEditInitialized, setIsEditInitialized] = useState(false);
   const [isEditLocked, setIsEditLocked] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGeneratingWithAi, setIsGeneratingWithAi] = useState(false);
+  const isAm = (i18n.language || 'en').startsWith('am');
+  const tx = (en: string, am: string) => (isAm ? am : en);
   const { data: categories = [] } = useQuery({
     queryKey: ['course-categories'],
     queryFn: getCategories,
@@ -254,14 +237,14 @@ const InstructorCourseCreate = () => {
 
   const sectionsQuery = useQuery({
     queryKey: ['course-sections', courseId],
-    queryFn: getCourseSections,
-    enabled: isEditMode,
+    queryFn: () => getCourseSections(courseId),
+    enabled: isEditMode && Boolean(courseId),
   });
 
   const lessonsQuery = useQuery({
     queryKey: ['lessons', courseId],
-    queryFn: getLessons,
-    enabled: isEditMode,
+    queryFn: () => getLessons(courseId),
+    enabled: isEditMode && Boolean(courseId),
   });
 
   const outcomesQuery = useQuery({
@@ -312,17 +295,76 @@ const InstructorCourseCreate = () => {
     enabled: isEditMode,
   });
 
+  const isEditDataLoading = isEditMode && (
+    courseQuery.isLoading ||
+    sectionsQuery.isLoading ||
+    lessonsQuery.isLoading ||
+    outcomesQuery.isLoading ||
+    requirementsQuery.isLoading ||
+    quizzesQuery.isLoading ||
+    questionsQuery.isLoading ||
+    questionOptionsQuery.isLoading ||
+    !isEditInitialized
+  );
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setIsEditInitialized(false);
+      setIsEditLocked(false);
+      return;
+    }
+    setIsEditInitialized(false);
+    setIsEditLocked(false);
+  }, [courseId, isEditMode]);
+
+  const validateCurriculumBeforeSubmit = () => {
+    if (sections.length === 0) {
+      throw new Error('At least one section is required.');
+    }
+
+    sections.forEach((section, sectionIndex) => {
+      const sectionTitle = section.title.trim();
+      if (!sectionTitle) {
+        throw new Error(`Section ${sectionIndex + 1} title is required.`);
+      }
+      if (!section.lessons || section.lessons.length === 0) {
+        throw new Error(`Section ${sectionIndex + 1} must contain at least one lesson.`);
+      }
+
+      section.lessons.forEach((lesson, lessonIndex) => {
+        const lessonTitle = lesson.title.trim();
+        if (!lessonTitle) {
+          throw new Error(`Lesson ${lessonIndex + 1} in section ${sectionIndex + 1} needs a title.`);
+        }
+        if (lesson.type === 'VIDEO' && !lesson.videoUrl) {
+          throw new Error(`Upload video for lesson "${lessonTitle}" in section ${sectionIndex + 1}.`);
+        }
+        if (lesson.type === 'DOCUMENT' && !lesson.documentUrl) {
+          throw new Error(`Upload document for lesson "${lessonTitle}" in section ${sectionIndex + 1}.`);
+        }
+      });
+    });
+  };
+
   useEffect(() => {
     if (!isEditMode || isEditInitialized || !courseQuery.data) {
       return;
     }
-    if (isEditMode && (quizzesQuery.isLoading || questionsQuery.isLoading || questionOptionsQuery.isLoading)) {
+    if (isEditMode && (
+      sectionsQuery.isLoading ||
+      lessonsQuery.isLoading ||
+      outcomesQuery.isLoading ||
+      requirementsQuery.isLoading ||
+      quizzesQuery.isLoading ||
+      questionsQuery.isLoading ||
+      questionOptionsQuery.isLoading
+    )) {
       return;
     }
 
     const courseData = courseQuery.data;
-    const locked = courseData.status === 'PUBLISHED' || courseData.status === 'APPROVED';
-    setIsEditLocked(locked);
+    // Approved/published courses are editable; backend now handles maker-checker.
+    setIsEditLocked(false);
 
     setCourse({
       ...emptyCourse,
@@ -476,6 +518,9 @@ const InstructorCourseCreate = () => {
 
   const createCourseMutation = useMutation({
     mutationFn: async (payload: CoursePayload) => {
+      // Validate first so we don't partially save and then fail.
+      validateCurriculumBeforeSubmit();
+
       const updatedCourse = isEditMode
         ? await updateCourseApi(courseId as string, payload)
         : await createCourse(payload);
@@ -517,30 +562,10 @@ const InstructorCourseCreate = () => {
         await Promise.all(existingRequirements.map((item) => deleteCourseRequirement(item.id)));
       }
 
-      const trimmedOutcomes = outcomes.map((item) => item.text.trim()).filter(Boolean);
-      for (let index = 0; index < trimmedOutcomes.length; index += 1) {
-        await createCourseOutcome({
-          courseId: courseIdValue,
-          text: trimmedOutcomes[index],
-          orderIndex: index,
-        });
-      }
-
-      const trimmedRequirements = requirements.map((item) => item.text.trim()).filter(Boolean);
-      for (let index = 0; index < trimmedRequirements.length; index += 1) {
-        await createCourseRequirement({
-          courseId: courseIdValue,
-          text: trimmedRequirements[index],
-          orderIndex: index,
-        });
-      }
-
       for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex += 1) {
         const section = sections[sectionIndex];
         const sectionTitle = section.title.trim();
-        if (!sectionTitle) {
-          throw new Error(`Section ${sectionIndex + 1} title is required.`);
-        }
+        // Safe due to pre-validation
 
         const createdSection = await createCourseSection({
           courseId: courseIdValue,
@@ -552,9 +577,7 @@ const InstructorCourseCreate = () => {
         for (let lessonIndex = 0; lessonIndex < section.lessons.length; lessonIndex += 1) {
           const lesson = section.lessons[lessonIndex];
           const lessonTitle = lesson.title.trim();
-          if (!lessonTitle) {
-            throw new Error(`Lesson ${lessonIndex + 1} in section ${sectionIndex + 1} needs a title.`);
-          }
+          // Safe due to pre-validation
 
           const createdLesson = await createLesson({
             sectionId: createdSection.id,
@@ -648,6 +671,24 @@ const InstructorCourseCreate = () => {
             }
           }
         }
+      }
+
+      const trimmedOutcomes = outcomes.map((item) => item.text.trim()).filter(Boolean);
+      for (let index = 0; index < trimmedOutcomes.length; index += 1) {
+        await createCourseOutcome({
+          courseId: courseIdValue,
+          text: trimmedOutcomes[index],
+          orderIndex: index,
+        });
+      }
+
+      const trimmedRequirements = requirements.map((item) => item.text.trim()).filter(Boolean);
+      for (let index = 0; index < trimmedRequirements.length; index += 1) {
+        await createCourseRequirement({
+          courseId: courseIdValue,
+          text: trimmedRequirements[index],
+          orderIndex: index,
+        });
       }
 
       return updatedCourse;
@@ -980,12 +1021,12 @@ const InstructorCourseCreate = () => {
     if (file) {
       updateLesson(sectionId, lessonId, 'videoFile', file);
       setPendingLessonUploads((prev) => prev + 1);
-      getVideoDurationMinutes(file)
-        .then((minutes) => updateLesson(sectionId, lessonId, 'duration', minutes))
-        .catch(() => { /* duration stays 0 or previous value */ });
       try {
         const uploaded = await uploadCourseMedia(file);
         updateLesson(sectionId, lessonId, 'videoUrl', uploaded.url);
+        if (typeof uploaded.durationMinutes === 'number' && uploaded.durationMinutes > 0) {
+          updateLesson(sectionId, lessonId, 'duration', uploaded.durationMinutes);
+        }
       } catch (error: unknown) {
         updateLesson(sectionId, lessonId, 'videoUrl', '');
         const message = error instanceof Error ? error.message : 'Failed to upload lesson video.';
@@ -1018,20 +1059,86 @@ const InstructorCourseCreate = () => {
   };
 
   const handleSaveDraft = () => {
-    toast({ title: 'Course saved as draft', description: 'You can continue editing later.' });
+    toast({
+      title: tx('Course saved as draft', 'ኮርሱ እንደ ረቂቅ ተቀምጧል'),
+      description: tx('You can continue editing later.', 'በኋላ ማስተካከልዎን መቀጠል ይችላሉ።'),
+    });
+  };
+
+  const handleGenerateWithAi = () => {
+    const prompt = aiPrompt.trim();
+    if (!prompt) {
+      toast({
+        title: tx('Describe your course first', 'መጀመሪያ ኮርስዎን ይግለጹ'),
+        description: tx('Please enter what kind of course you want to create.', 'ምን አይነት ኮርስ መፍጠር እንደሚፈልጉ ያስገቡ።'),
+        variant: 'destructive',
+      });
+      return;
+    }
+    setIsGeneratingWithAi(true);
+    try {
+      const generated = generateCourseTemplateFromPrompt(prompt, categories);
+
+      setCourse((prev) => ({
+        ...prev,
+        title: generated.title,
+        slug: toSlug(generated.title),
+        description: generated.description,
+        categoryId: generated.categoryId ?? prev.categoryId,
+        level: generated.level,
+        currency: generated.currency,
+        price: generated.price,
+        discountPrice: generated.discountPrice,
+      }));
+
+      setOutcomes(generated.outcomes.map((text) => ({ id: crypto.randomUUID(), text })));
+      setRequirements(generated.requirements.map((text) => ({ id: crypto.randomUUID(), text })));
+      setSections(
+        generated.sections.map((section) => ({
+          id: crypto.randomUUID(),
+          title: section.title,
+          titleAm: '',
+          isExpanded: true,
+          lessons: section.lessons.map((lesson) => ({
+            id: crypto.randomUUID(),
+            title: lesson.title,
+            titleAm: '',
+            type: lesson.type,
+            videoFile: null,
+            videoUrl: '',
+            documentFile: null,
+            documentUrl: '',
+            documentType: '',
+            content: '',
+            duration: lesson.duration,
+            isFree: lesson.isFree,
+            isDownloadable: false,
+            quiz: lesson.type === 'QUIZ' ? createQuizForm(lesson.title) : null,
+          })),
+        })),
+      );
+
+      setActiveTab('basic');
+      toast({
+        title: tx('AI draft generated', 'የAI ረቂቅ ተፈጥሯል'),
+        description: tx('Course form has been pre-filled. Please review and adjust before submitting.', 'የኮርስ ፎርሙ በራስ-ሰር ተሞልቷል። ከማስገባትዎ በፊት ይመርምሩ እና ያስተካክሉ።'),
+      });
+    } finally {
+      setIsGeneratingWithAi(false);
+    }
   };
 
   const handleSubmit = () => {
     if (!course.title || !course.description || !course.categoryId || !course.level) {
-      toast({ title: 'Missing required fields', description: 'Please fill in all required fields.', variant: 'destructive' });
+      toast({ title: tx('Missing required fields', 'አስፈላጊ መረጃዎች አልተሞሉም'), description: tx('Please fill in all required fields.', 'እባክዎ ሁሉንም አስፈላጊ መረጃዎች ይሙሉ።'), variant: 'destructive' });
       return;
     }
     if (isEditMode && isEditLocked) {
-      toast({ title: 'Editing disabled', description: 'Approved courses cannot be edited.' });
+      toast({ title: 'Editing disabled', description: 'Editing is currently unavailable for this course.' });
       return;
     }
     if (pendingLessonUploads > 0 || isUploadingThumbnail || isUploadingPreviewVideo) {
-      toast({ title: 'Upload in progress', description: 'Please wait for media uploads to finish before submitting.' });
+      toast({ title: tx('Upload in progress', 'ማስጫን በሂደት ላይ ነው'), description: tx('Please wait for media uploads to finish before submitting.', 'እባክዎ ሚዲያ ማስጫኑ እስኪጠናቀቅ ይጠብቁ።') });
       return;
     }
     const totalDuration = sections.reduce((acc, section) => acc + section.lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0), 0);
@@ -1071,10 +1178,15 @@ const InstructorCourseCreate = () => {
 
   const totalLessons = sections.reduce((acc, s) => acc + s.lessons.length, 0);
 
-  if (isEditMode && courseQuery.isLoading) {
+  if (isEditDataLoading) {
     return (
       <DashboardLayout>
-        <div className="py-12 text-muted-foreground">Loading course...</div>
+        <div className="space-y-4 py-8 max-w-5xl">
+          <div className="h-8 w-64 rounded-md bg-muted animate-pulse" />
+          <div className="h-24 w-full rounded-lg bg-muted animate-pulse" />
+          <div className="h-64 w-full rounded-lg bg-muted animate-pulse" />
+          <p className="text-sm text-muted-foreground">{tx('Loading existing course data...', 'ያለው የኮርስ መረጃ በመጫን ላይ...')}</p>
+        </div>
       </DashboardLayout>
     );
   }
@@ -1082,7 +1194,7 @@ const InstructorCourseCreate = () => {
   if (isEditMode && courseQuery.isError) {
     return (
       <DashboardLayout>
-        <div className="py-12 text-destructive">Failed to load course for editing.</div>
+        <div className="py-12 text-destructive">{tx('Failed to load course for editing.', 'ለማስተካከል የኮርስ መረጃ መጫን አልተሳካም።')}</div>
       </DashboardLayout>
     );
   }
@@ -1097,15 +1209,15 @@ const InstructorCourseCreate = () => {
           </Button>
           <div className="flex-1">
             <h1 className="font-display text-2xl font-bold text-foreground">
-              {isEditMode ? 'Edit Course' : 'Create New Course'}
+              {isEditMode ? tx('Edit Course', 'ኮርስ አስተካክል') : tx('Create New Course', 'አዲስ ኮርስ ፍጠር')}
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {sections.length} sections · {totalLessons} lessons
+              {sections.length} {tx('sections', 'ክፍሎች')} · {totalLessons} {tx('lessons', 'ትምህርቶች')}
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleSaveDraft} className="gap-2">
-              <Save className="h-4 w-4" /> Save Draft
+              <Save className="h-4 w-4" /> {tx('Save Draft', 'ረቂቅ አስቀምጥ')}
             </Button>
             <Button
               onClick={handleSubmit}
@@ -1118,20 +1230,20 @@ const InstructorCourseCreate = () => {
                 isEditLocked
               }
             >
-              <Send className="h-4 w-4" /> {isEditMode ? 'Update Course' : 'Submit for Review'}
+              <Send className="h-4 w-4" /> {isEditMode ? tx('Update Course', 'ኮርሱን አዘምን') : tx('Submit for Review', 'ለግምገማ አስገባ')}
             </Button>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="w-full justify-start">
-            <TabsTrigger value="basic">Basic Info</TabsTrigger>
-            <TabsTrigger value="media">Media</TabsTrigger>
-            <TabsTrigger value="curriculum">Curriculum</TabsTrigger>
-            <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
-            <TabsTrigger value="pricing">Pricing</TabsTrigger>
+            <TabsTrigger value="basic">{tx('Basic Info', 'መሰረታዊ መረጃ')}</TabsTrigger>
+            <TabsTrigger value="media">{tx('Media', 'ሚዲያ')}</TabsTrigger>
+            <TabsTrigger value="curriculum">{tx('Curriculum', 'ስርዓተ ትምህርት')}</TabsTrigger>
+            <TabsTrigger value="quizzes">{tx('Quizzes', 'ፈተናዎች')}</TabsTrigger>
+            <TabsTrigger value="pricing">{tx('Pricing', 'ዋጋ')}</TabsTrigger>
             <TabsTrigger value="localization">
-              <Globe className="h-3 w-3 mr-1" /> Localization
+              <Globe className="h-3 w-3 mr-1" /> {tx('Localization', 'ቋንቋ ቅንብር')}
             </TabsTrigger>
           </TabsList>
 
@@ -1139,24 +1251,58 @@ const InstructorCourseCreate = () => {
           <TabsContent value="basic" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Course Information</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  {tx('AI Course Draft Assistant', 'AI የኮርስ ረቂቅ አጋዥ')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  {tx(
+                    'Describe the course you want to create. AI will pre-fill title, description, outcomes, requirements, and a starter curriculum template.',
+                    'መፍጠር የሚፈልጉትን ኮርስ ይግለጹ። AI ርዕስ፣ መግለጫ፣ የትምህርት ውጤቶች፣ መስፈርቶች እና የመጀመሪያ ስርዓተ ትምህርት ቅጽ ይሞላል።'
+                  )}
+                </p>
+                <Textarea
+                  rows={3}
+                  placeholder={tx('Example: A beginner React course with practical projects for church media teams', 'ምሳሌ፡ ለቤተክርስቲያን ሚዲያ ቡድኖች ተግባራዊ ፕሮጀክቶችን ያካተተ የጀማሪ React ኮርስ')}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={handleGenerateWithAi}
+                    disabled={isGeneratingWithAi}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {isGeneratingWithAi ? tx('Generating...', 'በመፍጠር ላይ...') : tx('Generate Draft', 'ረቂቅ ፍጠር')}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{tx('Course Information', 'የኮርስ መረጃ')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="title">Course Title *</Label>
+                    <Label htmlFor="title">{tx('Course Title *', 'የኮርስ ርዕስ *')}</Label>
                     <Input
                       id="title"
-                      placeholder="e.g., Complete Web Development Bootcamp 2026"
+                      placeholder={tx('e.g., Complete Web Development Bootcamp 2026', 'ለምሳሌ፡ የሙሉ ድር ልማት ቡትካምፕ 2026')}
                       value={course.title}
                       onChange={(e) => updateCourse('title', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Category *</Label>
+                    <Label>{tx('Category *', 'ምድብ *')}</Label>
                     <Select value={course.categoryId} onValueChange={(v) => updateCourse('categoryId', v)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                        <SelectValue placeholder={tx('Select category', 'ምድብ ይምረጡ')} />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
@@ -1168,25 +1314,25 @@ const InstructorCourseCreate = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Level *</Label>
+                    <Label>{tx('Level *', 'ደረጃ *')}</Label>
                     <Select value={course.level} onValueChange={(v) => updateCourse('level', v)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select level" />
+                        <SelectValue placeholder={tx('Select level', 'ደረጃ ይምረጡ')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="BEGINNER">Beginner</SelectItem>
-                        <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-                        <SelectItem value="ADVANCED">Advanced</SelectItem>
-                        <SelectItem value="ALL_LEVELS">All Levels</SelectItem>
+                        <SelectItem value="BEGINNER">{tx('Beginner', 'ጀማሪ')}</SelectItem>
+                        <SelectItem value="INTERMEDIATE">{tx('Intermediate', 'መካከለኛ')}</SelectItem>
+                        <SelectItem value="ADVANCED">{tx('Advanced', 'ከፍተኛ')}</SelectItem>
+                        <SelectItem value="ALL_LEVELS">{tx('All Levels', 'ሁሉም ደረጃዎች')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="description">Description *</Label>
+                    <Label htmlFor="description">{tx('Description *', 'መግለጫ *')}</Label>
                     <Textarea
                       id="description"
                       rows={5}
-                      placeholder="What will students learn? Why should they take this course?"
+                      placeholder={tx("What will students learn? Why should they take this course?", "ተማሪዎች ምን ይማራሉ? ይህን ኮርስ ለምን ይውሰዱ?")}
                       value={course.description}
                       onChange={(e) => updateCourse('description', e.target.value)}
                     />
@@ -1197,15 +1343,15 @@ const InstructorCourseCreate = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Learning Outcomes & Requirements</CardTitle>
+                <CardTitle className="text-base">{tx('Learning Outcomes & Requirements', 'የትምህርት ውጤቶች እና መስፈርቶች')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label>What you'll learn</Label>
+                  <Label>{tx("What you'll learn", 'የሚማሩት')}</Label>
                   {outcomes.map((item, index) => (
                     <div key={item.id} className="flex items-center gap-2">
                       <Input
-                        placeholder={`Outcome ${index + 1}`}
+                        placeholder={tx(`Outcome ${index + 1}`, `ውጤት ${index + 1}`)}
                         value={item.text}
                         onChange={(e) => updateOutcome(item.id, e.target.value)}
                       />
@@ -1222,16 +1368,16 @@ const InstructorCourseCreate = () => {
                     </div>
                   ))}
                   <Button variant="outline" size="sm" onClick={addOutcome} className="gap-2">
-                    <PlusCircle className="h-4 w-4" /> Add Outcome
+                    <PlusCircle className="h-4 w-4" /> {tx('Add Outcome', 'ውጤት ጨምር')}
                   </Button>
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Requirements</Label>
+                  <Label>{tx('Requirements', 'መስፈርቶች')}</Label>
                   {requirements.map((item, index) => (
                     <div key={item.id} className="flex items-center gap-2">
                       <Input
-                        placeholder={`Requirement ${index + 1}`}
+                        placeholder={tx(`Requirement ${index + 1}`, `መስፈርት ${index + 1}`)}
                         value={item.text}
                         onChange={(e) => updateRequirement(item.id, e.target.value)}
                       />
@@ -1248,7 +1394,7 @@ const InstructorCourseCreate = () => {
                     </div>
                   ))}
                   <Button variant="outline" size="sm" onClick={addRequirement} className="gap-2">
-                    <PlusCircle className="h-4 w-4" /> Add Requirement
+                    <PlusCircle className="h-4 w-4" /> {tx('Add Requirement', 'መስፈርት ጨምር')}
                   </Button>
                 </div>
               </CardContent>
@@ -1259,7 +1405,7 @@ const InstructorCourseCreate = () => {
           <TabsContent value="media" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Course Thumbnail</CardTitle>
+                <CardTitle className="text-base">{tx('Course Thumbnail', 'የኮርስ ምስል')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col sm:flex-row gap-6 items-start">
@@ -1269,17 +1415,17 @@ const InstructorCourseCreate = () => {
                     ) : (
                       <div className="text-center text-muted-foreground">
                         <Image className="h-8 w-8 mx-auto mb-2" />
-                        <p className="text-xs">750×422 recommended</p>
+                        <p className="text-xs">{tx('750×422 recommended', '750×422 ይመከራል')}</p>
                       </div>
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Upload thumbnail image</Label>
-                    <p className="text-xs text-muted-foreground">JPG, PNG, or WebP. Max 5MB.</p>
+                    <Label>{tx('Upload thumbnail image', 'የኮርስ ምስል ያስገቡ')}</Label>
+                    <p className="text-xs text-muted-foreground">{tx('JPG, PNG, or WebP. Max 5MB.', 'JPG, PNG ወይም WebP። ከፍተኛ 5MB።')}</p>
                     <label className="inline-flex cursor-pointer">
                       <input type="file" accept="image/*" className="hidden" onChange={handleThumbnail} />
                       <Button variant="outline" size="sm" asChild>
-                        <span><Upload className="h-4 w-4 mr-2" /> Choose Image</span>
+                        <span><Upload className="h-4 w-4 mr-2" /> {tx('Choose Image', 'ምስል ይምረጡ')}</span>
                       </Button>
                     </label>
                   </div>
@@ -1289,18 +1435,21 @@ const InstructorCourseCreate = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Preview Video</CardTitle>
+                <CardTitle className="text-base">{tx('Preview Video', 'የቅድመ-እይታ ቪዲዮ')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Upload a short preview video that shows students what they'll learn. This appears on the course page.
+                    {tx(
+                      "Upload a short preview video that shows students what they'll learn. This appears on the course page.",
+                      'ተማሪዎች ምን እንደሚማሩ የሚያሳይ አጭር የቅድመ-እይታ ቪዲዮ ያስገቡ። ይህ በኮርሱ ገጽ ላይ ይታያል።'
+                    )}
                   </p>
                   <div className="flex items-center gap-4">
                     <label className="inline-flex cursor-pointer">
                       <input type="file" accept="video/*" className="hidden" onChange={handlePreviewVideo} />
                       <Button variant="outline" size="sm" asChild>
-                        <span><Video className="h-4 w-4 mr-2" /> Upload Video</span>
+                        <span><Video className="h-4 w-4 mr-2" /> {tx('Upload Video', 'ቪዲዮ ያስገቡ')}</span>
                       </Button>
                     </label>
                     {course.previewVideoName && (
@@ -1349,10 +1498,10 @@ const InstructorCourseCreate = () => {
                       <div key={lesson.id} className="border rounded-lg p-4 space-y-3 bg-muted/30">
                         <div className="flex items-center gap-2">
                           <GripVertical className="h-3 w-3 text-muted-foreground cursor-grab" />
-                          <span className="text-xs text-muted-foreground font-medium">Lesson {lIndex + 1}</span>
+                          <span className="text-xs text-muted-foreground font-medium">{tx('Lesson', 'ትምህርት')} {lIndex + 1}</span>
                           <div className="flex-1">
                             <Input
-                              placeholder="Lesson title"
+                              placeholder={tx('Lesson title', 'የትምህርት ርዕስ')}
                               value={lesson.title}
                               onChange={(e) => updateLesson(section.id, lesson.id, 'title', e.target.value)}
                               className="h-8 text-sm"
@@ -1367,7 +1516,7 @@ const InstructorCourseCreate = () => {
 
                         <div className="grid gap-3 sm:grid-cols-4">
                           <div className="space-y-1">
-                            <Label className="text-xs">Type</Label>
+                            <Label className="text-xs">{tx('Type', 'አይነት')}</Label>
                             <Select
                               value={lesson.type}
                               onValueChange={(v) => updateLesson(section.id, lesson.id, 'type', v)}
@@ -1376,15 +1525,15 @@ const InstructorCourseCreate = () => {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="VIDEO">Video</SelectItem>
-                                <SelectItem value="DOCUMENT">Document</SelectItem>
-                                <SelectItem value="TEXT">Text</SelectItem>
-                                <SelectItem value="QUIZ">Quiz</SelectItem>
+                                <SelectItem value="VIDEO">{tx('Video', 'ቪዲዮ')}</SelectItem>
+                                <SelectItem value="DOCUMENT">{tx('Document', 'ሰነድ')}</SelectItem>
+                                <SelectItem value="TEXT">{tx('Text', 'ጽሑፍ')}</SelectItem>
+                                <SelectItem value="QUIZ">{tx('Quiz', 'ፈተና')}</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Duration (min)</Label>
+                            <Label className="text-xs">{tx('Duration (min)', 'ቆይታ (ደቂቃ)')}</Label>
                             <Input
                               type="number"
                               min={0}
@@ -1399,14 +1548,14 @@ const InstructorCourseCreate = () => {
                                 checked={lesson.isFree}
                                 onCheckedChange={(v) => updateLesson(section.id, lesson.id, 'isFree', v)}
                               />
-                              <Label className="text-xs">Free Preview</Label>
+                              <Label className="text-xs">{tx('Free Preview', 'ነጻ ቅድመ-እይታ')}</Label>
                             </div>
                             <div className="flex items-center gap-2">
                               <Switch
                                 checked={lesson.isDownloadable}
                                 onCheckedChange={(v) => updateLesson(section.id, lesson.id, 'isDownloadable', v)}
                               />
-                              <Label className="text-xs">Downloadable</Label>
+                              <Label className="text-xs">{tx('Downloadable', 'የሚወርድ')}</Label>
                             </div>
                           </div>
                         </div>
@@ -1417,7 +1566,7 @@ const InstructorCourseCreate = () => {
                             <label className="inline-flex cursor-pointer">
                               <input type="file" accept="video/*" className="hidden" onChange={(e) => handleLessonVideo(section.id, lesson.id, e)} />
                               <Button variant="outline" size="sm" asChild>
-                                <span><Video className="h-3 w-3 mr-1" /> Upload Video</span>
+                                <span><Video className="h-3 w-3 mr-1" /> {tx('Upload Video', 'ቪዲዮ ያስገቡ')}</span>
                               </Button>
                             </label>
                             {lesson.videoUrl && (
@@ -1430,7 +1579,7 @@ const InstructorCourseCreate = () => {
                             <label className="inline-flex cursor-pointer">
                               <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="hidden" onChange={(e) => handleLessonDocument(section.id, lesson.id, e)} />
                               <Button variant="outline" size="sm" asChild>
-                                <span><FileText className="h-3 w-3 mr-1" /> Upload Document</span>
+                                <span><FileText className="h-3 w-3 mr-1" /> {tx('Upload Document', 'ሰነድ ያስገቡ')}</span>
                               </Button>
                             </label>
                             {lesson.documentFile && (
@@ -1440,7 +1589,7 @@ const InstructorCourseCreate = () => {
                         )}
                         {lesson.type === 'TEXT' && (
                           <Textarea
-                            placeholder="Write lesson content here..."
+                            placeholder={tx('Write lesson content here...', 'የትምህርቱን ይዘት እዚህ ይጻፉ...')}
                             rows={3}
                             value={lesson.content}
                             onChange={(e) => updateLesson(section.id, lesson.id, 'content', e.target.value)}
@@ -1450,14 +1599,14 @@ const InstructorCourseCreate = () => {
                       </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={() => addLesson(section.id)} className="gap-1">
-                      <PlusCircle className="h-3 w-3" /> Add Lesson
+                      <PlusCircle className="h-3 w-3" /> {tx('Add Lesson', 'ትምህርት ጨምር')}
                     </Button>
                   </CardContent>
                 )}
               </Card>
             ))}
             <Button variant="outline" onClick={addSection} className="gap-2 w-full">
-              <PlusCircle className="h-4 w-4" /> Add Section
+              <PlusCircle className="h-4 w-4" /> {tx('Add Section', 'ክፍል ጨምር')}
             </Button>
           </TabsContent>
 
@@ -1745,38 +1894,38 @@ const InstructorCourseCreate = () => {
           <TabsContent value="pricing" className="space-y-6 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Pricing</CardTitle>
+                <CardTitle className="text-base">{tx('Pricing', 'ዋጋ')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div className="space-y-2">
-                    <Label>Currency</Label>
+                    <Label>{tx('Currency', 'ምንዛሬ')}</Label>
                     <Select value={course.currency} onValueChange={(v) => updateCourse('currency', v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ETB">ETB (Birr)</SelectItem>
-                        <SelectItem value="USD">USD (Dollar)</SelectItem>
+                        <SelectItem value="ETB">{tx('ETB (Birr)', 'ETB (ብር)')}</SelectItem>
+                        <SelectItem value="USD">{tx('USD (Dollar)', 'USD (ዶላር)')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Original Price *</Label>
+                    <Label>{tx('Original Price *', 'ዋና ዋጋ *')}</Label>
                     <Input
                       type="number"
                       min={0}
-                      placeholder="1499"
+                      placeholder={tx('1499', '1499')}
                       value={course.price}
                       onChange={(e) => updateCourse('price', e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Discount Price</Label>
+                    <Label>{tx('Discount Price', 'የቅናሽ ዋጋ')}</Label>
                     <Input
                       type="number"
                       min={0}
-                      placeholder="299"
+                      placeholder={tx('299', '299')}
                       value={course.discountPrice}
                       onChange={(e) => updateCourse('discountPrice', e.target.value)}
                     />

@@ -9,7 +9,7 @@ import { CreditCard, ImageIcon, UploadCloud } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMyPaymentProofs, getMyPayments, resubmitPaymentProof, type PaymentProofPayload } from '@/lib/course-api';
 import { formatPrice } from '@/lib/formatters';
-import { apiFetchBlob } from '@/lib/api';
+import { apiFetchBlob, getApiBaseUrl } from '@/lib/api';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,8 +36,13 @@ const StudentPaymentHistory = () => {
 
   const [previewProofId, setPreviewProofId] = useState<string | null>(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
+  const [receiptPreviewMime, setReceiptPreviewMime] = useState<string | null>(null);
   const [receiptPreviewLoading, setReceiptPreviewLoading] = useState(false);
   const receiptUrlRef = useRef<string | null>(null);
+  const previewProof = proofs.find((p) => p.id === previewProofId) ?? null;
+  const toAbsoluteReceiptUrl = (url: string) => (
+    /^https?:\/\//i.test(url) ? url : `${getApiBaseUrl()}${url.startsWith('/') ? '' : '/'}${url}`
+  );
 
   useEffect(() => {
     if (!previewProofId) {
@@ -46,6 +51,7 @@ const StudentPaymentHistory = () => {
         receiptUrlRef.current = null;
       }
       setReceiptPreviewUrl(null);
+      setReceiptPreviewMime(null);
       return;
     }
     setReceiptPreviewLoading(true);
@@ -56,8 +62,20 @@ const StudentPaymentHistory = () => {
         const url = URL.createObjectURL(blob);
         receiptUrlRef.current = url;
         setReceiptPreviewUrl(url);
+        setReceiptPreviewMime(blob.type || 'application/octet-stream');
       })
       .catch(() => {
+        if (previewProof?.receiptUrl) {
+          if (receiptUrlRef.current) {
+            URL.revokeObjectURL(receiptUrlRef.current);
+            receiptUrlRef.current = null;
+          }
+          const absolute = toAbsoluteReceiptUrl(previewProof.receiptUrl);
+          setReceiptPreviewUrl(absolute);
+          const lower = absolute.toLowerCase();
+          setReceiptPreviewMime(lower.endsWith('.pdf') ? 'application/pdf' : 'image/*');
+          return;
+        }
         toast({
           title: 'Could not load receipt',
           description: 'The receipt image could not be loaded.',
@@ -71,11 +89,33 @@ const StudentPaymentHistory = () => {
         receiptUrlRef.current = null;
       }
     };
-  }, [previewProofId, toast]);
+  }, [previewProofId, previewProof, toast]);
 
   const [resubmitTarget, setResubmitTarget] = useState<PaymentProofPayload | null>(null);
   const [resubmitFile, setResubmitFile] = useState<File | null>(null);
+  const [resubmitFilePreviewUrl, setResubmitFilePreviewUrl] = useState<string | null>(null);
+  const [resubmitFilePreviewMime, setResubmitFilePreviewMime] = useState<string | null>(null);
+  const resubmitPreviewRef = useRef<string | null>(null);
   const [resubmitNote, setResubmitNote] = useState('');
+
+  useEffect(() => {
+    if (!resubmitFile) {
+      if (resubmitPreviewRef.current) URL.revokeObjectURL(resubmitPreviewRef.current);
+      resubmitPreviewRef.current = null;
+      setResubmitFilePreviewUrl(null);
+      setResubmitFilePreviewMime(null);
+      return;
+    }
+    if (resubmitPreviewRef.current) URL.revokeObjectURL(resubmitPreviewRef.current);
+    const url = URL.createObjectURL(resubmitFile);
+    resubmitPreviewRef.current = url;
+    setResubmitFilePreviewUrl(url);
+    setResubmitFilePreviewMime(resubmitFile.type || null);
+    return () => {
+      if (resubmitPreviewRef.current) URL.revokeObjectURL(resubmitPreviewRef.current);
+      resubmitPreviewRef.current = null;
+    };
+  }, [resubmitFile]);
 
   const resubmitMutation = useMutation({
     mutationFn: () => {
@@ -256,11 +296,20 @@ const StudentPaymentHistory = () => {
             <div className="flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-md p-4">
               {receiptPreviewLoading && <p className="text-sm text-muted-foreground">Loading receipt…</p>}
               {!receiptPreviewLoading && receiptPreviewUrl && (
-                <img
-                  src={receiptPreviewUrl}
-                  alt="Payment receipt"
-                  className="max-w-full max-h-[70vh] object-contain rounded border"
-                />
+                receiptPreviewMime?.includes('pdf') ? (
+                  <div className="text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">PDF receipt preview is opened in a new tab.</p>
+                    <Button variant="outline" onClick={() => window.open(receiptPreviewUrl, '_blank', 'noopener,noreferrer')}>
+                      Open PDF receipt
+                    </Button>
+                  </div>
+                ) : (
+                  <img
+                    src={receiptPreviewUrl}
+                    alt="Payment receipt"
+                    className="max-w-full max-h-[70vh] object-contain rounded border"
+                  />
+                )
               )}
               {!receiptPreviewLoading && !receiptPreviewUrl && previewProofId && (
                 <p className="text-sm text-muted-foreground">Receipt could not be loaded.</p>
@@ -279,7 +328,24 @@ const StudentPaymentHistory = () => {
                 <p className="text-sm text-muted-foreground">
                   Upload a new receipt image and optionally add a note. This will set your receipt back to <span className="font-medium">PENDING</span>.
                 </p>
-                <Input type="file" accept="image/*" onChange={(e) => setResubmitFile(e.target.files?.[0] ?? null)} />
+                <Input type="file" accept="image/*,application/pdf" onChange={(e) => setResubmitFile(e.target.files?.[0] ?? null)} />
+                {resubmitFile && (
+                  <div className="rounded-md border p-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground truncate">{resubmitFile.name}</p>
+                      <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => setResubmitFile(null)}>
+                        Remove
+                      </Button>
+                    </div>
+                    {resubmitFilePreviewUrl && (
+                      resubmitFilePreviewMime?.includes('pdf') ? (
+                        <iframe title="Selected receipt preview" src={resubmitFilePreviewUrl} className="w-full h-40 rounded border bg-background" />
+                      ) : (
+                        <img src={resubmitFilePreviewUrl} alt="Selected receipt preview" className="max-h-40 w-full object-contain rounded border" />
+                      )
+                    )}
+                  </div>
+                )}
                 <Input value={resubmitNote} onChange={(e) => setResubmitNote(e.target.value)} placeholder="Optional note" />
               </div>
               <div className="flex gap-2 justify-end">

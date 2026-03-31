@@ -13,7 +13,9 @@ const FeaturedCourses = () => {
     queryFn: getCourses,
   });
 
-  const featuredCourses = courses.filter(c => c.isFeatured).slice(0, 4);
+  const featuredCourses = courses
+    .filter((c) => c.isFeatured && c.isPublished !== false)
+    .slice(0, 4);
 
   return (
     <section className="py-16 lg:py-24 bg-background">

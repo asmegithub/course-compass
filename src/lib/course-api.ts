@@ -76,6 +76,7 @@ type ApiCourse = {
   totalReviews?: number | string;
   isFeatured?: boolean;
   isPopular?: boolean;
+  isPublished?: boolean;
   publishedAt?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -107,6 +108,7 @@ export type CoursePayload = {
   totalReviews?: number;
   isFeatured?: boolean;
   isPopular?: boolean;
+  isPublished?: boolean;
 };
 
 type ApiCategory = {
@@ -276,11 +278,51 @@ export type CategoryPayload = {
 type UploadMediaResponse = {
   url: string;
   fileName: string;
+  durationMinutes?: number;
 };
 
 const toNumber = (value: unknown, fallback: number = 0) => {
   const numeric = typeof value === "number" ? value : Number(value);
   return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const normalizeEntityId = (value: unknown, fieldName: string): string => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed) return trimmed;
+  }
+  if (value && typeof value === "object" && "id" in value) {
+    const nested = (value as { id?: unknown }).id;
+    if (typeof nested === "string" && nested.trim()) return nested.trim();
+  }
+  throw new Error(`Invalid ${fieldName}: expected an ID string`);
+};
+
+const getVideoDurationMinutes = async (file: File): Promise<number | undefined> => {
+  if (!file.type?.startsWith("video/")) return undefined;
+  return new Promise((resolve) => {
+    try {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      const objectUrl = URL.createObjectURL(file);
+      video.onloadedmetadata = () => {
+        const seconds = video.duration;
+        URL.revokeObjectURL(objectUrl);
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+          resolve(undefined);
+          return;
+        }
+        resolve(Math.max(1, Math.round(seconds / 60)));
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(undefined);
+      };
+      video.src = objectUrl;
+    } catch {
+      resolve(undefined);
+    }
+  });
 };
 
 const toUser = (user?: ApiInstructorUser): User | undefined => {
@@ -392,7 +434,7 @@ const toCourse = (course: ApiCourse): Course => {
     totalReviews: toNumber(course.totalReviews, 0),
     isFeatured: Boolean(course.isFeatured),
     isPopular: Boolean(course.isPopular),
-    isPublished: normalizedStatus === "PUBLISHED",
+    isPublished: course.isPublished ?? normalizedStatus === "PUBLISHED",
     publishedAt: course.publishedAt || undefined,
     createdAt: course.createdAt || "",
     updatedAt: course.updatedAt || "",
@@ -406,11 +448,14 @@ export const getCourses = async (): Promise<Course[]> => {
 
 export const getApprovedCourses = async (): Promise<Course[]> => {
   const data = await apiFetch<ApiCourse[]>("/api/courses?status=APPROVED");
-  return data.map((course) => toCourse(course));
+  return data
+    .map((course) => toCourse(course))
+    .filter((course) => course.isPublished !== false);
 };
 
-export const getCourseById = async (courseId: string): Promise<Course> => {
-  const data = await apiFetch<ApiCourse>(`/api/courses/${courseId}`);
+export const getCourseById = async (courseId: string | { id?: string }): Promise<Course> => {
+  const safeCourseId = normalizeEntityId(courseId, "courseId");
+  const data = await apiFetch<ApiCourse>(`/api/courses/${safeCourseId}`);
   return toCourse(data);
 };
 
@@ -423,12 +468,32 @@ export const createCourse = async (payload: CoursePayload): Promise<Course> => {
 };
 
 export const updateCourse = async (
-  courseId: string,
+  courseId: string | { id?: string },
   payload: CoursePayload,
 ): Promise<Course> => {
-  const data = await apiFetch<ApiCourse>(`/api/courses/${courseId}`, {
+  const safeCourseId = normalizeEntityId(courseId, "courseId");
+  const data = await apiFetch<ApiCourse>(`/api/courses/${safeCourseId}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+  return toCourse(data);
+};
+
+export const deleteCourse = async (courseId: string | { id?: string }): Promise<void> => {
+  const safeCourseId = normalizeEntityId(courseId, "courseId");
+  await apiFetch<void>(`/api/courses/${safeCourseId}`, {
+    method: "DELETE",
+  });
+};
+
+export const setCourseVisibility = async (
+  courseId: string | { id?: string },
+  isPublished: boolean,
+): Promise<Course> => {
+  const safeCourseId = normalizeEntityId(courseId, "courseId");
+  const data = await apiFetch<ApiCourse>(`/api/courses/${safeCourseId}/visibility`, {
+    method: "PATCH",
+    body: JSON.stringify({ isPublished }),
   });
   return toCourse(data);
 };
@@ -473,13 +538,18 @@ export const deleteCategory = async (categoryId: string): Promise<void> => {
 export const uploadCourseMedia = async (
   file: File,
 ): Promise<UploadMediaResponse> => {
+  const durationMinutes = await getVideoDurationMinutes(file);
   const formData = new FormData();
   formData.append("file", file);
 
-  return apiFetch<UploadMediaResponse>("/api/media/upload", {
+  const uploaded = await apiFetch<UploadMediaResponse>("/api/media/upload", {
     method: "POST",
     body: formData,
   });
+  return {
+    ...uploaded,
+    durationMinutes: uploaded.durationMinutes ?? durationMinutes,
+  };
 };
 
 export type PaymentAccount = {
@@ -517,23 +587,51 @@ export const getActivePaymentAccounts = async (): Promise<PaymentAccount[]> => {
 };
 
 export const submitPaymentProofForOrder = async (payload: {
-  orderId: string;
-  paymentAccountId: string;
+  orderId: string | { id?: string };
+  paymentAccountId: string | { id?: string };
   amount?: string;
   currency?: string;
   note?: string;
   file: File;
 }): Promise<{ id: string; status?: string }> => {
+  const safeOrderId = normalizeEntityId(payload.orderId, "orderId");
+  const safeAccountId = normalizeEntityId(payload.paymentAccountId, "paymentAccountId");
   const form = new FormData();
-  form.append("paymentAccountId", payload.paymentAccountId);
+  form.append("paymentAccountId", safeAccountId);
   if (payload.amount) form.append("amount", payload.amount);
   if (payload.currency) form.append("currency", payload.currency);
   if (payload.note) form.append("note", payload.note);
   form.append("file", payload.file);
-  const data = await apiFetch<{ id?: string; status?: string }>(`/api/payment-proofs/order/${payload.orderId}`, {
+  const data = await apiFetch<{ id?: string; status?: string }>(`/api/payment-proofs/order/${safeOrderId}`, {
     method: "POST",
     body: form,
   });
+  return { id: data.id ?? "", status: data.status };
+};
+
+export const submitPaymentProofForCourse = async (payload: {
+  courseId: string | { id?: string };
+  paymentAccountId: string | { id?: string };
+  amount?: string;
+  currency?: string;
+  note?: string;
+  file: File;
+}): Promise<{ id: string; status?: string }> => {
+  const safeCourseId = normalizeEntityId(payload.courseId, "courseId");
+  const safeAccountId = normalizeEntityId(payload.paymentAccountId, "paymentAccountId");
+  const form = new FormData();
+  form.append("paymentAccountId", safeAccountId);
+  if (payload.amount) form.append("amount", payload.amount);
+  if (payload.currency) form.append("currency", payload.currency);
+  if (payload.note) form.append("note", payload.note);
+  form.append("file", payload.file);
+  const data = await apiFetch<{ id?: string; status?: string }>(
+    `/api/payment-proofs/course/${safeCourseId}`,
+    {
+      method: "POST",
+      body: form,
+    },
+  );
   return { id: data.id ?? "", status: data.status };
 };
 
@@ -556,6 +654,7 @@ export type PaymentProofPayload = {
   updatedAt?: string;
   reviewedAt?: string;
   originalFileName?: string;
+  receiptUrl?: string;
   courseTitle?: string;
   orderCourseTitles?: string[];
 };
@@ -572,6 +671,7 @@ export const getMyPaymentProofs = async (): Promise<PaymentProofPayload[]> => {
     updatedAt?: string;
     reviewedAt?: string;
     originalFileName?: string;
+    receiptUrl?: string;
     course?: { title?: string };
     order?: { items?: Array<{ course?: { title?: string } }> };
   }>>("/api/payment-proofs/me");
@@ -587,6 +687,7 @@ export const getMyPaymentProofs = async (): Promise<PaymentProofPayload[]> => {
     updatedAt: p.updatedAt ?? undefined,
     reviewedAt: p.reviewedAt ?? undefined,
     originalFileName: p.originalFileName ?? undefined,
+    receiptUrl: p.receiptUrl ?? undefined,
     courseTitle: p.course?.title ?? undefined,
     orderCourseTitles: (p.order?.items ?? [])
       .map((i) => i.course?.title)
@@ -971,15 +1072,16 @@ const toEnrollment = (enrollment: ApiEnrollment): EnrollmentPayload => ({
 });
 
 export const createEnrollment = async (payload: {
-  courseId: string;
+  courseId: string | { id?: string };
   paymentId?: string;
   referrerId?: string;
   useBalance?: boolean;
 }): Promise<EnrollmentPayload> => {
+  const safeCourseId = normalizeEntityId(payload.courseId, "courseId");
   const data = await apiFetch<ApiEnrollment>("/api/enrollments", {
     method: "POST",
     body: JSON.stringify({
-      course: { id: payload.courseId },
+      course: { id: safeCourseId },
       ...(payload.paymentId ? { payment: { id: payload.paymentId } } : {}),
       ...(payload.referrerId ? { referrerId: payload.referrerId } : {}),
       ...(payload.useBalance ? { useBalance: true } : {}),
@@ -990,10 +1092,11 @@ export const createEnrollment = async (payload: {
 };
 
 export const getMyCourseEnrollment = async (
-  courseId: string,
+  courseId: string | { id?: string },
 ): Promise<EnrollmentPayload | null> => {
+  const safeCourseId = normalizeEntityId(courseId, "courseId");
   const data = await apiFetch<ApiEnrollment | null>(
-    `/api/enrollments/me?courseId=${encodeURIComponent(courseId)}`,
+    `/api/enrollments/me?courseId=${encodeURIComponent(safeCourseId)}`,
   );
   if (!data) {
     return null;
@@ -1035,40 +1138,105 @@ export type WithdrawalRequestPayload = {
   amount: number;
   status: string;
   createdAt?: string;
+  updatedAt?: string;
+  reviewedAt?: string;
+  payoutDetailsJson?: string;
+  methodOption?: { id: string; name: string; type: string; fieldsJson?: string };
+  rejectionReason?: string;
+  receiptOriginalFileName?: string;
+  hasReceipt?: boolean;
+  receiptUrl?: string;
+  student?: { id?: string; email?: string; firstName?: string; lastName?: string };
 };
 
-export const requestWithdrawal = async (
-  amount: number,
-): Promise<WithdrawalRequestPayload> => {
-  const data = await apiFetch<{
-    id?: string;
-    amount?: number;
-    status?: string;
-    createdAt?: string;
-  }>("/api/referral-balance/withdraw", {
+const mapWithdrawalRequest = (w: Record<string, unknown>): WithdrawalRequestPayload => ({
+  id: String(w.id ?? ""),
+  amount: Number(w.amount ?? 0),
+  status: String(w.status ?? "PENDING"),
+  createdAt: w.createdAt as string | undefined,
+  updatedAt: w.updatedAt as string | undefined,
+  reviewedAt: w.reviewedAt as string | undefined,
+  payoutDetailsJson: typeof w.payoutDetailsJson === "string" ? w.payoutDetailsJson : undefined,
+  methodOption: w.methodOption && typeof w.methodOption === "object"
+    ? {
+        id: String((w.methodOption as { id?: string }).id ?? ""),
+        name: String((w.methodOption as { name?: string }).name ?? ""),
+        type: String((w.methodOption as { type?: string }).type ?? ""),
+        fieldsJson: (w.methodOption as { fieldsJson?: string }).fieldsJson,
+      }
+    : undefined,
+  rejectionReason: typeof w.rejectionReason === "string" ? w.rejectionReason : undefined,
+  receiptOriginalFileName: typeof w.receiptOriginalFileName === "string" ? w.receiptOriginalFileName : undefined,
+  receiptUrl: typeof (w as { receiptUrl?: unknown }).receiptUrl === "string" ? (w as { receiptUrl?: string }).receiptUrl : undefined,
+  hasReceipt: Boolean((w as { receiptUrl?: string }).receiptUrl),
+  student:
+    w.student && typeof w.student === "object"
+      ? {
+          id: (w.student as { id?: string }).id,
+          email: (w.student as { email?: string }).email,
+          firstName: (w.student as { firstName?: string }).firstName,
+          lastName: (w.student as { lastName?: string }).lastName,
+        }
+      : undefined,
+});
+
+export const requestWithdrawal = async (payload: {
+  amount: number;
+  methodOptionId: string;
+  payoutDetails: Record<string, unknown>;
+}): Promise<WithdrawalRequestPayload> => {
+  const data = await apiFetch<Record<string, unknown>>("/api/referral-balance/withdraw", {
     method: "POST",
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({
+      amount: payload.amount,
+      methodOptionId: payload.methodOptionId,
+      payoutDetailsJson: JSON.stringify(payload.payoutDetails ?? {}),
+    }),
   });
-  return {
-    id: data.id ?? "",
-    amount: Number(data.amount ?? 0),
-    status: data.status ?? "PENDING",
-    createdAt: data.createdAt,
-  };
+  return mapWithdrawalRequest(data);
 };
 
-export const getMyWithdrawals = async (): Promise<
-  WithdrawalRequestPayload[]
-> => {
-  const data = await apiFetch<
-    Array<{ id?: string; amount?: number; status?: string; createdAt?: string }>
-  >("/api/referral-balance/withdrawals");
-  return (Array.isArray(data) ? data : []).map((w) => ({
-    id: w.id ?? "",
-    amount: Number(w.amount ?? 0),
-    status: w.status ?? "PENDING",
-    createdAt: w.createdAt,
-  }));
+export const resubmitReferralWithdrawal = async (payload: {
+  requestId: string;
+  amount: number;
+  methodOptionId: string;
+  payoutDetails: Record<string, unknown>;
+}): Promise<WithdrawalRequestPayload> => {
+  const data = await apiFetch<Record<string, unknown>>(
+    `/api/referral-balance/withdraw/resubmit/${payload.requestId}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        amount: payload.amount,
+        methodOptionId: payload.methodOptionId,
+        payoutDetailsJson: JSON.stringify(payload.payoutDetails ?? {}),
+      }),
+    },
+  );
+  return mapWithdrawalRequest(data);
+};
+
+export const getMyWithdrawals = async (): Promise<WithdrawalRequestPayload[]> => {
+  const data = await apiFetch<Array<Record<string, unknown>>>("/api/referral-balance/withdrawals");
+  return (Array.isArray(data) ? data : []).map(mapWithdrawalRequest);
+};
+
+export const getReferralWithdrawalReceiptBlob = async (requestId: string): Promise<Blob> => {
+  return apiFetchBlob(`/api/referral-balance/withdrawals/${requestId}/receipt`);
+};
+
+export const reportReferralWithdrawalIssue = async (payload: {
+  requestId: string;
+  message?: string;
+}): Promise<WithdrawalRequestPayload> => {
+  const data = await apiFetch<Record<string, unknown>>(
+    `/api/referral-balance/withdrawals/${payload.requestId}/report-issue`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message: payload.message ?? '' }),
+    },
+  );
+  return mapWithdrawalRequest(data);
 };
 
 export const getMyInstructorEnrollmentSummary =
@@ -1405,16 +1573,17 @@ export const getPayment = async (
 
 /** Create a payment (e.g. TEST gateway for checkout). Student is set by backend from auth. */
 export const createPayment = async (payload: {
-  courseId: string;
+  courseId: string | { id?: string };
   amount: number;
   currency: string;
   gateway?: string;
   status?: string;
 }): Promise<{ id: string }> => {
+  const safeCourseId = normalizeEntityId(payload.courseId, "courseId");
   const data = await apiFetch<{ id?: string }>("/api/payments", {
     method: "POST",
     body: JSON.stringify({
-      course: { id: payload.courseId },
+      course: { id: safeCourseId },
       amount: payload.amount,
       currency: payload.currency,
       gateway: payload.gateway ?? "TEST",
@@ -1597,12 +1766,16 @@ export const resubmitInstructorPayoutRequest = async (payload: {
   return { id: data.id ?? '' };
 };
 
+export const getInstructorPayoutReceiptBlob = async (requestId: string): Promise<Blob> => {
+  return apiFetchBlob(`/api/instructor-payouts/${requestId}/receipt`);
+};
+
 /** Initialize Chapa payment; returns checkout URL to redirect the user.
  * Use courseId (and slug) for single-course checkout, or courseIds for cart/multi-course checkout. */
 export const initializeChapaPayment = async (payload: {
-  courseId?: string;
+  courseId?: string | { id?: string };
   /** Multiple course IDs for cart checkout (single transaction). */
-  courseIds?: string[];
+  courseIds?: Array<string | { id?: string }>;
   slug?: string;
   referrerId?: string;
 }): Promise<{ checkoutUrl: string; paymentId: string; txRef: string }> => {
@@ -1611,9 +1784,9 @@ export const initializeChapaPayment = async (payload: {
     referrerId: payload.referrerId ?? undefined,
   };
   if (payload.courseIds != null && payload.courseIds.length > 0) {
-    body.courseIds = payload.courseIds;
+    body.courseIds = payload.courseIds.map((id) => normalizeEntityId(id, "courseIds[]"));
   } else if (payload.courseId) {
-    body.courseId = payload.courseId;
+    body.courseId = normalizeEntityId(payload.courseId, "courseId");
   }
   const data = await apiFetch<{
     checkoutUrl?: string;

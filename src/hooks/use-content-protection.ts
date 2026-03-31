@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 type UseContentProtectionOptions = {
   enabled?: boolean;
@@ -153,7 +154,11 @@ export const useContentProtection = ({
       if (!blockPrint) return;
       hideContent();
       window.setTimeout(() => {
-        window.alert('Printing is disabled on protected content pages.');
+        toast({
+          title: 'Printing blocked',
+          description: 'Printing is disabled on protected content pages.',
+          variant: 'destructive',
+        });
       }, 0);
     };
 

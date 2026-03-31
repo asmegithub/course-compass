@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuery } from '@tanstack/react-query';
-import { getCourses, getMyInstructorEnrollmentSummary } from '@/lib/course-api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { deleteCourse, getCourses, getMyInstructorEnrollmentSummary, setCourseVisibility } from '@/lib/course-api';
+import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import {
   DollarSign, Users, BookOpen, Star, TrendingUp,
   ArrowUpRight, ArrowDownRight, PlusCircle, Eye, MoreVertical,
@@ -22,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 const InstructorDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('my-courses');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -34,6 +38,38 @@ const InstructorDashboard = () => {
     queryKey: ['enrollments', 'me', 'instructor-summary'],
     queryFn: getMyInstructorEnrollmentSummary,
     enabled: Boolean(user?.id),
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: (courseId: string) => deleteCourse(courseId),
+    onSuccess: () => {
+      toast({ title: 'Course deleted' });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['course-sections'] });
+      queryClient.invalidateQueries({ queryKey: ['lessons'] });
+      queryClient.invalidateQueries({ queryKey: ['course-outcomes'] });
+      queryClient.invalidateQueries({ queryKey: ['course-requirements'] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to delete course';
+      toast({ title: 'Delete failed', description: message, variant: 'destructive' });
+    },
+  });
+
+  const courseVisibilityMutation = useMutation({
+    mutationFn: ({ courseId, isPublished }: { courseId: string; isPublished: boolean }) =>
+      setCourseVisibility(courseId, isPublished),
+    onSuccess: (_, variables) => {
+      toast({
+        title: variables.isPublished ? 'Course is now visible' : 'Course is now hidden',
+      });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['courses', 'approved'] });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Failed to update course visibility';
+      toast({ title: 'Visibility update failed', description: message, variant: 'destructive' });
+    },
   });
 
   const instructorCourses = useMemo(() => {
@@ -93,6 +129,11 @@ const InstructorDashboard = () => {
             <Badge variant={course.status === 'APPROVED' ? 'default' : course.status === 'PENDING' ? 'secondary' : 'outline'} className="text-xs">
               {course.status}
             </Badge>
+            {(course.status === 'APPROVED' || course.status === 'PUBLISHED') && !course.isPublished && (
+              <Badge variant="outline" className="text-xs">
+                Hidden
+              </Badge>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -103,17 +144,42 @@ const InstructorDashboard = () => {
                 <DropdownMenuItem onClick={() => navigate(`/instructor/courses/${course.id}`)}>
                   <Eye className="h-4 w-4 mr-2" /> View Details
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (course.status !== 'APPROVED' && course.status !== 'PUBLISHED') {
-                      navigate(`/instructor/courses/${course.id}/edit`);
-                    }
-                  }}
-                  disabled={course.status === 'APPROVED' || course.status === 'PUBLISHED'}
-                >
+                <DropdownMenuItem onClick={() => navigate(`/instructor/courses/${course.id}/edit`)}>
                   <Edit className="h-4 w-4 mr-2" /> Edit Course
                 </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive">
+                {(course.status === 'APPROVED' || course.status === 'PUBLISHED') && (
+                  <DropdownMenuItem
+                    disabled={courseVisibilityMutation.isPending}
+                    onClick={() =>
+                      courseVisibilityMutation.mutate({
+                        courseId: course.id,
+                        isPublished: !course.isPublished,
+                      })
+                    }
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    {course.isPublished ? 'Hide course' : 'Unhide course'}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  className="text-destructive"
+                  disabled={deleteCourseMutation.isPending || !(course.status === 'PENDING' || course.status === 'DRAFT' || course.status === 'REJECTED')}
+                  onClick={() => {
+                    if (!(course.status === 'PENDING' || course.status === 'DRAFT' || course.status === 'REJECTED')) {
+                      return;
+                    }
+                    toast({
+                      title: 'Delete course?',
+                      description: `You are about to delete "${course.title}". This action cannot be undone.`,
+                      variant: 'destructive',
+                      action: (
+                        <ToastAction altText="Confirm delete" onClick={() => deleteCourseMutation.mutate(course.id)}>
+                          Delete
+                        </ToastAction>
+                      ),
+                    });
+                  }}
+                >
                   <Trash2 className="h-4 w-4 mr-2" /> Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>

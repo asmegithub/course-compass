@@ -218,6 +218,61 @@ export type AdminPayoutRequest = {
   createdAt?: string;
 };
 
+export type AdminReferralWithdrawalRequest = {
+  id: string;
+  amount: number;
+  status?: string;
+  payoutDetailsJson?: string;
+  receiptUrl?: string;
+  receiptOriginalFileName?: string;
+  receiptIssueMessage?: string;
+  methodOption?: { id?: string; name?: string; type?: string; fieldsJson?: string };
+  student?: { id?: string; firstName?: string; lastName?: string; email?: string };
+  createdAt?: string;
+};
+
+export const getPendingReferralWithdrawals = async (): Promise<AdminReferralWithdrawalRequest[]> => {
+  const data = await apiFetch<
+    Array<{
+      id?: string;
+      amount?: number | string;
+      status?: string;
+      payoutDetailsJson?: string;
+      receiptUrl?: string;
+      receiptOriginalFileName?: string;
+      receiptIssueMessage?: string;
+      methodOption?: { id?: string; name?: string; type?: string; fieldsJson?: string };
+      student?: { id?: string; firstName?: string; lastName?: string; email?: string };
+      createdAt?: string;
+    }>
+  >('/api/referral-balance/admin/pending-withdrawals');
+  return (Array.isArray(data) ? data : []).map((r) => ({
+    id: r.id ?? '',
+    amount: Number(r.amount ?? 0),
+    status: r.status,
+    payoutDetailsJson: r.payoutDetailsJson,
+    receiptUrl: r.receiptUrl ?? undefined,
+    receiptOriginalFileName: r.receiptOriginalFileName ?? undefined,
+    receiptIssueMessage: r.receiptIssueMessage ?? undefined,
+    methodOption: r.methodOption,
+    student: r.student,
+    createdAt: r.createdAt,
+  }));
+};
+
+export const approveReferralWithdrawal = async (payload: { requestId: string; file?: File | null }): Promise<void> => {
+  const form = new FormData();
+  if (payload.file) form.append('file', payload.file);
+  await apiFetch<void>(`/api/referral-balance/admin/withdrawals/${payload.requestId}/approve`, { method: 'POST', body: form });
+};
+
+export const rejectReferralWithdrawal = async (payload: { requestId: string; reason?: string }): Promise<void> => {
+  await apiFetch<void>(`/api/referral-balance/admin/withdrawals/${payload.requestId}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ reason: payload.reason }),
+  });
+};
+
 export const getPendingInstructorPayoutRequests = async (): Promise<AdminPayoutRequest[]> => {
   const data = await apiFetch<Array<{
     id?: string;
@@ -286,4 +341,32 @@ export const updatePayoutMethodOption = async (id: string, payload: Partial<Payo
 
 export const deletePayoutMethodOption = async (id: string): Promise<void> => {
   await apiFetch<void>(`/api/payout-method-options/${id}`, { method: 'DELETE' });
+};
+
+export type SystemSetting = {
+  id?: string;
+  key?: string;
+  value?: string;
+  description?: string;
+  isPublic?: boolean;
+  updatedBy?: string;
+};
+
+export const getSystemSettings = async (): Promise<SystemSetting[]> => {
+  const data = await apiFetch<SystemSetting[]>('/api/system-settings');
+  return Array.isArray(data) ? data : [];
+};
+
+export const createSystemSetting = async (payload: Partial<SystemSetting>): Promise<SystemSetting> => {
+  return apiFetch<SystemSetting>('/api/system-settings', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const updateSystemSetting = async (id: string, payload: Partial<SystemSetting>): Promise<SystemSetting> => {
+  return apiFetch<SystemSetting>(`/api/system-settings/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 };

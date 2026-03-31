@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/layout/Navbar';
@@ -24,7 +24,10 @@ const Cart = () => {
   const [paymentMethod, setPaymentMethod] = useState<'CHAPA' | 'MANUAL'>('CHAPA');
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
+  const [receiptPreviewMime, setReceiptPreviewMime] = useState<string | null>(null);
   const [note, setNote] = useState<string>('');
+  const receiptPreviewRef = useRef<string | null>(null);
 
   const coursesQuery = useQuery({
     queryKey: ['courses', 'approved'],
@@ -107,6 +110,25 @@ const Cart = () => {
     },
   });
 
+  useEffect(() => {
+    if (!receiptFile) {
+      if (receiptPreviewRef.current) URL.revokeObjectURL(receiptPreviewRef.current);
+      receiptPreviewRef.current = null;
+      setReceiptPreviewUrl(null);
+      setReceiptPreviewMime(null);
+      return;
+    }
+    if (receiptPreviewRef.current) URL.revokeObjectURL(receiptPreviewRef.current);
+    const url = URL.createObjectURL(receiptFile);
+    receiptPreviewRef.current = url;
+    setReceiptPreviewUrl(url);
+    setReceiptPreviewMime(receiptFile.type || null);
+    return () => {
+      if (receiptPreviewRef.current) URL.revokeObjectURL(receiptPreviewRef.current);
+      receiptPreviewRef.current = null;
+    };
+  }, [receiptFile]);
+
   const total = cartCourses.reduce((sum, course) => {
     const price = Number(course.discountPrice ?? course.price ?? 0);
     return sum + (isNaN(price) ? 0 : price);
@@ -116,7 +138,7 @@ const Cart = () => {
 
   const isStudent = isLoggedIn && (user?.role === 'STUDENT' || user?.role === 'ROLE_STUDENT');
 
-  if (!isLoggedIn || !isStudent) {
+  if (!isLoggedIn) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Navbar />
@@ -133,7 +155,7 @@ const Cart = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-muted-foreground">
-                Please sign in as a student to manage your cart and proceed to checkout.
+                Please sign in to manage your cart and proceed to checkout.
               </p>
               <Button onClick={() => navigate('/auth?redirect=/cart')}>Sign in</Button>
             </CardContent>
@@ -211,7 +233,17 @@ const Cart = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => course.slug && handleGoToCheckout(course.slug)}
+                              onClick={() => {
+                                if (!isStudent) {
+                                  toast({
+                                    title: 'Enrollment not allowed',
+                                    description: 'Instructor accounts can add to cart/wishlist, but cannot enroll in courses.',
+                                    variant: 'destructive',
+                                  });
+                                  return;
+                                }
+                                if (course.slug) handleGoToCheckout(course.slug);
+                              }}
                               disabled={!course.slug}
                             >
                               Checkout
@@ -261,7 +293,17 @@ const Cart = () => {
                     <Button
                       className="w-full"
                       disabled={cartCourses.length === 0 || checkoutAllMutation.isPending}
-                      onClick={() => checkoutAllMutation.mutate()}
+                      onClick={() => {
+                        if (!isStudent) {
+                          toast({
+                            title: 'Enrollment not allowed',
+                            description: 'Instructor accounts can add to cart/wishlist, but cannot enroll in courses.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        checkoutAllMutation.mutate();
+                      }}
                     >
                       {checkoutAllMutation.isPending ? (
                         <>
@@ -329,10 +371,27 @@ const Cart = () => {
                         <Label>Receipt screenshot</Label>
                         <Input
                           type="file"
-                          accept="image/*"
+                          accept="image/*,application/pdf"
                           onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
                         />
                         <p className="text-xs text-muted-foreground">Upload a clear screenshot/photo of the transfer receipt.</p>
+                        {receiptFile && (
+                          <div className="rounded-md border p-2 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-xs text-muted-foreground truncate">{receiptFile.name}</p>
+                              <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => setReceiptFile(null)}>
+                                Remove
+                              </Button>
+                            </div>
+                            {receiptPreviewUrl && (
+                              receiptPreviewMime?.includes('pdf') ? (
+                                <iframe title="Selected receipt preview" src={receiptPreviewUrl} className="w-full h-40 rounded border bg-background" />
+                              ) : (
+                                <img src={receiptPreviewUrl} alt="Selected receipt preview" className="max-h-40 w-full object-contain rounded border" />
+                              )
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -344,7 +403,17 @@ const Cart = () => {
                         className="w-full"
                         variant="accent"
                         disabled={manualSubmitMutation.isPending || cartCourses.length === 0 || (paymentAccountsQuery.data ?? []).length === 0}
-                        onClick={() => manualSubmitMutation.mutate()}
+                        onClick={() => {
+                          if (!isStudent) {
+                            toast({
+                              title: 'Enrollment not allowed',
+                              description: 'Instructor accounts can add to cart/wishlist, but cannot enroll in courses.',
+                              variant: 'destructive',
+                            });
+                            return;
+                          }
+                          manualSubmitMutation.mutate();
+                        }}
                       >
                         {manualSubmitMutation.isPending ? (
                           <>

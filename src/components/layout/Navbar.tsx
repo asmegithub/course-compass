@@ -45,8 +45,7 @@ const Navbar = () => {
   const dashboardPath = user?.role === 'ADMIN' ? '/admin' : user?.role === 'INSTRUCTOR' ? '/instructor' : '/dashboard';
 
   const handleCartClick = () => {
-    // Only students can manage cart; others go to auth
-    if (!isLoggedIn || user?.role !== 'STUDENT') {
+    if (!isLoggedIn) {
       navigate('/auth?redirect=/cart');
       return;
     }

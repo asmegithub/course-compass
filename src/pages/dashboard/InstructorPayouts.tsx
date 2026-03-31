@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, Landmark, Clock, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -14,6 +15,7 @@ import {
   getMyInstructorPayoutRequestsV2,
   requestInstructorPayoutV2,
   resubmitInstructorPayoutRequest,
+  getInstructorPayoutReceiptBlob,
 } from '@/lib/course-api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatPrice } from '@/lib/formatters';
@@ -53,6 +55,10 @@ const InstructorPayouts = () => {
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   const [details, setDetails] = useState<Record<string, string>>({});
   const [resubmitTargetId, setResubmitTargetId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewUrlRef = useRef<string | null>(null);
 
   const earningQuery = useQuery({ queryKey: ['instructor-earning'], queryFn: getMyInstructorEarning });
   const methodsQuery = useQuery({ queryKey: ['payout-method-options', 'active'], queryFn: getActivePayoutMethodOptions });
@@ -153,6 +159,31 @@ const InstructorPayouts = () => {
 
   const selectedMethod = useMemo(() => methods.find((m) => m.id === selectedMethodId) ?? null, [methods, selectedMethodId]);
   const methodFields = useMemo(() => parseFields(selectedMethod?.fieldsJson), [selectedMethod?.fieldsJson]);
+
+  useEffect(() => {
+    if (!previewId) {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+      setPreviewUrl(null);
+      return;
+    }
+    setPreviewLoading(true);
+    getInstructorPayoutReceiptBlob(previewId)
+      .then((blob) => {
+        if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+        const u = URL.createObjectURL(blob);
+        previewUrlRef.current = u;
+        setPreviewUrl(u);
+      })
+      .catch(() => {
+        toast({ title: 'Could not load receipt', variant: 'destructive' });
+      })
+      .finally(() => setPreviewLoading(false));
+    return () => {
+      if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+      previewUrlRef.current = null;
+    };
+  }, [previewId]);
 
   const isLoading = earningQuery.isLoading || methodsQuery.isLoading;
 
@@ -293,6 +324,11 @@ const InstructorPayouts = () => {
                             {p.status === 'COMPLETED' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
                             {p.status}
                           </Badge>
+                        {p.status === 'COMPLETED' && p.hasReceipt && (
+                          <Button size="sm" variant="outline" onClick={() => setPreviewId(p.id)}>
+                            View receipt
+                          </Button>
+                        )}
                           {p.status === 'REJECTED' && (
                             <Button
                               size="sm"
@@ -319,6 +355,20 @@ const InstructorPayouts = () => {
             </div>
           </>
         )}
+        <Dialog open={!!previewId} onOpenChange={(open) => !open && setPreviewId(null)}>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+            <DialogHeader><DialogTitle>Payout receipt</DialogTitle></DialogHeader>
+            <div className="flex-1 min-h-0 flex items-center justify-center bg-muted/30 rounded-md p-4">
+              {previewLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+              {!previewLoading && previewUrl && (
+                <img src={previewUrl} alt="Receipt" className="max-w-full max-h-[70vh] object-contain rounded border" />
+              )}
+              {!previewLoading && !previewUrl && previewId && (
+                <p className="text-sm text-muted-foreground">Could not load receipt.</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

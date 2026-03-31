@@ -142,9 +142,27 @@
     "exploreTitle": "ኮርሶችን ይመልከቱ",
     "exploreSubtitle": "በባለሙያ አስተማሪዎች የሚዘጋጁ ብዙ ኮርሶችን ያግኙ። በጊዜዎ መሰረት ይማሩ እና ሰርቲፊኬት ያግኙ።",
     "filters": {
+      "title": "ማጣሪያዎች",
+      "active": "ንቁ ማጣሪያዎች",
+      "clear": "ማጣሪያዎችን አጥፋ",
+      "clearAll": "ሁሉንም አጥፋ",
+      "rating": "ደረጃ አሰጣጥ",
+      "ratingUp": "{{rating}}+ እና ከዚያ በላይ",
       "category": "ምድብ",
       "level": "ደረጃ"
     },
+    "searchPlaceholder": "ኮርሶችን ፈልግ...",
+    "sort": {
+      "placeholder": "በ... አስደራጅ",
+      "popular": "በጣም ታዋቂ",
+      "rating": "ከፍተኛ ደረጃ ያለው",
+      "newest": "አዲስ",
+      "priceLow": "ዋጋ: ከዝቅተኛ ወደ ከፍተኛ",
+      "priceHigh": "ዋጋ: ከከፍተኛ ወደ ዝቅተኛ"
+    },
+    "loading": "ኮርሶች በመጫን ላይ...",
+    "errorLoading": "ኮርሶችን መጫን አልተሳካም።",
+    "noResults": "ከመስፈርቶችዎ ጋር የሚጣጣሙ ኮርሶች አልተገኙም።",
     "levels": {
       "BEGINNER": "ጀማሪ",
       "INTERMEDIATE": "መካከለኛ",

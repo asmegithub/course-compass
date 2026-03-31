@@ -9,7 +9,7 @@ Set these environment variables (or add to `application.yaml`):
 | Variable | Description |
 |----------|-------------|
 | `CHAPA_SECRET_KEY` | Your Chapa secret key (test: `CHASECK_TEST-...`, live: `CHASECK-...`). Get it from [dashboard.chapa.co](https://dashboard.chapa.co) → Settings → API. |
-| `FRONTEND_BASE_URL` | Frontend base URL for redirect after payment (e.g. `http://localhost:8081`). |
+| `FRONTEND_BASE_URL` | Frontend base URL for redirect after payment (e.g. `http://localhost:8080`). |
 | `CHAPA_CALLBACK_BASE_URL` | Backend base URL so Chapa can call the callback (e.g. `http://localhost:8080`). In production use your public backend URL. |
 
 ## Flow

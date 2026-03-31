@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+const POST_LOGIN_REDIRECT_KEY = 'postLoginRedirect';
+
 const Auth = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -48,14 +50,45 @@ const Auth = () => {
   useEffect(() => {
     if (!user) return;
     const redirect = searchParams.get('redirect');
-    const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('/auth')
-      ? redirect
+    const storedRedirect = (() => {
+      try {
+        return localStorage.getItem(POST_LOGIN_REDIRECT_KEY);
+      } catch {
+        return null;
+      }
+    })();
+    const candidateRedirect = redirect || storedRedirect;
+    const safeRedirect = candidateRedirect && candidateRedirect.startsWith('/') && !candidateRedirect.startsWith('/auth')
+      ? candidateRedirect
       : null;
     const role = user.role;
     const normalizedRole = role === 'ROLE_ADMIN' ? 'ADMIN' : role;
     const dest = safeRedirect || (normalizedRole === 'ADMIN' ? '/admin' : normalizedRole === 'INSTRUCTOR' ? '/instructor' : '/dashboard');
+    try {
+      localStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
+    } catch {
+      // ignore storage errors
+    }
     navigate(dest, { replace: true });
   }, [user, navigate, searchParams]);
+
+  useEffect(() => {
+    const redirect = searchParams.get('redirect');
+    if (!redirect) return;
+    if (!redirect.startsWith('/') || redirect.startsWith('/auth')) return;
+    try {
+      localStorage.setItem(POST_LOGIN_REDIRECT_KEY, redirect);
+    } catch {
+      // ignore storage errors
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const oauthError = searchParams.get('oauthError');
+    if (!oauthError) return;
+    toast({ title: 'OAuth login failed', description: oauthError });
+    window.history.replaceState({}, '', '/auth');
+  }, [searchParams, toast]);
 
   useEffect(() => {
     const accessToken = searchParams.get('accessToken');

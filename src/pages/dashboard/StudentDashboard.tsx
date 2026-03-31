@@ -1,30 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookOpen, Award, Clock, TrendingUp, Play, Bell, CreditCard, GraduationCap, Share2, Banknote } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCertificates, getCourses, getLessons, getMyEnrollments, getNotifications, getReferralBalance, getMyWithdrawals, requestWithdrawal } from '@/lib/course-api';
-import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { getCertificates, getCourses, getLessons, getMyEnrollments, getNotifications, getReferralBalance, getMyWithdrawals } from '@/lib/course-api';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
 
   const enrollmentsQuery = useQuery({
     queryKey: ['my-enrollments', user?.id],
@@ -67,36 +54,9 @@ const StudentDashboard = () => {
     enabled: Boolean(user?.id),
   });
 
-  const withdrawMutation = useMutation({
-    mutationFn: (amount: number) => requestWithdrawal(amount),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['referral-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['referral-withdrawals'] });
-      setWithdrawOpen(false);
-      setWithdrawAmount('');
-      toast({ title: 'Withdrawal requested', description: 'Your request has been submitted. You will be notified when it is processed.' });
-    },
-    onError: (err: Error) => {
-      toast({ title: 'Withdrawal failed', description: err.message, variant: 'destructive' });
-    },
-  });
-
   const balance = referralBalanceQuery.data?.balance ?? 0;
   const totalEarned = referralBalanceQuery.data?.totalEarned ?? 0;
   const withdrawals = withdrawalsQuery.data ?? [];
-
-  const handleWithdraw = () => {
-    const num = parseFloat(withdrawAmount);
-    if (Number.isNaN(num) || num <= 0) {
-      toast({ title: 'Invalid amount', variant: 'destructive' });
-      return;
-    }
-    if (num > balance) {
-      toast({ title: 'Insufficient balance', variant: 'destructive' });
-      return;
-    }
-    withdrawMutation.mutate(num);
-  };
 
   const formatTimeAgo = (value?: string) => {
     if (!value) return '';
@@ -276,7 +236,7 @@ const StudentDashboard = () => {
                   {referralBalanceQuery.isLoading ? '...' : `ETB ${balance.toFixed(2)}`}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Earned from referrals: ETB {totalEarned.toFixed(2)}. Share a course; when a friend enrolls, you get 5%.
+                  Earned from referrals: ETB {totalEarned.toFixed(2)}. Share a course; when a friend enrolls, referral reward is credited to your balance.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -289,14 +249,8 @@ const StudentDashboard = () => {
                       <Share2 className="h-3.5 w-3.5 mr-1" /> Use for course
                     </Link>
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1"
-                    disabled={balance <= 0 || withdrawMutation.isPending}
-                    onClick={() => setWithdrawOpen(true)}
-                  >
-                    Withdraw
+                  <Button variant="secondary" size="sm" className="flex-1" disabled={balance <= 0} asChild>
+                    <Link to="/dashboard/referral-withdrawals">Withdraw</Link>
                   </Button>
                 </div>
                 {withdrawals.length > 0 && (
@@ -356,6 +310,11 @@ const StudentDashboard = () => {
                     <CreditCard className="h-4 w-4" /> Payment History
                   </Button>
                 </Link>
+                <Link to="/dashboard/referral-withdrawals">
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                    <Banknote className="h-4 w-4" /> Referral withdrawals
+                  </Button>
+                </Link>
                 <Link to="/dashboard/become-instructor">
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
                     <GraduationCap className="h-4 w-4" /> Apply as Instructor
@@ -372,30 +331,6 @@ const StudentDashboard = () => {
         </div>
       </div>
 
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Withdraw referral balance</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Available: ETB {balance.toFixed(2)}. Enter the amount you want to withdraw. Requests are processed by the team.
-          </p>
-          <Input
-            type="number"
-            min={0}
-            step={0.01}
-            placeholder="Amount"
-            value={withdrawAmount}
-            onChange={(e) => setWithdrawAmount(e.target.value)}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>Cancel</Button>
-            <Button onClick={handleWithdraw} disabled={withdrawMutation.isPending}>
-              {withdrawMutation.isPending ? 'Submitting...' : 'Request withdrawal'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </DashboardLayout>
   );
 };

@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Cart from "./pages/Cart";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import StudentPaymentHistory from "./pages/dashboard/StudentPaymentHistory";
+import StudentReferralWithdrawals from "./pages/dashboard/StudentReferralWithdrawals";
 import StudentCertificates from "./pages/dashboard/StudentCertificates";
 import StudentWishlist from "./pages/dashboard/StudentWishlist";
 import StudentNotifications from "./pages/dashboard/StudentNotifications";
@@ -38,9 +39,11 @@ import AdminPayments from "./pages/dashboard/AdminPayments";
 import AdminAuditLogs from "./pages/dashboard/AdminAuditLogs";
 import AdminEmailLogs from "./pages/dashboard/AdminEmailLogs";
 import AdminSettings from "./pages/dashboard/AdminSettings";
+import AdminCertificates from "./pages/dashboard/AdminCertificates";
 import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerifications";
 import AdminNotifications from "./pages/dashboard/AdminNotifications";
 import AdminPayouts from "./pages/dashboard/AdminPayouts";
+import AdminManualPayments from "./pages/dashboard/AdminManualPayments";
 import { ReactNode } from "react";
 import { useContentProtection } from "@/hooks/use-content-protection";
 import ContentProtectionOverlay from "@/components/security/ContentProtectionOverlay";
@@ -77,6 +80,7 @@ const AppRoutes = () => (
     {/* Student routes */}
     <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
     <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentPaymentHistory /></ProtectedRoute>} />
+    <Route path="/dashboard/referral-withdrawals" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentReferralWithdrawals /></ProtectedRoute>} />
     <Route path="/dashboard/certificates" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentCertificates /></ProtectedRoute>} />
     <Route path="/dashboard/wishlist" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentWishlist /></ProtectedRoute>} />
     <Route path="/dashboard/notifications" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentNotifications /></ProtectedRoute>} />
@@ -103,7 +107,9 @@ const AppRoutes = () => (
     <Route path="/admin/instructor-verifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminInstructorVerifications /></ProtectedRoute>} />
     <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
     <Route path="/admin/coupons" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCoupons /></ProtectedRoute>} />
+    <Route path="/admin/certificates" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCertificates /></ProtectedRoute>} />
     <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />
+    <Route path="/admin/manual-payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminManualPayments /></ProtectedRoute>} />
     <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayouts /></ProtectedRoute>} />
     <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
     <Route path="/admin/email-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminEmailLogs /></ProtectedRoute>} />

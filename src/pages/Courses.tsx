@@ -111,8 +111,8 @@ const CourseCardWithWishlist = ({ course }: { course: Course }) => {
     event.stopPropagation();
     if (!course.slug) return;
 
-    // Only students can keep a cart; others go to auth first
-    if (!isLoggedIn || user?.role !== 'STUDENT') {
+    // Guests are redirected to auth; logged-in users can keep a cart regardless of role.
+    if (!isLoggedIn) {
       navigate(`/auth?redirect=${encodeURIComponent(`/courses/${course.slug}/checkout`)}`);
       return;
     }
@@ -272,7 +272,7 @@ const Courses = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search courses..."
+                placeholder={t('courses.searchPlaceholder', 'Search courses...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -282,14 +282,14 @@ const Courses = () => {
             {/* Sort */}
             <Select value={sortBy} onValueChange={setSortBy}>
               <SelectTrigger className="w-full md:w-48 bg-card">
-                <SelectValue placeholder="Sort by" />
+                <SelectValue placeholder={t('courses.sort.placeholder', 'Sort by')} />
               </SelectTrigger>
               <SelectContent className="bg-card">
-                <SelectItem value="popular">Most Popular</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="popular">{t('courses.sort.popular', 'Most Popular')}</SelectItem>
+                <SelectItem value="rating">{t('courses.sort.rating', 'Highest Rated')}</SelectItem>
+                <SelectItem value="newest">{t('courses.sort.newest', 'Newest')}</SelectItem>
+                <SelectItem value="price-low">{t('courses.sort.priceLow', 'Price: Low to High')}</SelectItem>
+                <SelectItem value="price-high">{t('courses.sort.priceHigh', 'Price: High to Low')}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -300,7 +300,7 @@ const Courses = () => {
               className="relative"
             >
               <SlidersHorizontal className="h-4 w-4 mr-2" />
-              Filters
+              {t('courses.filters.title', 'Filters')}
               {activeFiltersCount > 0 && (
                 <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-accent text-accent-foreground">
                   {activeFiltersCount}
@@ -338,10 +338,10 @@ const Courses = () => {
               {/* Active Filters */}
               {activeFiltersCount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Active Filters</span>
+                  <span className="text-sm font-medium">{t('courses.filters.active', 'Active Filters')}</span>
                   <Button variant="ghost" size="sm" onClick={clearFilters}>
                     <X className="h-4 w-4 mr-1" />
-                    Clear All
+                    {t('courses.filters.clearAll', 'Clear All')}
                   </Button>
                 </div>
               )}
@@ -408,7 +408,7 @@ const Courses = () => {
 
               {/* Rating */}
               <div className="space-y-3">
-                <h3 className="font-semibold">Rating</h3>
+                <h3 className="font-semibold">{t('courses.filters.rating', 'Rating')}</h3>
                 <div className="space-y-2">
                   {[4.5, 4.0, 3.5, 3.0].map((rating) => (
                     <label 
@@ -430,7 +430,7 @@ const Courses = () => {
                         className="sr-only"
                       />
                       <Star className="h-4 w-4 fill-warning text-warning" />
-                      <span className="text-sm">{rating}+ & up</span>
+                      <span className="text-sm">{t('courses.filters.ratingUp', '{{rating}}+ & up', { rating })}</span>
                     </label>
                   ))}
                 </div>
@@ -448,12 +448,12 @@ const Courses = () => {
                 {(coursesQuery.isLoading || categoriesQuery.isLoading) && (
                   <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
                     <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <span>Loading courses...</span>
+                    <span>{t('courses.loading', 'Loading courses...')}</span>
                   </div>
                 )}
 
                 {(coursesQuery.isError || categoriesQuery.isError) && (
-                  <div className="text-destructive">Failed to load courses.</div>
+                  <div className="text-destructive">{t('courses.errorLoading', 'Failed to load courses.')}</div>
                 )}
 
                 {!coursesQuery.isLoading && !coursesQuery.isError && sortedCourses.length > 0 && (
@@ -472,10 +472,10 @@ const Courses = () => {
                 {!coursesQuery.isLoading && !coursesQuery.isError && sortedCourses.length === 0 && (
                   <div className="text-center py-16">
                     <p className="text-muted-foreground mb-4">
-                      No courses found matching your criteria.
+                      {t('courses.noResults', 'No courses found matching your criteria.')}
                     </p>
                     <Button variant="outline" onClick={clearFilters}>
-                      Clear Filters
+                      {t('courses.filters.clear', 'Clear Filters')}
                     </Button>
                   </div>
                 )}
