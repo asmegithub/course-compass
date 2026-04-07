@@ -53,15 +53,31 @@ import ContentProtectionOverlay from "@/components/security/ContentProtectionOve
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allowedRoles: string[] }) => {
+const ProtectedRoute = ({
+  children,
+  allowedRoles,
+}: {
+  children: ReactNode;
+  allowedRoles: string[];
+}) => {
   const { user, isLoggedIn } = useAuth();
-  const { isContentObscured, isDevtoolsOpen } = useContentProtection({ enabled: isLoggedIn, detectDevtools: true, blockPrint: true, blockSelection: true });
+  const { isContentObscured, isDevtoolsOpen } = useContentProtection({
+    enabled: isLoggedIn,
+    detectDevtools: true,
+    blockPrint: true,
+    blockSelection: true,
+  });
   if (!isLoggedIn) return <Navigate to="/auth" replace />;
-  const normalizedRole = user?.role?.startsWith('ROLE_') ? user.role.slice(5) : user?.role;
-  if (!normalizedRole || !allowedRoles.includes(normalizedRole)) return <Navigate to="/" replace />;
+  const normalizedRole = user?.role?.startsWith("ROLE_")
+    ? user.role.slice(5)
+    : user?.role;
+  if (!normalizedRole || !allowedRoles.includes(normalizedRole))
+    return <Navigate to="/" replace />;
   return (
     <>
-      {isContentObscured && <ContentProtectionOverlay isDevtoolsOpen={isDevtoolsOpen} />}
+      {isContentObscured && (
+        <ContentProtectionOverlay isDevtoolsOpen={isDevtoolsOpen} />
+      )}
       {children}
     </>
   );
@@ -76,51 +92,299 @@ const AppRoutes = () => (
     <Route path="/cart/checkout/success" element={<CheckoutSuccess />} />
     <Route path="/courses/:slug" element={<CourseDetail />} />
     <Route path="/courses/:slug/checkout" element={<Checkout />} />
-    <Route path="/courses/:slug/checkout/success" element={<CheckoutSuccess />} />
+    <Route
+      path="/courses/:slug/checkout/success"
+      element={<CheckoutSuccess />}
+    />
     <Route path="/courses/:slug/learn" element={<Learn />} />
     <Route path="/auth" element={<Auth />} />
     <Route path="/referrals" element={<Referrals />} />
 
     {/* Student routes */}
-    <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
-    <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentPaymentHistory /></ProtectedRoute>} />
-    <Route path="/dashboard/referral-withdrawals" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentReferralWithdrawals /></ProtectedRoute>} />
-    <Route path="/dashboard/certificates" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentCertificates /></ProtectedRoute>} />
-    <Route path="/dashboard/quiz-history" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentQuizHistory /></ProtectedRoute>} />
-    <Route path="/dashboard/wishlist" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentWishlist /></ProtectedRoute>} />
-    <Route path="/dashboard/notifications" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentNotifications /></ProtectedRoute>} />
-    <Route path="/dashboard/become-instructor" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentInstructorApplication /></ProtectedRoute>} />
-    <Route path="/dashboard/*" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentDashboard /></ProtectedRoute>} />
+    <Route
+      path="/dashboard"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/payments"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentPaymentHistory />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/referral-withdrawals"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentReferralWithdrawals />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/certificates"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentCertificates />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/quiz-history"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentQuizHistory />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/wishlist"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentWishlist />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/notifications"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentNotifications />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/become-instructor"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentInstructorApplication />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/*"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentDashboard />
+        </ProtectedRoute>
+      }
+    />
 
     {/* Instructor routes */}
-    <Route path="/instructor" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorDashboard /></ProtectedRoute>} />
-    <Route path="/instructor/courses/new" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
-    <Route path="/instructor/courses/:courseId" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseDetail /></ProtectedRoute>} />
-    <Route path="/instructor/courses/:courseId/edit" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorCourseCreate /></ProtectedRoute>} />
-    <Route path="/instructor/students" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorStudents /></ProtectedRoute>} />
-    <Route path="/instructor/reviews" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorReviews /></ProtectedRoute>} />
-    <Route path="/instructor/earnings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorEarnings /></ProtectedRoute>} />
-    <Route path="/instructor/payouts" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorPayouts /></ProtectedRoute>} />
-    <Route path="/instructor/settings" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorSettings /></ProtectedRoute>} />
-    <Route path="/instructor/*" element={<ProtectedRoute allowedRoles={['INSTRUCTOR']}><InstructorDashboard /></ProtectedRoute>} />
+    <Route
+      path="/instructor"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/courses/new"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorCourseCreate />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/courses/:courseId"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorCourseDetail />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/courses/:courseId/edit"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorCourseCreate />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/students"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorStudents />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/reviews"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorReviews />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/earnings"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorEarnings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/payouts"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorPayouts />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/settings"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorSettings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/*"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <InstructorDashboard />
+        </ProtectedRoute>
+      }
+    />
 
     {/* Admin routes */}
-    <Route path="/admin" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
-    <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminNotifications /></ProtectedRoute>} />
-    <Route path="/admin/users" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminUsers /></ProtectedRoute>} />
-    <Route path="/admin/approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminApprovals /></ProtectedRoute>} />
-    <Route path="/admin/instructor-verifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminInstructorVerifications /></ProtectedRoute>} />
-    <Route path="/admin/categories" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCategories /></ProtectedRoute>} />
-    <Route path="/admin/coupons" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCoupons /></ProtectedRoute>} />
-    <Route path="/admin/certificates" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminCertificates /></ProtectedRoute>} />
-    <Route path="/admin/payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayments /></ProtectedRoute>} />
-    <Route path="/admin/manual-payments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminManualPayments /></ProtectedRoute>} />
-    <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayouts /></ProtectedRoute>} />
-    <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
-    <Route path="/admin/email-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminEmailLogs /></ProtectedRoute>} />
-    <Route path="/admin/rbac" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminRbac /></ProtectedRoute>} />
-    <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
-    <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+    <Route
+      path="/admin"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/notifications"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminNotifications />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/users"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminUsers />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/approvals"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminApprovals />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/instructor-verifications"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminInstructorVerifications />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/categories"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminCategories />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/coupons"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminCoupons />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/certificates"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminCertificates />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/payments"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminPayments />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/manual-payments"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminManualPayments />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/payouts"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminPayouts />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/audit-logs"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminAuditLogs />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/email-logs"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminEmailLogs />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/rbac"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminRbac />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/settings"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminSettings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/*"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      }
+    />
 
     <Route path="*" element={<NotFound />} />
   </Routes>

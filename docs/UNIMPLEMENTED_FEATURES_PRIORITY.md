@@ -34,20 +34,20 @@ No open P2 items currently.
 
 ## P3 – Low
 
-| # | Feature | Where | What's missing |
-|---|--------|--------|----------------|
-| 9 | **Role/Permission (RBAC)** | Backend (+ Admin) | Completed: role permissions now seed and enforce controller access. |
+| #   | Feature                    | Where             | What's missing                                                      |
+| --- | -------------------------- | ----------------- | ------------------------------------------------------------------- |
+| 9   | **Role/Permission (RBAC)** | Backend (+ Admin) | Completed: role permissions now seed and enforce controller access. |
 
 ---
 
 ## Summary by priority
 
-| Priority | Count | Focus |
-|----------|--------|--------|
-| **P0** | 0 | No open critical gaps |
-| **P1** | 0 | No open high-priority gaps |
-| **P2** | 0 | No open medium-priority gaps |
-| **P3** | 0 | No open backoffice gaps |
+| Priority | Count | Focus                        |
+| -------- | ----- | ---------------------------- |
+| **P0**   | 0     | No open critical gaps        |
+| **P1**   | 0     | No open high-priority gaps   |
+| **P2**   | 0     | No open medium-priority gaps |
+| **P3**   | 0     | No open backoffice gaps      |
 
 ---
 

@@ -80,7 +80,9 @@ const InstructorStudents = () => {
 
   const instructorEnrollments = useMemo(() => {
     if (!user?.id) return [];
-    return enrollments.filter((enrollment) => instructorCourseIds.has(enrollment.courseId));
+    return enrollments.filter((enrollment) =>
+      instructorCourseIds.has(enrollment.courseId),
+    );
   }, [enrollments, instructorCourseIds, user?.id]);
 
   const filtered = instructorEnrollments.filter((enrollment) => {
@@ -100,8 +102,10 @@ const InstructorStudents = () => {
         .map((enrollment) => enrollment.studentId)
         .filter(Boolean),
     ).size;
-    const totalEnrollments = enrollmentSummary?.totalEnrollments ?? calculatedTotalEnrollments;
-    const totalStudents = enrollmentSummary?.totalStudents ?? calculatedTotalStudents;
+    const totalEnrollments =
+      enrollmentSummary?.totalEnrollments ?? calculatedTotalEnrollments;
+    const totalStudents =
+      enrollmentSummary?.totalStudents ?? calculatedTotalStudents;
     const completedCourses = instructorEnrollments.filter(
       (enrollment) => enrollment.isCompleted || enrollment.progress >= 100,
     ).length;
@@ -128,7 +132,11 @@ const InstructorStudents = () => {
       activeThisWeek,
       avgCompletion,
     };
-  }, [enrollmentSummary?.totalEnrollments, enrollmentSummary?.totalStudents, instructorEnrollments]);
+  }, [
+    enrollmentSummary?.totalEnrollments,
+    enrollmentSummary?.totalStudents,
+    instructorEnrollments,
+  ]);
 
   const isLoading = isCoursesLoading || isEnrollmentsLoading;
   const isError = isCoursesError || isEnrollmentsError;
@@ -233,7 +241,7 @@ const InstructorStudents = () => {
                       {student.studentName || "Student"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                          {student.studentEmail || "No email"}
+                      {student.studentEmail || "No email"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       <span className="font-medium text-foreground">

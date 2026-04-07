@@ -1,17 +1,39 @@
-import { ReactNode, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { FirstLoginTour } from '@/components/onboarding/FirstLoginTour';
-import { useQuery } from '@tanstack/react-query';
-import { getNotificationUnreadCount } from '@/lib/course-api';
+import { ReactNode, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { FirstLoginTour } from "@/components/onboarding/FirstLoginTour";
+import { useQuery } from "@tanstack/react-query";
+import { getNotificationUnreadCount } from "@/lib/course-api";
 import {
-  GraduationCap, BookOpen, Award, CreditCard, Bell, Heart, Settings, LogOut,
-  BarChart3, Users, PlusCircle, DollarSign, Landmark, Star,
-  ShieldCheck, Shield, FolderOpen, Tag, FileText, Activity, Mail, Cog,
-  Menu, X, ChevronRight, User,
-} from 'lucide-react';
+  GraduationCap,
+  BookOpen,
+  Award,
+  CreditCard,
+  Bell,
+  Heart,
+  Settings,
+  LogOut,
+  BarChart3,
+  Users,
+  PlusCircle,
+  DollarSign,
+  Landmark,
+  Star,
+  ShieldCheck,
+  Shield,
+  FolderOpen,
+  Tag,
+  FileText,
+  Activity,
+  Mail,
+  Cog,
+  Menu,
+  X,
+  ChevronRight,
+  User,
+} from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -20,45 +42,61 @@ interface NavItem {
 }
 
 const studentNav: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: BookOpen },
-  { label: 'Become Instructor', href: '/dashboard/become-instructor', icon: User },
-  { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
-  { label: 'Quiz History', href: '/dashboard/quiz-history', icon: BarChart3 },
-  { label: 'Certificates', href: '/dashboard/certificates', icon: Award },
-  { label: 'Payments', href: '/dashboard/payments', icon: CreditCard },
-  { label: 'Referral withdrawals', href: '/dashboard/referral-withdrawals', icon: DollarSign },
-  { label: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
-  { label: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: "Dashboard", href: "/dashboard", icon: BookOpen },
+  {
+    label: "Become Instructor",
+    href: "/dashboard/become-instructor",
+    icon: User,
+  },
+  { label: "My Courses", href: "/dashboard/courses", icon: GraduationCap },
+  { label: "Quiz History", href: "/dashboard/quiz-history", icon: BarChart3 },
+  { label: "Certificates", href: "/dashboard/certificates", icon: Award },
+  { label: "Payments", href: "/dashboard/payments", icon: CreditCard },
+  {
+    label: "Referral withdrawals",
+    href: "/dashboard/referral-withdrawals",
+    icon: DollarSign,
+  },
+  { label: "Wishlist", href: "/dashboard/wishlist", icon: Heart },
+  { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
+  { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
 const instructorNav: NavItem[] = [
-  { label: 'Dashboard', href: '/instructor', icon: BarChart3 },
-  { label: 'My Courses', href: '/instructor/courses', icon: BookOpen },
-  { label: 'Create Course', href: '/instructor/courses/new', icon: PlusCircle },
-  { label: 'Students', href: '/instructor/students', icon: Users },
-  { label: 'Reviews', href: '/instructor/reviews', icon: Star },
-  { label: 'Earnings', href: '/instructor/earnings', icon: DollarSign },
-  { label: 'Payouts', href: '/instructor/payouts', icon: Landmark },
-  { label: 'Settings', href: '/instructor/settings', icon: Settings },
+  { label: "Dashboard", href: "/instructor", icon: BarChart3 },
+  { label: "My Courses", href: "/instructor/courses", icon: BookOpen },
+  { label: "Create Course", href: "/instructor/courses/new", icon: PlusCircle },
+  { label: "Students", href: "/instructor/students", icon: Users },
+  { label: "Reviews", href: "/instructor/reviews", icon: Star },
+  { label: "Earnings", href: "/instructor/earnings", icon: DollarSign },
+  { label: "Payouts", href: "/instructor/payouts", icon: Landmark },
+  { label: "Settings", href: "/instructor/settings", icon: Settings },
 ];
 
 const adminNav: NavItem[] = [
-  { label: 'Dashboard', href: '/admin', icon: Activity },
-  { label: 'Notifications', href: '/admin/notifications', icon: Bell },
-  { label: 'Users', href: '/admin/users', icon: Users },
-  { label: 'Course Approvals', href: '/admin/approvals', icon: ShieldCheck },
-  { label: 'Instructor Verify', href: '/admin/instructor-verifications', icon: ShieldCheck },
-  { label: 'Categories', href: '/admin/categories', icon: FolderOpen },
-  { label: 'Coupons', href: '/admin/coupons', icon: Tag },
-  { label: 'Certificates', href: '/admin/certificates', icon: Award },
-  { label: 'Payments', href: '/admin/payments', icon: CreditCard },
-  { label: 'Manual Payments', href: '/admin/manual-payments', icon: CreditCard },
-  { label: 'Payouts', href: '/admin/payouts', icon: Landmark },
-  { label: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
-  { label: 'Email Logs', href: '/admin/email-logs', icon: Mail },
-  { label: 'RBAC', href: '/admin/rbac', icon: Shield },
-  { label: 'System Settings', href: '/admin/settings', icon: Cog },
+  { label: "Dashboard", href: "/admin", icon: Activity },
+  { label: "Notifications", href: "/admin/notifications", icon: Bell },
+  { label: "Users", href: "/admin/users", icon: Users },
+  { label: "Course Approvals", href: "/admin/approvals", icon: ShieldCheck },
+  {
+    label: "Instructor Verify",
+    href: "/admin/instructor-verifications",
+    icon: ShieldCheck,
+  },
+  { label: "Categories", href: "/admin/categories", icon: FolderOpen },
+  { label: "Coupons", href: "/admin/coupons", icon: Tag },
+  { label: "Certificates", href: "/admin/certificates", icon: Award },
+  { label: "Payments", href: "/admin/payments", icon: CreditCard },
+  {
+    label: "Manual Payments",
+    href: "/admin/manual-payments",
+    icon: CreditCard,
+  },
+  { label: "Payouts", href: "/admin/payouts", icon: Landmark },
+  { label: "Audit Logs", href: "/admin/audit-logs", icon: FileText },
+  { label: "Email Logs", href: "/admin/email-logs", icon: Mail },
+  { label: "RBAC", href: "/admin/rbac", icon: Shield },
+  { label: "System Settings", href: "/admin/settings", icon: Cog },
 ];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
@@ -67,19 +105,29 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const unreadCountQuery = useQuery({
-    queryKey: ['notification-unread-count', user?.id],
+    queryKey: ["notification-unread-count", user?.id],
     queryFn: getNotificationUnreadCount,
     enabled: Boolean(user?.id),
     refetchInterval: 30000,
   });
   const unreadCount = unreadCountQuery.data ?? 0;
 
-  const navItems = user?.role === 'ADMIN' ? adminNav : user?.role === 'INSTRUCTOR' ? instructorNav : studentNav;
-  const roleLabel = user?.role === 'ADMIN' ? 'Admin' : user?.role === 'INSTRUCTOR' ? 'Instructor' : 'Student';
+  const navItems =
+    user?.role === "ADMIN"
+      ? adminNav
+      : user?.role === "INSTRUCTOR"
+        ? instructorNav
+        : studentNav;
+  const roleLabel =
+    user?.role === "ADMIN"
+      ? "Admin"
+      : user?.role === "INSTRUCTOR"
+        ? "Instructor"
+        : "Student";
 
   const handleLogout = () => {
     logout();
-    navigate('/');
+    navigate("/");
   };
 
   return (
@@ -87,15 +135,20 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <FirstLoginTour />
       {/* Sidebar overlay mobile */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-foreground/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div
+          className="fixed inset-0 bg-foreground/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed lg:sticky top-0 left-0 z-[100] h-screen w-64 text-sidebar-foreground flex flex-col transition-transform duration-300 shadow-xl lg:shadow-card",
-        "bg-[hsl(222,47%,11%)] backdrop-blur-none",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-      )}>
+      <aside
+        className={cn(
+          "fixed lg:sticky top-0 left-0 z-[100] h-screen w-64 text-sidebar-foreground flex flex-col transition-transform duration-300 shadow-xl lg:shadow-card",
+          "bg-[hsl(222,47%,11%)] backdrop-blur-none",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+        )}
+      >
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2">
@@ -104,7 +157,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             </div>
             <span className="font-display text-lg font-bold">BeteGubae</span>
           </Link>
-          <Button variant="ghost" size="icon" className="lg:hidden text-sidebar-foreground" onClick={() => setSidebarOpen(false)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden text-sidebar-foreground"
+            onClick={() => setSidebarOpen(false)}
+          >
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -127,12 +185,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 to={item.href}
                 onClick={() => setSidebarOpen(false)}
                 data-tour={`nav:${item.href}`}
-                 className={cn(
-                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                   isActive
-                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                     : "text-secondary hover:text-accent hover:bg-sidebar-accent"
-                 )}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-secondary hover:text-accent hover:bg-sidebar-accent",
+                )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
                 {item.label}
@@ -146,14 +204,22 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-3 mb-3">
             <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center overflow-hidden">
               {user?.profileImage ? (
-                <img src={user.profileImage} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={user.profileImage}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <User className="h-4 w-4" />
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</p>
-              <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+              <p className="text-sm font-medium truncate">
+                {user?.firstName} {user?.lastName}
+              </p>
+              <p className="text-xs text-sidebar-foreground/60 truncate">
+                {user?.email}
+              </p>
             </div>
           </div>
           <Button
@@ -172,7 +238,12 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-30 h-16 bg-card border-b border-border flex items-center justify-between px-4 lg:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+          >
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2 ml-auto">
@@ -180,20 +251,20 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               )}
             </Button>
             <Link to="/">
-              <Button variant="outline" size="sm" data-tour="back-to-site">Back to Site</Button>
+              <Button variant="outline" size="sm" data-tour="back-to-site">
+                Back to Site
+              </Button>
             </Link>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 p-4 lg:p-6 overflow-auto">{children}</main>
       </div>
     </div>
   );

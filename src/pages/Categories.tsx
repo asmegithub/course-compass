@@ -1,23 +1,26 @@
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import Navbar from '@/components/layout/Navbar';
-import Footer from '@/components/layout/Footer';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { getApprovedCourses, getCategories } from '@/lib/course-api';
-import { Loader2, ArrowRight, BookOpen, Sparkles } from 'lucide-react';
-import { useMemo } from 'react';
-import type { CourseCategory } from '@/types';
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { getApprovedCourses, getCategories } from "@/lib/course-api";
+import { Loader2, ArrowRight, BookOpen, Sparkles } from "lucide-react";
+import { useMemo } from "react";
+import type { CourseCategory } from "@/types";
 
-const getLocalizedCategoryName = (category: CourseCategory, language: string) => {
+const getLocalizedCategoryName = (
+  category: CourseCategory,
+  language: string,
+) => {
   switch (language) {
-    case 'am':
+    case "am":
       return category.nameAm || category.name;
-    case 'om':
+    case "om":
       return category.nameOm || category.name;
-    case 'gez':
-    case 'gz':
+    case "gez":
+    case "gz":
       return category.nameGz || category.name;
     default:
       return category.name;
@@ -26,15 +29,19 @@ const getLocalizedCategoryName = (category: CourseCategory, language: string) =>
 
 const Categories = () => {
   const { t, i18n } = useTranslation();
-  const language = (i18n.language || 'en').split('-')[0];
+  const language = (i18n.language || "en").split("-")[0];
 
-  const { data: categories = [], isLoading, isError } = useQuery({
-    queryKey: ['course-categories'],
+  const {
+    data: categories = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["course-categories"],
     queryFn: getCategories,
   });
 
   const { data: courses = [] } = useQuery({
-    queryKey: ['courses', 'approved'],
+    queryKey: ["courses", "approved"],
     queryFn: getApprovedCourses,
   });
 
@@ -65,13 +72,14 @@ const Categories = () => {
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-sm">
                 <Sparkles className="h-4 w-4 text-accent" />
-                <span>{t('common.categories')}</span>
+                <span>{t("common.categories")}</span>
               </div>
               <h1 className="font-display text-4xl md:text-5xl font-bold leading-tight">
                 Explore courses by category
               </h1>
               <p className="text-lg text-primary-foreground/80 max-w-2xl">
-                Discover focused learning paths and jump into the subject area that fits your goals.
+                Discover focused learning paths and jump into the subject area
+                that fits your goals.
               </p>
             </div>
           </div>
@@ -80,12 +88,16 @@ const Categories = () => {
         <section className="container py-12 lg:py-16">
           <div className="flex items-center justify-between gap-4 mb-8">
             <div>
-              <h2 className="font-display text-2xl font-bold">All Categories</h2>
-              <p className="text-muted-foreground text-sm">{featuredCategories.length} categories available</p>
+              <h2 className="font-display text-2xl font-bold">
+                All Categories
+              </h2>
+              <p className="text-muted-foreground text-sm">
+                {featuredCategories.length} categories available
+              </p>
             </div>
             <Button asChild variant="outline">
               <Link to="/courses">
-                {t('common.exploreCourses')}
+                {t("common.exploreCourses")}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
             </Button>
@@ -117,7 +129,10 @@ const Categories = () => {
           {!isLoading && !isError && featuredCategories.length > 0 && (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {featuredCategories.map((category) => {
-                const count = courseCounts.get(category.slug) || courseCounts.get(category.id) || 0;
+                const count =
+                  courseCounts.get(category.slug) ||
+                  courseCounts.get(category.id) ||
+                  0;
                 return (
                   <Link
                     key={category.id}
@@ -128,7 +143,7 @@ const Categories = () => {
                       <CardContent className="p-6 space-y-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-3xl">
-                            {category.icon || '📚'}
+                            {category.icon || "📚"}
                           </div>
                           <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                             {count} courses
@@ -158,7 +173,9 @@ const Categories = () => {
           <div className="mt-12 rounded-2xl border bg-muted/30 p-6 lg:p-8">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h3 className="font-display text-xl font-bold">Not sure where to start?</h3>
+                <h3 className="font-display text-xl font-bold">
+                  Not sure where to start?
+                </h3>
                 <p className="text-muted-foreground mt-1">
                   Browse all courses and filter by level, rating, or language.
                 </p>
