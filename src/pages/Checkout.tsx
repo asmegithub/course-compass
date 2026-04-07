@@ -5,7 +5,7 @@ import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getApprovedCourses, getCourseById, createEnrollment, getReferralBalance, initializeChapaPayment, getActivePaymentAccounts, submitPaymentProofForCourse } from '@/lib/course-api';
+import { getApprovedCourses, getCourseById, createEnrollment, getReferralBalance, initializeChapaPayment, getActivePaymentAccounts, submitPaymentProofForCourse, getMyCourseEnrollment } from '@/lib/course-api';
 import { formatPrice } from '@/lib/formatters';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
@@ -52,6 +52,7 @@ const Checkout = () => {
   });
 
   const course = isUuidSlug ? courseByIdQuery.data : coursesQuery.data?.find((c) => c.slug === slugValue);
+  const isStudent = isLoggedIn && (user?.role === 'STUDENT' || user?.role === 'ROLE_STUDENT');
 
   const referralBalanceQuery = useQuery({
     queryKey: ['referral-balance'],
@@ -63,10 +64,16 @@ const Checkout = () => {
     queryFn: getActivePaymentAccounts,
   });
 
+  const myEnrollmentQuery = useQuery({
+    queryKey: ['my-course-enrollment', course?.id, user?.id],
+    queryFn: () => getMyCourseEnrollment(course!.id),
+    enabled: Boolean(course?.id) && isStudent,
+  });
+
   const referralBalance = referralBalanceQuery.data?.balance ?? 0;
   const coursePrice = course ? Number(course.discountPrice ?? course.price ?? 0) : 0;
-  const isStudent = isLoggedIn && (user?.role === 'STUDENT' || user?.role === 'ROLE_STUDENT');
-  const canUseBalance = isStudent && referralBalance >= coursePrice && coursePrice > 0;
+  const isAlreadyEnrolled = Boolean(myEnrollmentQuery.data?.id);
+  const canUseBalance = isStudent && !isAlreadyEnrolled && referralBalance >= coursePrice && coursePrice > 0;
 
   const referrerId = useMemo(() => {
     if (!course?.id) return null;
@@ -85,6 +92,9 @@ const Checkout = () => {
     mutationFn: async () => {
       if (!isStudent) {
         throw new Error('Instructor accounts can add to cart/wishlist, but cannot enroll in courses.');
+      }
+      if (myEnrollmentQuery.data?.id) {
+        throw new Error('You are already enrolled in this course.');
       }
       if (!course?.id) throw new Error('Course not found');
       const res = await initializeChapaPayment({
@@ -108,6 +118,9 @@ const Checkout = () => {
         if (!isStudent) {
           throw new Error('Instructor accounts can add to cart/wishlist, but cannot enroll in courses.');
         }
+        if (myEnrollmentQuery.data?.id) {
+          throw new Error('You are already enrolled in this course.');
+        }
         return createEnrollment({
           courseId: course!.id,
           useBalance: true,
@@ -130,6 +143,7 @@ const Checkout = () => {
   const manualSubmitMutation = useMutation({
     mutationFn: async () => {
       if (!isStudent) throw new Error('Only student accounts can enroll in courses.');
+      if (myEnrollmentQuery.data?.id) throw new Error('You are already enrolled in this course.');
       if (!course?.id) throw new Error('Course not found');
       if (!selectedAccountId) throw new Error('Please select a payment account');
       if (!receiptFile) throw new Error('Please upload your receipt');
@@ -185,7 +199,7 @@ const Checkout = () => {
     } catch (_) {}
   }
 
-  const isLoading = courseByIdQuery.isLoading || coursesQuery.isLoading;
+  const isLoading = courseByIdQuery.isLoading || coursesQuery.isLoading || myEnrollmentQuery.isLoading;
   const notFound = !isLoading && !course;
   const mustLogin = !isLoggedIn;
 
@@ -239,6 +253,21 @@ const Checkout = () => {
             }}
           >
             Sign in
+          </Button>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (isAlreadyEnrolled) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 container py-16">
+          <p className="text-muted-foreground">You are already enrolled in this course.</p>
+          <Button className="mt-4" onClick={() => navigate(`/courses/${slugValue}/learn`, { replace: true })}>
+            Continue learning
           </Button>
         </main>
         <Footer />

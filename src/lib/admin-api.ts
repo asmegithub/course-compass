@@ -59,6 +59,47 @@ export interface AuditLog {
   updatedAt?: string;
 }
 
+export interface CertificateTemplate {
+  id: string;
+  name?: string;
+  description?: string;
+  templateHtml?: string;
+  templateCss?: string;
+  backgroundUrl?: string;
+  isDefault?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RbacRole {
+  id: string;
+  name?: string;
+  displayName?: string;
+  description?: string;
+  isSystem?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RbacPermission {
+  id: string;
+  name?: string;
+  displayName?: string;
+  module?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RbacRolePermission {
+  id: string;
+  role?: { id?: string };
+  permission?: { id?: string };
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const getUsers = async (): Promise<AdminUser[]> => {
   return apiFetch<AdminUser[]>('/api/users');
 };
@@ -103,6 +144,94 @@ export interface EmailLog {
 
 export const getEmailLogs = async (): Promise<EmailLog[]> => {
   return apiFetch<EmailLog[]>('/api/email-logs');
+};
+
+export const getCertificateTemplates = async (): Promise<CertificateTemplate[]> => {
+  const data = await apiFetch<CertificateTemplate[]>('/api/certificate-templates');
+  return Array.isArray(data) ? data : [];
+};
+
+export const getRoles = async (): Promise<RbacRole[]> => {
+  const data = await apiFetch<RbacRole[]>('/api/roles');
+  return Array.isArray(data) ? data : [];
+};
+
+export const createRole = async (payload: Partial<RbacRole>): Promise<RbacRole> => {
+  return apiFetch<RbacRole>('/api/roles', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const updateRole = async (id: string, payload: Partial<RbacRole>): Promise<RbacRole> => {
+  return apiFetch<RbacRole>(`/api/roles/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const deleteRole = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/api/roles/${id}`, { method: 'DELETE' });
+};
+
+export const getPermissions = async (): Promise<RbacPermission[]> => {
+  const data = await apiFetch<RbacPermission[]>('/api/permissions');
+  return Array.isArray(data) ? data : [];
+};
+
+export const createPermission = async (payload: Partial<RbacPermission>): Promise<RbacPermission> => {
+  return apiFetch<RbacPermission>('/api/permissions', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const updatePermission = async (id: string, payload: Partial<RbacPermission>): Promise<RbacPermission> => {
+  return apiFetch<RbacPermission>(`/api/permissions/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const deletePermission = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/api/permissions/${id}`, { method: 'DELETE' });
+};
+
+export const getRolePermissions = async (): Promise<RbacRolePermission[]> => {
+  const data = await apiFetch<RbacRolePermission[]>('/api/role-permissions');
+  return Array.isArray(data) ? data : [];
+};
+
+export const createRolePermission = async (payload: { roleId: string; permissionId: string }): Promise<RbacRolePermission> => {
+  return apiFetch<RbacRolePermission>('/api/role-permissions', {
+    method: 'POST',
+    body: JSON.stringify({
+      role: { id: payload.roleId },
+      permission: { id: payload.permissionId },
+    }),
+  });
+};
+
+export const deleteRolePermission = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/api/role-permissions/${id}`, { method: 'DELETE' });
+};
+
+export const createCertificateTemplate = async (payload: Partial<CertificateTemplate>): Promise<CertificateTemplate> => {
+  return apiFetch<CertificateTemplate>('/api/certificate-templates', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const updateCertificateTemplate = async (id: string, payload: Partial<CertificateTemplate>): Promise<CertificateTemplate> => {
+  return apiFetch<CertificateTemplate>(`/api/certificate-templates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const deleteCertificateTemplate = async (id: string): Promise<void> => {
+  await apiFetch<void>(`/api/certificate-templates/${id}`, { method: 'DELETE' });
 };
 
 export interface AdminPayment {

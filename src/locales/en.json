@@ -182,5 +182,134 @@
       "removedTitle": "Removed from cart",
       "removedDescription": "This course was removed from your cart."
     }
+  },
+  "courseDetail": {
+    "tabs": {
+      "overview": "Overview",
+      "curriculum": "Curriculum",
+      "instructor": "Instructor",
+      "reviews": "Reviews",
+      "discussion": "Discussion"
+    },
+    "sections": {
+      "whatYouWillLearn": "What you'll learn",
+      "requirements": "Requirements",
+      "description": "Description",
+      "courseDiscussion": "Course Discussion"
+    },
+    "actions": {
+      "continueLearning": "Continue Learning",
+      "resumeLearning": "Resume learning",
+      "enrollNow": "Enroll Now",
+      "addToCart": "Add to Cart",
+      "inCart": "In Cart",
+      "wishlist": "Wishlist",
+      "share": "Share",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "unenroll": "Unenroll"
+    },
+    "onlyStudents": "Only students can enroll",
+    "includes": {
+      "title": "This course includes:",
+      "onDemandVideo": "{{duration}} on-demand video",
+      "downloadableResources": "Downloadable resources",
+      "offlineAccess": "Offline access",
+      "certificate": "Certificate of completion"
+    },
+    "curriculum": {
+      "summary": "{{sections}} sections • {{lessons}} lessons • {{duration}} total",
+      "lessonsCount": "{{count}} lessons",
+      "sectionFallback": "Course Section"
+    },
+    "preview": {
+      "preview": "Preview",
+      "previewCourse": "Preview this course",
+      "coursePreview": "Course Preview",
+      "previewTitleWithLesson": "Preview: {{lesson}}",
+      "videoUnavailable": "Video preview not available",
+      "videoPreviewAlt": "Video preview",
+      "noTextPreview": "No text preview available for this lesson.",
+      "freePreview": "This is a free preview lesson.",
+      "enrollForAll": "Enroll to access all course content."
+    },
+    "instructor": {
+      "unknown": "Unknown Instructor",
+      "bioFallback": "Biography is not available yet.",
+      "ratingLabel": "{{value}} rating",
+      "studentsLabel": "{{count}} students",
+      "coursesLabel": "{{count}} courses",
+      "badge": "Instructor"
+    },
+    "feedback": {
+      "loadingCourse": "Loading course...",
+      "loadCourseFailed": "Failed to load course.",
+      "browseCourses": "Browse courses",
+      "courseNotFound": "Course not found.",
+      "loadCourseDetailsFailed": "Failed to load course details.",
+      "backToCourse": "Back to course",
+      "courses": "Courses",
+      "course": "Course",
+      "enrolledBadge": "You are enrolled in this course",
+      "availableLanguages": "Available in 4 languages",
+      "certificateIncluded": "Certificate included",
+      "enrollmentNotAllowedTitle": "Enrollment not allowed",
+      "enrollmentNotAllowedDesc": "Only student accounts can enroll in courses.",
+      "removedFromCartTitle": "Removed from cart",
+      "removedFromCartDesc": "This course was removed from your cart.",
+      "addedToCartTitle": "Added to cart",
+      "addedToCartDesc": "This course was added to your cart.",
+      "totalLabel": "total",
+      "unenrolledTitle": "Unenrolled",
+      "unenrolledDesc": "You have been unenrolled from this course.",
+      "unenrollFailedTitle": "Unenroll failed",
+      "unenrollFailedDesc": "Unable to unenroll right now.",
+      "linkCopiedTitle": "Link copied!",
+      "linkCopiedDesc": "Share this link. When a friend enrolls, referral reward will be credited to your balance.",
+      "copyFailedTitle": "Could not copy",
+      "unlockLessonsTitle": "Enroll to unlock lessons",
+      "noFreePreviewDesc": "This course has no free preview lessons.",
+      "noLessonTitle": "No lesson available",
+      "noLessonDesc": "Cannot post discussion because this course has no lessons yet.",
+      "questionPostedTitle": "Question posted!",
+      "questionPostedDesc": "Your question has been posted to the discussion.",
+      "replyPostedTitle": "Reply posted!",
+      "reviewSubmittedTitle": "Review submitted",
+      "reviewUpdatedTitle": "Review updated",
+      "reviewFailedTitle": "Review failed",
+      "reviewDeletedTitle": "Review deleted",
+      "deleteFailedTitle": "Delete failed",
+      "submitReviewFailedDesc": "Unable to submit review.",
+      "reviewNotFound": "Review not found",
+      "deleteReviewFailedDesc": "Unable to delete review.",
+      "missingUserOrCourse": "Missing user or course details"
+    },
+    "discussion": {
+      "threadsCount": "{{count}} threads",
+      "askQuestion": "Ask a question",
+      "questionPlaceholder": "What would you like to ask about this course?",
+      "postQuestion": "Post Question",
+      "enrollToDiscuss": "Enroll in this course to join the discussion and ask questions.",
+      "loginToDiscuss": "Log in and enroll to join the discussion.",
+      "enrollToDiscussButton": "Enroll to Discuss",
+      "replyCount": "Reply ({{count}})",
+      "learner": "Learner",
+      "replyPlaceholder": "Write a reply..."
+    },
+    "reviews": {
+      "updateReview": "Update your review",
+      "leaveReviewTitle": "Leave a review",
+      "leaveReviewDesc": "Share your experience with other students.",
+      "titleOptional": "Title (optional)",
+      "writeReview": "Write your review...",
+      "submitReview": "Submit Review",
+      "yourReview": "Your review",
+      "enrollToReview": "Enroll in this course to leave a review.",
+      "reviewsCount": "{{count}} reviews",
+      "selectRating": "Please select a rating",
+      "rateStarsAria": "Rate {{count}} stars"
+    }
   }
 }

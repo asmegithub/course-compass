@@ -12,7 +12,7 @@ import { CoursePayload, getCourses, getCourseSections, getLessons, updateCourse 
 import { formatDuration } from '@/lib/formatters';
 import {
   Eye, CheckCircle2, XCircle, Clock, BookOpen,
-  FileText, PlayCircle,
+  FileText, PlayCircle, Lock, Check,
 } from 'lucide-react';
 
 const AdminApprovals = () => {
@@ -20,14 +20,6 @@ const AdminApprovals = () => {
   const coursesQuery = useQuery({
     queryKey: ['courses'],
     queryFn: getCourses,
-  });
-  const sectionsQuery = useQuery({
-    queryKey: ['course-sections'],
-    queryFn: getCourseSections,
-  });
-  const lessonsQuery = useQuery({
-    queryKey: ['lessons'],
-    queryFn: getLessons,
   });
   const [reviewCourseId, setReviewCourseId] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
@@ -37,18 +29,18 @@ const AdminApprovals = () => {
   const courses = coursesQuery.data || [];
   const reviewCourse = courses.find((course) => course.id === reviewCourseId) || null;
   const rejectDialog = courses.find((course) => course.id === rejectDialogId) || null;
-  const allSections = sectionsQuery.data || [];
-  const allLessons = lessonsQuery.data || [];
-  const reviewSections = reviewCourse
-    ? allSections
-        .filter((section) => section.courseId === reviewCourse.id)
-        .sort((a, b) => a.orderIndex - b.orderIndex)
-    : [];
-  const reviewLessons = reviewCourse
-    ? allLessons
-        .filter((lesson) => reviewSections.some((section) => section.id === lesson.sectionId))
-        .sort((a, b) => a.orderIndex - b.orderIndex)
-    : [];
+  const reviewSectionsQuery = useQuery({
+    queryKey: ['course-sections', reviewCourseId],
+    queryFn: () => getCourseSections(reviewCourseId || undefined),
+    enabled: Boolean(reviewCourseId),
+  });
+  const reviewLessonsQuery = useQuery({
+    queryKey: ['lessons', reviewCourseId],
+    queryFn: () => getLessons(reviewCourseId || undefined),
+    enabled: Boolean(reviewCourseId),
+  });
+  const reviewSections = (reviewSectionsQuery.data || []).sort((a, b) => a.orderIndex - b.orderIndex);
+  const reviewLessons = (reviewLessonsQuery.data || []).sort((a, b) => a.orderIndex - b.orderIndex);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: CoursePayload }) => updateCourse(id, payload),
@@ -92,6 +84,7 @@ const AdminApprovals = () => {
       totalReviews: course.totalReviews,
       isFeatured: course.isFeatured,
       isPopular: course.isPopular,
+      isPublished: course.isPublished,
     };
   };
 
@@ -103,6 +96,7 @@ const AdminApprovals = () => {
       toast({ title: 'Missing instructor', description: 'Instructor profile is required to approve.', variant: 'destructive' });
       return;
     }
+    payload.isPublished = true;
     updateMutation.mutate({ id: courseId, payload });
     setReviewCourseId(null);
     toast({ title: 'Course Approved', description: 'The course is now live on the platform.' });
@@ -259,10 +253,15 @@ const AdminApprovals = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-2">Curriculum</h3>
-                  {sectionsQuery.isLoading || lessonsQuery.isLoading ? (
+                  {reviewSectionsQuery.isLoading || reviewLessonsQuery.isLoading ? (
                     <div className="border border-border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       Loading curriculum...
+                    </div>
+                  ) : reviewSectionsQuery.isError || reviewLessonsQuery.isError ? (
+                    <div className="border border-border rounded-lg p-3 text-sm text-destructive flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Failed to load curriculum.
                     </div>
                   ) : reviewSections.length === 0 ? (
                     <div className="border border-border rounded-lg p-3 text-sm text-muted-foreground flex items-center gap-2">
@@ -271,39 +270,76 @@ const AdminApprovals = () => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {reviewSections.map((section) => (
-                        <div key={section.id} className="border border-border rounded-lg">
-                          <div className="px-3 py-2 border-b text-sm font-medium">
-                            {section.title || 'Untitled section'}
-                          </div>
-                          <div className="p-3 text-sm text-muted-foreground space-y-2">
-                            {reviewLessons
-                              .filter((lesson) => lesson.sectionId === section.id)
-                              .map((lesson) => (
-                                <div key={lesson.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                  <div className="flex items-center gap-2">
-                                    {lesson.type === 'VIDEO' ? <PlayCircle className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                                    <span>{lesson.title || 'Untitled lesson'}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Badge variant="outline">{lesson.type}</Badge>
-                                    <span>{formatDuration(lesson.duration || 0)}</span>
-                                    {lesson.videoUrl && lesson.type === 'VIDEO' && (
-                                      <Button variant="outline" size="sm" asChild>
-                                        <a href={lesson.videoUrl} target="_blank" rel="noreferrer">Preview</a>
-                                      </Button>
-                                    )}
-                                    {lesson.documentUrl && lesson.type === 'DOCUMENT' && (
-                                      <Button variant="outline" size="sm" asChild>
-                                        <a href={lesson.documentUrl} target="_blank" rel="noreferrer">Preview</a>
-                                      </Button>
-                                    )}
-                                  </div>
+                      {reviewSections.map((section, sectionIndex) => {
+                        const sectionLessons = reviewLessons.filter((lesson) => lesson.sectionId === section.id);
+                        return (
+                          <div key={section.id} className="rounded-xl border border-border overflow-hidden">
+                            <div className="bg-muted/30 px-4 py-3 flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">
+                                  {section.title || `Section ${sectionIndex + 1}`}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {sectionLessons.length} lesson{sectionLessons.length === 1 ? '' : 's'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="divide-y divide-border">
+                              {sectionLessons.length === 0 ? (
+                                <div className="px-4 py-3 text-sm text-muted-foreground">
+                                  No lessons added in this section.
                                 </div>
-                              ))}
+                              ) : (
+                                sectionLessons.map((lesson) => (
+                                  <div key={lesson.id} className="px-4 py-3 space-y-2">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        {lesson.type === 'VIDEO' ? (
+                                          <PlayCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        ) : lesson.type === 'DOCUMENT' ? (
+                                          <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        ) : lesson.type === 'QUIZ' ? (
+                                          <CheckCircle2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        ) : (
+                                          <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                                        )}
+                                        <span className="text-sm truncate">{lesson.title || 'Untitled lesson'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <Badge variant="outline" className="text-[10px]">{lesson.type}</Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDuration(lesson.duration || 0)}
+                                        </span>
+                                        {lesson.isFree ? (
+                                          <Badge variant="secondary" className="text-[10px]">Free</Badge>
+                                        ) : (
+                                          <Lock className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                        {lesson.isPublished && <Check className="h-3 w-3 text-success" />}
+                                        {lesson.videoUrl && lesson.type === 'VIDEO' && (
+                                          <Button variant="outline" size="sm" asChild>
+                                            <a href={lesson.videoUrl} target="_blank" rel="noreferrer">Preview</a>
+                                          </Button>
+                                        )}
+                                        {lesson.documentUrl && lesson.type === 'DOCUMENT' && (
+                                          <Button variant="outline" size="sm" asChild>
+                                            <a href={lesson.documentUrl} target="_blank" rel="noreferrer">Preview</a>
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {lesson.type === 'TEXT' && (
+                                      <div className="rounded-md bg-muted/40 border border-border p-3 text-sm text-muted-foreground whitespace-pre-wrap">
+                                        {lesson.content?.trim() ? lesson.content : 'No text content added for this lesson.'}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

@@ -4,10 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { FirstLoginTour } from '@/components/onboarding/FirstLoginTour';
+import { useQuery } from '@tanstack/react-query';
+import { getNotificationUnreadCount } from '@/lib/course-api';
 import {
   GraduationCap, BookOpen, Award, CreditCard, Bell, Heart, Settings, LogOut,
   BarChart3, Users, PlusCircle, DollarSign, Landmark, Star,
-  ShieldCheck, FolderOpen, Tag, FileText, Activity, Mail, Cog,
+  ShieldCheck, Shield, FolderOpen, Tag, FileText, Activity, Mail, Cog,
   Menu, X, ChevronRight, User,
 } from 'lucide-react';
 
@@ -21,6 +23,7 @@ const studentNav: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: BookOpen },
   { label: 'Become Instructor', href: '/dashboard/become-instructor', icon: User },
   { label: 'My Courses', href: '/dashboard/courses', icon: GraduationCap },
+  { label: 'Quiz History', href: '/dashboard/quiz-history', icon: BarChart3 },
   { label: 'Certificates', href: '/dashboard/certificates', icon: Award },
   { label: 'Payments', href: '/dashboard/payments', icon: CreditCard },
   { label: 'Referral withdrawals', href: '/dashboard/referral-withdrawals', icon: DollarSign },
@@ -54,6 +57,7 @@ const adminNav: NavItem[] = [
   { label: 'Payouts', href: '/admin/payouts', icon: Landmark },
   { label: 'Audit Logs', href: '/admin/audit-logs', icon: FileText },
   { label: 'Email Logs', href: '/admin/email-logs', icon: Mail },
+  { label: 'RBAC', href: '/admin/rbac', icon: Shield },
   { label: 'System Settings', href: '/admin/settings', icon: Cog },
 ];
 
@@ -62,6 +66,13 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const unreadCountQuery = useQuery({
+    queryKey: ['notification-unread-count', user?.id],
+    queryFn: getNotificationUnreadCount,
+    enabled: Boolean(user?.id),
+    refetchInterval: 30000,
+  });
+  const unreadCount = unreadCountQuery.data ?? 0;
 
   const navItems = user?.role === 'ADMIN' ? adminNav : user?.role === 'INSTRUCTOR' ? instructorNav : studentNav;
   const roleLabel = user?.role === 'ADMIN' ? 'Admin' : user?.role === 'INSTRUCTOR' ? 'Instructor' : 'Student';
@@ -167,7 +178,11 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
           <div className="flex items-center gap-2 ml-auto">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center">3</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-[10px] text-destructive-foreground flex items-center justify-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Button>
             <Link to="/">
               <Button variant="outline" size="sm" data-tour="back-to-site">Back to Site</Button>

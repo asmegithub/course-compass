@@ -29,6 +29,11 @@ const emitSessionExpired = () => {
   setStoredUser(null);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(AUTH_SESSION_EXPIRED_EVENT));
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (!window.location.pathname.startsWith('/auth')) {
+      const redirect = current.startsWith('/auth') ? '/' : current;
+      window.location.assign(`/auth?redirect=${encodeURIComponent(redirect)}`);
+    }
   }
 };
 
@@ -43,16 +48,24 @@ const refreshAccessToken = async (): Promise<string | null> => {
       return null;
     }
 
-    const response = await fetch(buildUrl('/api/auth/refresh'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ refreshToken }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(buildUrl('/api/auth/refresh'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken }),
+      });
+    } catch {
+      throw new Error('Unable to reach server while refreshing session.');
+    }
 
-    if (!response.ok) {
+    if (response.status === 400 || response.status === 401) {
       return null;
+    }
+    if (!response.ok) {
+      throw new Error(`Refresh request failed (${response.status}).`);
     }
 
     const data = await response.json() as {
@@ -61,13 +74,12 @@ const refreshAccessToken = async (): Promise<string | null> => {
     };
 
     if (!data.accessToken) {
-      return null;
+      throw new Error('Refresh response did not include a valid access token.');
     }
 
     setTokens(data.accessToken, data.refreshToken || refreshToken);
     return data.accessToken;
   })()
-    .catch(() => null)
     .finally(() => {
       refreshInFlight = null;
     });
@@ -90,10 +102,16 @@ export const apiFetch = async <T>(path: string, init?: RequestInit): Promise<T> 
     return headers;
   };
 
-  const makeRequest = (token: string | null) => fetch(buildUrl(path), {
-    ...init,
-    headers: buildHeaders(token),
-  });
+  const makeRequest = async (token: string | null) => {
+    try {
+      return await fetch(buildUrl(path), {
+        ...init,
+        headers: buildHeaders(token),
+      });
+    } catch {
+      throw new Error(`Failed to fetch: cannot reach API at ${getApiBaseUrl()}`);
+    }
+  };
 
   let response = await makeRequest(getAccessToken());
 
@@ -148,8 +166,13 @@ export const apiFetchBlob = async (path: string): Promise<Blob> => {
     return headers;
   };
 
-  const makeRequest = (token: string | null) =>
-    fetch(buildUrl(path), { headers: buildHeaders(token) });
+  const makeRequest = async (token: string | null) => {
+    try {
+      return await fetch(buildUrl(path), { headers: buildHeaders(token) });
+    } catch {
+      throw new Error(`Failed to fetch: cannot reach API at ${getApiBaseUrl()}`);
+    }
+  };
 
   let response = await makeRequest(getAccessToken());
 

@@ -7,7 +7,7 @@ var __vite_injected_original_dirname = "/home/asmare/projects/course-compass";
 var vite_config_default = defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8081,
+    port: 8080,
     hmr: {
       overlay: false
     }

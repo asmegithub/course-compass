@@ -164,5 +164,134 @@
       "removedTitle": "Irra kaafame",
       "removedDescription": "Korsiin kun kaartii keessan irraa kaafame."
     }
+  },
+  "courseDetail": {
+    "tabs": {
+      "overview": "Wal-gala",
+      "curriculum": "Kurikulamii",
+      "instructor": "Barsiisaa",
+      "reviews": "Yaada",
+      "discussion": "Marii"
+    },
+    "sections": {
+      "whatYouWillLearn": "Waa'ee maal barattu",
+      "requirements": "Barbaachisummaa",
+      "description": "Ibsa",
+      "courseDiscussion": "Marii Koorsii"
+    },
+    "actions": {
+      "continueLearning": "Barnoota itti fufi",
+      "resumeLearning": "Itti fufi bakka irraa kutte",
+      "enrollNow": "Amma galmaa'i",
+      "addToCart": "Gara kaartii adda'i",
+      "inCart": "Kaartii keessa jira",
+      "wishlist": "Tarree barbaadduu",
+      "share": "Qoodi",
+      "edit": "Fooyyessi",
+      "delete": "Haqi",
+      "cancel": "Haquu",
+      "saveChanges": "Jijjiirama kuusi",
+      "unenroll": "Galmee irraa ba'i"
+    },
+    "onlyStudents": "Barattoonni qofa galmaa'uu danda'u",
+    "includes": {
+      "title": "Korsiin kun kan of keessaa qabu:",
+      "onDemandVideo": "{{duration}} viidiyoo yeroo barbaaddan",
+      "downloadableResources": "Qabeenya buufamuu danda'u",
+      "offlineAccess": "Seensa toora alaa",
+      "certificate": "Sertifikeetii xumuraa"
+    },
+    "curriculum": {
+      "summary": "{{sections}} kutaa • {{lessons}} leenjii • {{duration}} guutumma",
+      "lessonsCount": "{{count}} leenjii",
+      "sectionFallback": "Kutaa Koorsii"
+    },
+    "preview": {
+      "preview": "Dursee ilaalu",
+      "previewCourse": "Korsii kana dursee ilaali",
+      "coursePreview": "Dursee ilaalu Koorsii",
+      "previewTitleWithLesson": "Dursee ilaalu: {{lesson}}",
+      "videoUnavailable": "Dursee ilaalu viidiyoo hin jiru",
+      "videoPreviewAlt": "Dursee ilaalu viidiyoo",
+      "noTextPreview": "Kutaa kanaaf dursee ilaalu barruu hin jiru.",
+      "freePreview": "Kun kutaa dursee ilaalu bilisaa dha.",
+      "enrollForAll": "Qabiyyee koorsii hunda argachuuf galmaa'i."
+    },
+    "instructor": {
+      "unknown": "Barsiisaa hin beekamne",
+      "bioFallback": "Seenaa jireenyaa amma hin jiru.",
+      "ratingLabel": "Sadarkaa {{value}}",
+      "studentsLabel": "{{count}} barattoota",
+      "coursesLabel": "{{count}} koorsii",
+      "badge": "Barsiisaa"
+    },
+    "feedback": {
+      "loadingCourse": "Korsiin fe'amaa jira...",
+      "loadCourseFailed": "Korsii fe'uu dadhabame.",
+      "browseCourses": "Koorsii ilaali",
+      "courseNotFound": "Korsiin hin argamne.",
+      "loadCourseDetailsFailed": "Bal'ina koorsii fe'uu dadhabame.",
+      "backToCourse": "Gara koorsitti deebi'i",
+      "courses": "Koorsii",
+      "course": "Koorsii",
+      "enrolledBadge": "Korsii kana keessatti galmaa'aniittu",
+      "availableLanguages": "Afaan 4 keessatti ni argama",
+      "certificateIncluded": "Sertifikeetii ni qaba",
+      "enrollmentNotAllowedTitle": "Galmaan ni dhowrame",
+      "enrollmentNotAllowedDesc": "Akkaawuntii barataa qofa koorsii irratti galmaa'uu danda'a.",
+      "removedFromCartTitle": "Irraa kaafame",
+      "removedFromCartDesc": "Korsiin kun kaartii keessan irraa kaafame.",
+      "addedToCartTitle": "Gara kaartii itti dabalame",
+      "addedToCartDesc": "Korsiin kun kaartii keessanitti dabalame.",
+      "totalLabel": "guutumma",
+      "unenrolledTitle": "Galmee keessaa baafame",
+      "unenrolledDesc": "Korsii kana keessaa baaftan.",
+      "unenrollFailedTitle": "Galmee keessaa ba'uu dadhabe",
+      "unenrollFailedDesc": "Amma galmee keessaa ba'uu hin dandeenyu.",
+      "linkCopiedTitle": "Liinkiin koppii ta'e!",
+      "linkCopiedDesc": "Liinkii kana qoodi. Hiriyyaan galmaa'uun, badhaasni referral herrega keetti ni dabalam.",
+      "copyFailedTitle": "Koppii gochuu hin danda'amne",
+      "unlockLessonsTitle": "Leenjiilee banuuf galmaa'i",
+      "noFreePreviewDesc": "Korsiin kun leenjiilee dursee ilaalu bilisaa hin qabu.",
+      "noLessonTitle": "Leenjiin hin jiru",
+      "noLessonDesc": "Marii erguu hin dandeenyu sababniin kun amma leenjiilee hin qabu.",
+      "questionPostedTitle": "Gaaffiin ergame!",
+      "questionPostedDesc": "Gaaffiin kee marii keessatti ergameera.",
+      "replyPostedTitle": "Deebiin ergame!",
+      "reviewSubmittedTitle": "Gamaaggamni ergame",
+      "reviewUpdatedTitle": "Gamaaggamni haaromfame",
+      "reviewFailedTitle": "Gamaaggamni dadhabe",
+      "reviewDeletedTitle": "Gamaaggamni haqame",
+      "deleteFailedTitle": "Haquu dadhabe",
+      "submitReviewFailedDesc": "Gamaaggama erguu hin dandeenyu.",
+      "reviewNotFound": "Gamaaggamni hin argamne",
+      "deleteReviewFailedDesc": "Gamaaggama haquu hin dandeenyu.",
+      "missingUserOrCourse": "Oduu fayyadamaa ykn koorsii dhabame"
+    },
+    "discussion": {
+      "threadsCount": "{{count}} mata-duree",
+      "askQuestion": "Gaaffii gaafadhu",
+      "questionPlaceholder": "Waa'ee koorsii kana irratti maal gaafachuu barbaadda?",
+      "postQuestion": "Gaaffii ergi",
+      "enrollToDiscuss": "Marii keessatti hirmaachuuf koorsii kana irratti galmaa'i.",
+      "loginToDiscuss": "Seeniitii fi galmaa'iitii marii keessatti hirmaadhu.",
+      "enrollToDiscussButton": "Marii keessatti hirmaadhu",
+      "replyCount": "Deebii ({{count}})",
+      "learner": "Barataa",
+      "replyPlaceholder": "Deebii barreessi..."
+    },
+    "reviews": {
+      "updateReview": "Gamaaggama kee haaromsi",
+      "leaveReviewTitle": "Gamaaggama dhiyeessi",
+      "leaveReviewDesc": "Muuxannoo kee barattoota biroo waliin qoodi.",
+      "titleOptional": "Mataduree (fedhii keessaa)",
+      "writeReview": "Gamaaggama kee barreessi...",
+      "submitReview": "Gamaaggama ergi",
+      "yourReview": "Gamaaggama kee",
+      "enrollToReview": "Gamaaggama dhiyeessuuf koorsii kana irratti galmaa'i.",
+      "reviewsCount": "{{count}} gamaaggama",
+      "selectRating": "Mee sadarkaa filadhu",
+      "rateStarsAria": "{{count}} urjii madaali"
+    }
   }
 }

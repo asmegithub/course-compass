@@ -53,7 +53,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { generateCourseTemplateFromPrompt, toSlug } from '@/lib/ai-course-template';
 import {
   Upload, Image, Video, PlusCircle, Trash2, GripVertical,
-  ChevronDown, ChevronUp, Save, Send, ArrowLeft, FileText, Globe, Sparkles,
+  ChevronDown, ChevronUp, Save, Send, ArrowLeft, FileText, Globe, Sparkles, Loader2,
 } from 'lucide-react';
 
 interface SectionForm {
@@ -249,37 +249,37 @@ const InstructorCourseCreate = () => {
 
   const outcomesQuery = useQuery({
     queryKey: ['course-outcomes', courseId],
-    queryFn: getCourseOutcomes,
+    queryFn: () => getCourseOutcomes(courseId),
     enabled: isEditMode,
   });
 
   const requirementsQuery = useQuery({
     queryKey: ['course-requirements', courseId],
-    queryFn: getCourseRequirements,
+    queryFn: () => getCourseRequirements(courseId),
     enabled: isEditMode,
   });
 
   const lessonResourcesQuery = useQuery({
     queryKey: ['lesson-resources', courseId],
-    queryFn: getLessonResources,
+    queryFn: () => getLessonResources(courseId ? { courseId } : undefined),
     enabled: isEditMode,
   });
 
   const quizzesQuery = useQuery({
     queryKey: ['quizzes', courseId],
-    queryFn: getQuizzes,
+    queryFn: () => getQuizzes(courseId ? { courseId } : undefined),
     enabled: isEditMode,
   });
 
   const questionsQuery = useQuery({
     queryKey: ['questions', courseId],
-    queryFn: getQuestions,
+    queryFn: () => getQuestions(courseId ? { courseId } : undefined),
     enabled: isEditMode,
   });
 
   const questionOptionsQuery = useQuery({
     queryKey: ['question-options', courseId],
-    queryFn: getQuestionOptions,
+    queryFn: () => getQuestionOptions(courseId ? { courseId } : undefined),
     enabled: isEditMode,
   });
 
@@ -535,9 +535,9 @@ const InstructorCourseCreate = () => {
         const existingResources = (lessonResourcesQuery.data || []).filter((resource) => existingLessonIds.has(resource.lessonId));
         const existingOutcomes = (outcomesQuery.data || []).filter((item) => item.courseId === courseIdValue);
         const existingRequirements = (requirementsQuery.data || []).filter((item) => item.courseId === courseIdValue);
-        const quizzesData = quizzesQuery.data || await getQuizzes();
-        const questionsData = questionsQuery.data || await getQuestions();
-        const questionOptionsData = questionOptionsQuery.data || await getQuestionOptions();
+        const quizzesData = quizzesQuery.data || await getQuizzes({ courseId: courseIdValue });
+        const questionsData = questionsQuery.data || await getQuestions({ courseId: courseIdValue });
+        const questionOptionsData = questionOptionsQuery.data || await getQuestionOptions({ courseId: courseIdValue });
         const existingQuizzes = quizzesData.filter((quiz) => existingLessonIds.has(quiz.lessonId));
         const existingQuizIds = new Set(existingQuizzes.map((quiz) => quiz.id));
         const existingQuestions = questionsData.filter((question) => existingQuizIds.has(question.quizId));
@@ -701,11 +701,24 @@ const InstructorCourseCreate = () => {
           ? 'Your course updates have been saved.'
           : 'Your course has been submitted and will be reviewed by an admin.',
       });
+      setCourse(emptyCourse);
+      setSections([createSection()]);
+      setOutcomes([createListItem()]);
+      setRequirements([createListItem()]);
+      setAiPrompt('');
+      setActiveTab('basic');
       navigate('/instructor');
     },
     onError: (error: unknown) => {
       const message = error instanceof Error ? error.message : 'Failed to create course.';
       toast({ title: 'Error', description: message, variant: 'destructive' });
+      if (message.toLowerCase().includes('session expired')) {
+        toast({
+          title: 'Please sign in again',
+          description: 'Your session expired while submitting. Login and retry once.',
+          variant: 'destructive',
+        });
+      }
     },
   });
 
@@ -1230,7 +1243,16 @@ const InstructorCourseCreate = () => {
                 isEditLocked
               }
             >
-              <Send className="h-4 w-4" /> {isEditMode ? tx('Update Course', 'ኮርሱን አዘምን') : tx('Submit for Review', 'ለግምገማ አስገባ')}
+              {createCourseMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {tx('Processing...', 'በሂደት ላይ...')}
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" /> {isEditMode ? tx('Update Course', 'ኮርሱን አዘምን') : tx('Submit for Review', 'ለግምገማ አስገባ')}
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -1470,10 +1492,10 @@ const InstructorCourseCreate = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                    <span className="text-xs font-medium text-muted-foreground">Section {sIndex + 1}</span>
+                    <span className="text-xs font-medium text-muted-foreground">{tx('Section', 'ክፍል')} {sIndex + 1}</span>
                     <div className="flex-1">
                       <Input
-                        placeholder="Section title (e.g., Getting Started)"
+                        placeholder={tx('Section title (e.g., Getting Started)', 'የክፍል ርዕስ (ለምሳሌ፡ መጀመሪያ እርምጃዎች)')}
                         value={section.title}
                         onChange={(e) => updateSection(section.id, 'title', e.target.value)}
                         className="h-8 text-sm font-semibold"
@@ -1575,26 +1597,44 @@ const InstructorCourseCreate = () => {
                           </div>
                         )}
                         {lesson.type === 'DOCUMENT' && (
-                          <div className="flex items-center gap-3">
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              {tx(
+                                'Supported: PDF, Word, PowerPoint, and text files.',
+                                'የሚደገፉ፦ PDF፣ Word፣ PowerPoint እና የጽሑፍ ፋይሎች።'
+                              )}
+                            </p>
+                            <div className="flex items-center gap-3">
                             <label className="inline-flex cursor-pointer">
-                              <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" className="hidden" onChange={(e) => handleLessonDocument(section.id, lesson.id, e)} />
+                              <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" className="hidden" onChange={(e) => handleLessonDocument(section.id, lesson.id, e)} />
                               <Button variant="outline" size="sm" asChild>
                                 <span><FileText className="h-3 w-3 mr-1" /> {tx('Upload Document', 'ሰነድ ያስገቡ')}</span>
                               </Button>
                             </label>
-                            {lesson.documentFile && (
-                              <span className="text-xs text-muted-foreground">{lesson.documentFile.name}</span>
-                            )}
+                              {(lesson.documentFile || lesson.documentUrl) && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[280px]">
+                                  {lesson.documentFile?.name || lesson.documentUrl}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                         {lesson.type === 'TEXT' && (
-                          <Textarea
-                            placeholder={tx('Write lesson content here...', 'የትምህርቱን ይዘት እዚህ ይጻፉ...')}
-                            rows={3}
-                            value={lesson.content}
-                            onChange={(e) => updateLesson(section.id, lesson.id, 'content', e.target.value)}
-                            className="text-sm"
-                          />
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground">
+                              {tx(
+                                'Long-form reading supported. Tip: use Markdown headings (# Title, ## Subtitle) and bullet points.',
+                                'ረጅም የንባብ ይዘት ይደገፋል። ጥቆማ፦ የMarkdown ርዕሶች (# ርዕስ, ## ንዑስ ርዕስ) እና bullet points ይጠቀሙ።'
+                              )}
+                            </p>
+                            <Textarea
+                              placeholder={tx('Write lesson content here...', 'የትምህርቱን ይዘት እዚህ ይጻፉ...')}
+                              rows={10}
+                              value={lesson.content}
+                              onChange={(e) => updateLesson(section.id, lesson.id, 'content', e.target.value)}
+                              className="text-sm"
+                            />
+                          </div>
                         )}
                       </div>
                     ))}
@@ -1614,25 +1654,30 @@ const InstructorCourseCreate = () => {
           <TabsContent value="quizzes" className="space-y-4 mt-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Lesson Quizzes</CardTitle>
+                <CardTitle className="text-base">{tx('Lesson Quizzes', 'የትምህርት ፈተናዎች')}</CardTitle>
               </CardHeader>
               <CardContent className="text-sm text-muted-foreground">
-                Add optional quizzes for each lesson. Quizzes can include multiple questions and answer options.
+                {tx(
+                  'Add optional quizzes for each lesson. Quizzes can include multiple questions and answer options.',
+                  'ለእያንዳንዱ ትምህርት አማራጭ ፈተናዎችን ያክሉ። ፈተናዎች ብዙ ጥያቄዎችን እና የመልስ አማራጮችን ሊካተቱ ይችላሉ።'
+                )}
               </CardContent>
             </Card>
 
             {sections.map((section, sIndex) => (
               <Card key={section.id}>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Section {sIndex + 1}: {section.title || 'Untitled section'}</CardTitle>
+                  <CardTitle className="text-sm">
+                    {tx('Section', 'ክፍል')} {sIndex + 1}: {section.title || tx('Untitled section', 'ርዕስ የሌለው ክፍል')}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {section.lessons.map((lesson, lIndex) => (
                     <div key={lesson.id} className="border rounded-lg p-4 space-y-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                          <p className="text-sm font-semibold">{lesson.title || `Lesson ${lIndex + 1}`}</p>
-                          <p className="text-xs text-muted-foreground">Lesson {lIndex + 1}</p>
+                          <p className="text-sm font-semibold">{lesson.title || `${tx('Lesson', 'ትምህርት')} ${lIndex + 1}`}</p>
+                          <p className="text-xs text-muted-foreground">{tx('Lesson', 'ትምህርት')} {lIndex + 1}</p>
                         </div>
                         <div className="flex flex-wrap items-center gap-3">
                           <Badge variant="secondary" className="text-[10px]">{lesson.type}</Badge>
@@ -1641,37 +1686,37 @@ const InstructorCourseCreate = () => {
                               checked={Boolean(lesson.quiz)}
                               onCheckedChange={(value) => toggleLessonQuiz(section.id, lesson.id, value)}
                             />
-                            <Label className="text-xs">Enable Quiz</Label>
+                            <Label className="text-xs">{tx('Enable Quiz', 'ፈተና አንቃ')}</Label>
                           </div>
                         </div>
                       </div>
 
                       {!lesson.quiz && (
-                        <p className="text-xs text-muted-foreground">No quiz added for this lesson.</p>
+                        <p className="text-xs text-muted-foreground">{tx('No quiz added for this lesson.', 'ለዚህ ትምህርት ፈተና አልተጨመረም።')}</p>
                       )}
 
                       {lesson.quiz && (
                         <div className="space-y-4">
                           <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-1 sm:col-span-2">
-                              <Label className="text-xs">Quiz Title</Label>
+                              <Label className="text-xs">{tx('Quiz Title', 'የፈተና ርዕስ')}</Label>
                               <Input
                                 value={lesson.quiz.title}
                                 onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'title', e.target.value)}
-                                placeholder="Quiz title"
+                                placeholder={tx('Quiz title', 'የፈተና ርዕስ')}
                               />
                             </div>
                             <div className="space-y-1 sm:col-span-2">
-                              <Label className="text-xs">Description</Label>
+                              <Label className="text-xs">{tx('Description', 'መግለጫ')}</Label>
                               <Textarea
                                 rows={3}
                                 value={lesson.quiz.description}
                                 onChange={(e) => updateLessonQuiz(section.id, lesson.id, 'description', e.target.value)}
-                                placeholder="Quiz instructions or overview"
+                                placeholder={tx('Quiz instructions or overview', 'የፈተና መመሪያ ወይም አጠቃላይ እይታ')}
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Quiz Type</Label>
+                              <Label className="text-xs">{tx('Quiz Type', 'የፈተና አይነት')}</Label>
                               <Select
                                 value={lesson.quiz.quizType}
                                 onValueChange={(value) => updateLessonQuiz(section.id, lesson.id, 'quizType', value)}
@@ -1680,14 +1725,14 @@ const InstructorCourseCreate = () => {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="MULTIPLE_CHOICE">Multiple Choice</SelectItem>
-                                  <SelectItem value="TRUE_FALSE">True/False</SelectItem>
-                                  <SelectItem value="SHORT_ANSWER">Short Answer</SelectItem>
+                                  <SelectItem value="MULTIPLE_CHOICE">{tx('Multiple Choice', 'ብዙ አማራጭ')}</SelectItem>
+                                  <SelectItem value="TRUE_FALSE">{tx('True/False', 'እውነት/ሐሰት')}</SelectItem>
+                                  <SelectItem value="SHORT_ANSWER">{tx('Short Answer', 'አጭር መልስ')}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Passing Score</Label>
+                              <Label className="text-xs">{tx('Passing Score', 'የማለፊያ ውጤት')}</Label>
                               <Input
                                 type="number"
                                 min={0}
@@ -1697,7 +1742,7 @@ const InstructorCourseCreate = () => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Max Attempts</Label>
+                              <Label className="text-xs">{tx('Max Attempts', 'ከፍተኛ ሙከራዎች')}</Label>
                               <Input
                                 type="number"
                                 min={0}
@@ -1707,7 +1752,7 @@ const InstructorCourseCreate = () => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Time Limit (min)</Label>
+                              <Label className="text-xs">{tx('Time Limit (min)', 'የጊዜ ገደብ (ደቂቃ)')}</Label>
                               <Input
                                 type="number"
                                 min={0}
@@ -1717,7 +1762,7 @@ const InstructorCourseCreate = () => {
                               />
                             </div>
                             <div className="space-y-1">
-                              <Label className="text-xs">Show Correct Answers</Label>
+                              <Label className="text-xs">{tx('Show Correct Answers', 'ትክክለኛ መልሶችን አሳይ')}</Label>
                               <Select
                                 value={lesson.quiz.showCorrectAnswers}
                                 onValueChange={(value) => updateLessonQuiz(section.id, lesson.id, 'showCorrectAnswers', value)}
@@ -1726,10 +1771,10 @@ const InstructorCourseCreate = () => {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="AFTER_SUBMIT">After Submit</SelectItem>
-                                  <SelectItem value="AFTER_PASS">After Pass</SelectItem>
-                                  <SelectItem value="ALWAYS">Always</SelectItem>
-                                  <SelectItem value="NEVER">Never</SelectItem>
+                                  <SelectItem value="AFTER_SUBMIT">{tx('After Submit', 'ካስገባ በኋላ')}</SelectItem>
+                                  <SelectItem value="AFTER_PASS">{tx('After Pass', 'ካለፈ በኋላ')}</SelectItem>
+                                  <SelectItem value="ALWAYS">{tx('Always', 'ሁልጊዜ')}</SelectItem>
+                                  <SelectItem value="NEVER">{tx('Never', 'በፍጹም')}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1739,41 +1784,41 @@ const InstructorCourseCreate = () => {
                                   checked={lesson.quiz.shuffleQuestions}
                                   onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'shuffleQuestions', value)}
                                 />
-                                <Label className="text-xs">Shuffle Questions</Label>
+                                <Label className="text-xs">{tx('Shuffle Questions', 'ጥያቄዎችን ቀላቅል')}</Label>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Switch
                                   checked={lesson.quiz.shuffleOptions}
                                   onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'shuffleOptions', value)}
                                 />
-                                <Label className="text-xs">Shuffle Options</Label>
+                                <Label className="text-xs">{tx('Shuffle Options', 'አማራጮችን ቀላቅል')}</Label>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Switch
                                   checked={lesson.quiz.isActive}
                                   onCheckedChange={(value) => updateLessonQuiz(section.id, lesson.id, 'isActive', value)}
                                 />
-                                <Label className="text-xs">Active</Label>
+                                <Label className="text-xs">{tx('Active', 'ንቁ')}</Label>
                               </div>
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <Label className="text-xs">Questions</Label>
+                              <Label className="text-xs">{tx('Questions', 'ጥያቄዎች')}</Label>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="gap-1"
                                 onClick={() => addQuizQuestion(section.id, lesson.id)}
                               >
-                                <PlusCircle className="h-3 w-3" /> Add Question
+                                <PlusCircle className="h-3 w-3" /> {tx('Add Question', 'ጥያቄ ጨምር')}
                               </Button>
                             </div>
                             {lesson.quiz.questions.map((question, qIndex) => (
                               <div key={question.id} className="border rounded-lg p-4 space-y-3 bg-muted/40">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-xs font-medium text-muted-foreground">Question {qIndex + 1}</span>
+                                  <span className="text-xs font-medium text-muted-foreground">{tx('Question', 'ጥያቄ')} {qIndex + 1}</span>
                                   {lesson.quiz.questions.length > 1 && (
                                     <Button
                                       variant="ghost"
@@ -1787,15 +1832,15 @@ const InstructorCourseCreate = () => {
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-2">
                                   <div className="space-y-1 sm:col-span-2">
-                                    <Label className="text-xs">Question Text</Label>
+                                    <Label className="text-xs">{tx('Question Text', 'የጥያቄ ጽሑፍ')}</Label>
                                     <Input
                                       value={question.questionText}
                                       onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'questionText', e.target.value)}
-                                      placeholder="Type the question"
+                                      placeholder={tx('Type the question', 'ጥያቄውን ይጻፉ')}
                                     />
                                   </div>
                                   <div className="space-y-1">
-                                    <Label className="text-xs">Question Type</Label>
+                                    <Label className="text-xs">{tx('Question Type', 'የጥያቄ አይነት')}</Label>
                                     <Select
                                       value={question.type}
                                       onValueChange={(value) => updateQuizQuestion(section.id, lesson.id, question.id, 'type', value)}
@@ -1804,14 +1849,14 @@ const InstructorCourseCreate = () => {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="MULTIPLE_CHOICE">Multiple Choice</SelectItem>
-                                        <SelectItem value="TRUE_FALSE">True/False</SelectItem>
-                                        <SelectItem value="SHORT_ANSWER">Short Answer</SelectItem>
+                                        <SelectItem value="MULTIPLE_CHOICE">{tx('Multiple Choice', 'ብዙ አማራጭ')}</SelectItem>
+                                        <SelectItem value="TRUE_FALSE">{tx('True/False', 'እውነት/ሐሰት')}</SelectItem>
+                                        <SelectItem value="SHORT_ANSWER">{tx('Short Answer', 'አጭር መልስ')}</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
                                   <div className="space-y-1">
-                                    <Label className="text-xs">Points</Label>
+                                    <Label className="text-xs">{tx('Points', 'ነጥቦች')}</Label>
                                     <Input
                                       type="number"
                                       min={0}
@@ -1821,34 +1866,34 @@ const InstructorCourseCreate = () => {
                                     />
                                   </div>
                                   <div className="space-y-1 sm:col-span-2">
-                                    <Label className="text-xs">Explanation</Label>
+                                    <Label className="text-xs">{tx('Explanation', 'ማብራሪያ')}</Label>
                                     <Textarea
                                       rows={2}
                                       value={question.explanation}
                                       onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'explanation', e.target.value)}
-                                      placeholder="Explain the correct answer"
+                                      placeholder={tx('Explain the correct answer', 'ትክክለኛውን መልስ ያብራሩ')}
                                     />
                                   </div>
                                   <div className="space-y-1 sm:col-span-2">
-                                    <Label className="text-xs">Image URL</Label>
+                                    <Label className="text-xs">{tx('Image URL', 'የምስል URL')}</Label>
                                     <Input
                                       value={question.imageUrl}
                                       onChange={(e) => updateQuizQuestion(section.id, lesson.id, question.id, 'imageUrl', e.target.value)}
-                                      placeholder="Optional image URL"
+                                      placeholder={tx('Optional image URL', 'አማራጭ የምስል URL')}
                                     />
                                   </div>
                                 </div>
 
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between">
-                                    <Label className="text-xs">Options</Label>
+                                    <Label className="text-xs">{tx('Options', 'አማራጮች')}</Label>
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       className="gap-1"
                                       onClick={() => addQuizOption(section.id, lesson.id, question.id)}
                                     >
-                                      <PlusCircle className="h-3 w-3" /> Add Option
+                                      <PlusCircle className="h-3 w-3" /> {tx('Add Option', 'አማራጭ ጨምር')}
                                     </Button>
                                   </div>
                                   {question.options.map((option, oIndex) => (
@@ -1856,14 +1901,14 @@ const InstructorCourseCreate = () => {
                                       <Input
                                         value={option.optionText}
                                         onChange={(e) => updateQuizOption(section.id, lesson.id, question.id, option.id, 'optionText', e.target.value)}
-                                        placeholder={`Option ${oIndex + 1}`}
+                                        placeholder={`${tx('Option', 'አማራጭ')} ${oIndex + 1}`}
                                       />
                                       <div className="flex items-center gap-2">
                                         <Switch
                                           checked={option.isCorrect}
                                           onCheckedChange={(value) => updateQuizOption(section.id, lesson.id, question.id, option.id, 'isCorrect', value)}
                                         />
-                                        <Label className="text-xs">Correct</Label>
+                                        <Label className="text-xs">{tx('Correct', 'ትክክል')}</Label>
                                       </div>
                                       {question.options.length > 1 && (
                                         <Button

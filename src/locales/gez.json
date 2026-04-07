@@ -164,5 +164,134 @@
       "removedTitle": "ካብ ጋሪ ተወፂኡ",
       "removedDescription": "እዚ ኮርስ ካብ መሸጣ ጋሪኻ ተወፂኡ ኣሎ።"
     }
+  },
+  "courseDetail": {
+    "tabs": {
+      "overview": "ሓፈሻዊ ርእይቶ",
+      "curriculum": "ስርዓተ ትምህርቲ",
+      "instructor": "መምህር",
+      "reviews": "ርእይቶታት",
+      "discussion": "ውይይት"
+    },
+    "sections": {
+      "whatYouWillLearn": "እንታይ ክትመሃሩ",
+      "requirements": "ኣድላይነት",
+      "description": "መግለጺ",
+      "courseDiscussion": "ውይይት ናይ ኮርስ"
+    },
+    "actions": {
+      "continueLearning": "ትምህርቲ ቀጽል",
+      "resumeLearning": "ካብ ዝተወደአ ቀጽል",
+      "enrollNow": "ሕጂ ተመዝገብ",
+      "addToCart": "ናብ ጋሪ ኣእትው",
+      "inCart": "ኣብ ጋሪ ኣሎ",
+      "wishlist": "ዝደሊኻዮ ዝርዝር",
+      "share": "ኣካፍል",
+      "edit": "ኣርትዕ",
+      "delete": "ሰርዝ",
+      "cancel": "ሰርዝ",
+      "saveChanges": "ለውጢ ኣቐምጥ",
+      "unenroll": "ካብ ምዝገባ ውጻእ"
+    },
+    "onlyStudents": "ተምሃሮ ጥራይ ክምዝገቡ ይኽእሉ",
+    "includes": {
+      "title": "እዚ ኮርስ ዝሓዘዎ፦",
+      "onDemandVideo": "{{duration}} ቪድዮ ብድሌት",
+      "downloadableResources": "ክወርዱ ዝኽእሉ መረጃታት",
+      "offlineAccess": "መዳረሻ ከመስመር ውጪ",
+      "certificate": "ሰርቲፊኬት ምዝዛም"
+    },
+    "curriculum": {
+      "summary": "{{sections}} ክፍል • {{lessons}} ትምህርቲ • {{duration}} ጠቕላላ",
+      "lessonsCount": "{{count}} ትምህርቲ",
+      "sectionFallback": "ክፍል ናይ ኮርስ"
+    },
+    "preview": {
+      "preview": "ቅድሚ ምርኣይ",
+      "previewCourse": "እዚ ኮርስ ቅድሚ ምርኣይ",
+      "coursePreview": "ቅድሚ ምርኣይ ናይ ኮርስ",
+      "previewTitleWithLesson": "ቅድሚ ምርኣይ፦ {{lesson}}",
+      "videoUnavailable": "ቅድሚ ምርኣይ ቪድዮ የለን",
+      "videoPreviewAlt": "ቅድሚ ምርኣይ ቪድዮ",
+      "noTextPreview": "ንዚ ትምህርቲ ዝምልከት የብሉን ጽሑፍ ቅድሚ ምርኣይ።",
+      "freePreview": "እዚ ነጻ ቅድሚ ምርኣይ ትምህርቲ እዩ።",
+      "enrollForAll": "ንኹሉ ትሕዝቶ ናይ ኮርስ ንምርካብ ተመዝገብ።"
+    },
+    "instructor": {
+      "unknown": "ዘይተፈልጠ መምህር",
+      "bioFallback": "መግለጺ ሕይወት ሕጂ የለን።",
+      "ratingLabel": "{{value}} ደረጃ",
+      "studentsLabel": "{{count}} ተምሃሮ",
+      "coursesLabel": "{{count}} ኮርስ",
+      "badge": "መምህር"
+    },
+    "feedback": {
+      "loadingCourse": "ኮርስ ይጫን ኣሎ...",
+      "loadCourseFailed": "ኮርስ ምጫን ኣይተሳእነን።",
+      "browseCourses": "ኮርሳት ርአዩ",
+      "courseNotFound": "ኮርስ ኣይተረኽበን።",
+      "loadCourseDetailsFailed": "ዝርዝር ናይ ኮርስ ምጫን ኣይተሳእነን።",
+      "backToCourse": "ናብ ኮርስ ተመለስ",
+      "courses": "ኮርሳት",
+      "course": "ኮርስ",
+      "enrolledBadge": "ኣብዚ ኮርስ ተመዝጊብካ ኣለኻ",
+      "availableLanguages": "ብ4 ቋንቋታት ይርከብ",
+      "certificateIncluded": "ሰርቲፊኬት ይሓዝ",
+      "enrollmentNotAllowedTitle": "ምዝገባ ኣይፍቀድን",
+      "enrollmentNotAllowedDesc": "መለያ ተምሃራይ ጥራይ ኣብ ኮርሳት ክምዝገቡ ይኽእሉ።",
+      "removedFromCartTitle": "ካብ ጋሪ ተወግዱ",
+      "removedFromCartDesc": "እዚ ኮርስ ካብ ጋሪኻ ተወግዱ።",
+      "addedToCartTitle": "ናብ ጋሪ ተወሲኹ",
+      "addedToCartDesc": "እዚ ኮርስ ናብ ጋሪኻ ተወሲኹ።",
+      "totalLabel": "ጠቕላላ",
+      "unenrolledTitle": "ካብ ምዝገባ ወጺኻ",
+      "unenrolledDesc": "ካብዚ ኮርስ ካብ ምዝገባ ወጺኻ ኣለኻ።",
+      "unenrollFailedTitle": "ካብ ምዝገባ ምውጻእ ኣይተሳእነን",
+      "unenrollFailedDesc": "ሕጂ ካብ ምዝገባ ምውጻእ ኣይከኣልናን።",
+      "linkCopiedTitle": "መስመር ተቐዲሑ!",
+      "linkCopiedDesc": "እዚ መስመር ኣካፍል። ዓርኪ ምዝገባ እንተገበረ ሽልማት ሪፈራል ናብ ብዝንብ ይኣቱ።",
+      "copyFailedTitle": "ምቕዳሕ ኣይተኻእለን",
+      "unlockLessonsTitle": "ትምህርቲ ንምክፋት ተመዝገብ",
+      "noFreePreviewDesc": "እዚ ኮርስ ነጻ ቅድሚ ምርኣይ ትምህርቲ የብሉን።",
+      "noLessonTitle": "ትምህርቲ የለን",
+      "noLessonDesc": "እዚ ኮርስ ገና ትምህርቲ ስለዘይብሉን ውይይት ክትልእኩ ኣይትኽእሉን።",
+      "questionPostedTitle": "ሕቶ ተለኣኹ!",
+      "questionPostedDesc": "ሕቶኻ ናብ ውይይት ተለኣኹ።",
+      "replyPostedTitle": "መልሲ ተለኣኹ!",
+      "reviewSubmittedTitle": "ርእይቶ ተለኣኹ",
+      "reviewUpdatedTitle": "ርእይቶ ተሓዲሱ",
+      "reviewFailedTitle": "ርእይቶ ኣይተሳእነን",
+      "reviewDeletedTitle": "ርእይቶ ተሰሪዙ",
+      "deleteFailedTitle": "ምስራዝ ኣይተሳእነን",
+      "submitReviewFailedDesc": "ርእይቶ ምልኣኽ ኣይከኣልናን።",
+      "reviewNotFound": "ርእይቶ ኣይተረኽበን",
+      "deleteReviewFailedDesc": "ርእይቶ ምስራዝ ኣይከኣልናን።",
+      "missingUserOrCourse": "መረጃ ተጠቃሚ ወይ ኮርስ ጎዶሎ እዩ"
+    },
+    "discussion": {
+      "threadsCount": "{{count}} ጽሑፋት",
+      "askQuestion": "ሕቶ ሕተት",
+      "questionPlaceholder": "ብዛዕባ እዚ ኮርስ እንታይ ክትሓትት ትደሊ?",
+      "postQuestion": "ሕቶ ልኣኽ",
+      "enrollToDiscuss": "ኣብ ውይይት ንምግባር እዚ ኮርስ ተመዝገብ።",
+      "loginToDiscuss": "ናብ መለያ ኣትው እና ተመዝገብ ኣብ ውይይት ሳተፍ።",
+      "enrollToDiscussButton": "ኣብ ውይይት ተመዝገብ",
+      "replyCount": "መልሲ ({{count}})",
+      "learner": "ተማሃራይ",
+      "replyPlaceholder": "መልሲ ጽሓፍ..."
+    },
+    "reviews": {
+      "updateReview": "ርእይቶኻ ኣሐድስ",
+      "leaveReviewTitle": "ርእይቶ ጽሓፍ",
+      "leaveReviewDesc": "ተመኩሮኻ ምስ ካልኦት ተማሃሮ ኣካፍል።",
+      "titleOptional": "ርእሲ (ክደሊ ይኽእል)",
+      "writeReview": "ርእይቶኻ ጽሓፍ...",
+      "submitReview": "ርእይቶ ልኣኽ",
+      "yourReview": "ርእይቶኻ",
+      "enrollToReview": "ርእይቶ ንምግባር እዚ ኮርስ ተመዝገብ።",
+      "reviewsCount": "{{count}} ርእይቶታት",
+      "selectRating": "እቲ ደረጃ ምረጽ",
+      "rateStarsAria": "{{count}} ከዋኽብቲ ምርጫ"
+    }
   }
 }

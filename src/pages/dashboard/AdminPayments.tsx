@@ -346,11 +346,9 @@ const AdminPayments = () => {
                         {t.paidAt || t.createdAt ? new Date(t.paidAt || t.createdAt!).toLocaleDateString() : '–'}
                       </td>
                       <td className="p-4 text-right">
-                        {t.status === 'COMPLETED' && (
-                          <Button size="sm" variant="ghost" className="text-xs" onClick={() => toast({ title: 'Refund initiated', description: `Refund for ${t.transactionId || t.id} is being processed.` })}>
-                            <RefreshCw className="h-3 w-3 mr-1" /> Refund
-                          </Button>
-                        )}
+                        <Button size="sm" variant="ghost" className="text-xs" disabled>
+                          <RefreshCw className="h-3 w-3 mr-1" /> No action
+                        </Button>
                       </td>
                     </tr>
                   ))}

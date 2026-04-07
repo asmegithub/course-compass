@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Navbar from '@/components/layout/Navbar';
@@ -41,6 +41,7 @@ import type { Course } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
 const levels = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'ALL_LEVELS'] as const;
+const RECENT_SEARCHES_KEY = 'courses.recentSearches';
 
 const getLocalizedCategoryName = (
   cat: { name: string; nameAm?: string; nameOm?: string; nameGz?: string },
@@ -201,6 +202,33 @@ const Courses = () => {
   const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState('popular');
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_SEARCHES_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string').slice(0, 6) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(recentSearches.slice(0, 6)));
+    } catch {
+      // ignore storage errors
+    }
+  }, [recentSearches]);
+
+  const addRecentSearch = (value: string) => {
+    const normalized = value.trim();
+    if (!normalized) return;
+    setRecentSearches((previous) => [normalized, ...previous.filter((item) => item.toLowerCase() !== normalized.toLowerCase())].slice(0, 6));
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+  };
 
   // Filter courses
   const filteredCourses = courses.filter(course => {
@@ -275,6 +303,11 @@ const Courses = () => {
                 placeholder={t('courses.searchPlaceholder', 'Search courses...')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    addRecentSearch(searchQuery);
+                  }
+                }}
                 className="pl-10"
               />
             </div>
@@ -328,6 +361,27 @@ const Courses = () => {
               </Button>
             </div>
           </div>
+
+          {recentSearches.length > 0 && (
+            <div className="mb-6 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-muted-foreground">Recent searches:</span>
+              {recentSearches.map((term) => (
+                <Button
+                  key={term}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setSearchQuery(term)}
+                >
+                  {term}
+                </Button>
+              ))}
+              <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={clearRecentSearches}>
+                Clear
+              </Button>
+            </div>
+          )}
 
           <div className="flex gap-8">
             {/* Filters Sidebar */}

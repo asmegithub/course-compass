@@ -182,5 +182,134 @@
       "removedTitle": "ከጋሪው ተወግዷል",
       "removedDescription": "ይህ ኮርስ ከመሸጫ ጋሪዎ ተወግዷል።"
     }
+  },
+  "courseDetail": {
+    "tabs": {
+      "overview": "አጠቃላይ እይታ",
+      "curriculum": "ካሪኩለም",
+      "instructor": "አስተማሪ",
+      "reviews": "ግምገማዎች",
+      "discussion": "ውይይት"
+    },
+    "sections": {
+      "whatYouWillLearn": "የምትማሩት",
+      "requirements": "መስፈርቶች",
+      "description": "መግለጫ",
+      "courseDiscussion": "የኮርስ ውይይት"
+    },
+    "actions": {
+      "continueLearning": "ትምህርቱን ቀጥል",
+      "resumeLearning": "ከቆመበት ቀጥል",
+      "enrollNow": "አሁን ይመዝገቡ",
+      "addToCart": "ወደ ጋሪ አክል",
+      "inCart": "በጋሪ ውስጥ ነው",
+      "wishlist": "የምፈልገው ዝርዝር",
+      "share": "አጋራ",
+      "edit": "አርትዕ",
+      "delete": "ሰርዝ",
+      "cancel": "ሰርዝ",
+      "saveChanges": "ለውጦችን አስቀምጥ",
+      "unenroll": "ከመመዝገብ ውጣ"
+    },
+    "onlyStudents": "ተማሪዎች ብቻ መመዝገብ ይችላሉ",
+    "includes": {
+      "title": "ይህ ኮርስ ያካትታል፦",
+      "onDemandVideo": "{{duration}} በፈለጉት ጊዜ የቪዲዮ ትምህርት",
+      "downloadableResources": "የሚወርዱ ሀብቶች",
+      "offlineAccess": "ከመስመር ውጪ መዳረሻ",
+      "certificate": "የማጠናቀቂያ ሰርቲፊኬት"
+    },
+    "curriculum": {
+      "summary": "{{sections}} ክፍሎች • {{lessons}} ትምህርቶች • {{duration}} ጠቅላላ",
+      "lessonsCount": "{{count}} ትምህርቶች",
+      "sectionFallback": "የኮርስ ክፍል"
+    },
+    "preview": {
+      "preview": "ቅድመ እይታ",
+      "previewCourse": "ይህን ኮርስ በቅድሚያ ይመልከቱ",
+      "coursePreview": "የኮርስ ቅድመ እይታ",
+      "previewTitleWithLesson": "ቅድመ እይታ፦ {{lesson}}",
+      "videoUnavailable": "የቪዲዮ ቅድመ እይታ አይገኝም",
+      "videoPreviewAlt": "የቪዲዮ ቅድመ እይታ",
+      "noTextPreview": "ለዚህ ትምህርት የጽሑፍ ቅድመ እይታ አይገኝም።",
+      "freePreview": "ይህ ነጻ የቅድመ እይታ ትምህርት ነው።",
+      "enrollForAll": "ሁሉንም የኮርስ ይዘት ለማግኘት ይመዝገቡ።"
+    },
+    "instructor": {
+      "unknown": "ያልታወቀ አስተማሪ",
+      "bioFallback": "የሕይወት ታሪክ ገና አልተጨመረም።",
+      "ratingLabel": "{{value}} ደረጃ",
+      "studentsLabel": "{{count}} ተማሪዎች",
+      "coursesLabel": "{{count}} ኮርሶች",
+      "badge": "አስተማሪ"
+    },
+    "feedback": {
+      "loadingCourse": "ኮርሱ በመጫን ላይ...",
+      "loadCourseFailed": "ኮርሱን መጫን አልተሳካም።",
+      "browseCourses": "ኮርሶችን ይመልከቱ",
+      "courseNotFound": "ኮርሱ አልተገኘም።",
+      "loadCourseDetailsFailed": "የኮርስ ዝርዝሮችን መጫን አልተሳካም።",
+      "backToCourse": "ወደ ኮርስ ተመለስ",
+      "courses": "ኮርሶች",
+      "course": "ኮርስ",
+      "enrolledBadge": "በዚህ ኮርስ ተመዝግበዋል",
+      "availableLanguages": "በ4 ቋንቋዎች ይገኛል",
+      "certificateIncluded": "ሰርቲፊኬት ያካትታል",
+      "enrollmentNotAllowedTitle": "መመዝገብ አይፈቀድም",
+      "enrollmentNotAllowedDesc": "ተማሪ መለያዎች ብቻ በኮርሶች ላይ መመዝገብ ይችላሉ።",
+      "removedFromCartTitle": "ከጋሪ ተወግዷል",
+      "removedFromCartDesc": "ይህ ኮርስ ከጋሪዎ ተወግዷል።",
+      "addedToCartTitle": "ወደ ጋሪ ታክሏል",
+      "addedToCartDesc": "ይህ ኮርስ ወደ ጋሪዎ ታክሏል።",
+      "totalLabel": "ጠቅላላ",
+      "unenrolledTitle": "ምዝገባ ተሰርዟል",
+      "unenrolledDesc": "ከዚህ ኮርስ ተሰርዘዋል።",
+      "unenrollFailedTitle": "ምዝገባን መሰረዝ አልተሳካም",
+      "unenrollFailedDesc": "በአሁኑ ጊዜ ምዝገባን መሰረዝ አልተቻለም።",
+      "linkCopiedTitle": "ሊንኩ ተቀድቷል!",
+      "linkCopiedDesc": "ይህን ሊንክ አጋሩ። ጓደኛዎ ሲመዘገብ የሪፈራል ሽልማት ወደ ባላንስዎ ይገባል።",
+      "copyFailedTitle": "መቅዳት አልተሳካም",
+      "unlockLessonsTitle": "ትምህርቶችን ለመክፈት ይመዝገቡ",
+      "noFreePreviewDesc": "ይህ ኮርስ ነጻ የቅድመ እይታ ትምህርቶች የሉትም።",
+      "noLessonTitle": "ትምህርት አልተገኘም",
+      "noLessonDesc": "ይህ ኮርስ ገና ትምህርቶች ስለሌሉት ውይይት መለጠፍ አይቻልም።",
+      "questionPostedTitle": "ጥያቄ ተለጥፏል!",
+      "questionPostedDesc": "ጥያቄዎ ወደ ውይይት ተለጥፏል።",
+      "replyPostedTitle": "መልስ ተለጥፏል!",
+      "reviewSubmittedTitle": "ግምገማ ተልኳል",
+      "reviewUpdatedTitle": "ግምገማ ተዘምኗል",
+      "reviewFailedTitle": "ግምገማ አልተሳካም",
+      "reviewDeletedTitle": "ግምገማ ተሰርዟል",
+      "deleteFailedTitle": "መሰረዝ አልተሳካም",
+      "submitReviewFailedDesc": "ግምገማን መላክ አልተሳካም።",
+      "reviewNotFound": "ግምገማ አልተገኘም",
+      "deleteReviewFailedDesc": "ግምገማን መሰረዝ አልተሳካም።",
+      "missingUserOrCourse": "የተጠቃሚ ወይም ኮርስ መረጃ አልተገኘም"
+    },
+    "discussion": {
+      "threadsCount": "{{count}} ውይይቶች",
+      "askQuestion": "ጥያቄ ይጠይቁ",
+      "questionPlaceholder": "ስለዚህ ኮርስ ምን መጠየቅ ይፈልጋሉ?",
+      "postQuestion": "ጥያቄውን ለጥፍ",
+      "enrollToDiscuss": "ወደ ውይይት ለመቀላቀል እና ጥያቄ ለመጠየቅ በዚህ ኮርስ ይመዝገቡ።",
+      "loginToDiscuss": "ወደ ውይይት ለመቀላቀል ይግቡ እና ይመዝገቡ።",
+      "enrollToDiscussButton": "ለውይይት ይመዝገቡ",
+      "replyCount": "መልስ ({{count}})",
+      "learner": "ተማሪ",
+      "replyPlaceholder": "መልስ ይጻፉ..."
+    },
+    "reviews": {
+      "updateReview": "ግምገማዎን ያዘምኑ",
+      "leaveReviewTitle": "ግምገማ ይተዉ",
+      "leaveReviewDesc": "ልምድዎን ከሌሎች ተማሪዎች ጋር ያጋሩ።",
+      "titleOptional": "ርዕስ (አማራጭ)",
+      "writeReview": "ግምገማዎን ይጻፉ...",
+      "submitReview": "ግምገማ አስገባ",
+      "yourReview": "የእርስዎ ግምገማ",
+      "enrollToReview": "ግምገማ ለመተው በዚህ ኮርስ ይመዝገቡ።",
+      "reviewsCount": "{{count}} ግምገማዎች",
+      "selectRating": "እባክዎ ደረጃ ይምረጡ",
+      "rateStarsAria": "{{count}} ኮከብ ደረጃ ይስጡ"
+    }
   }
 }

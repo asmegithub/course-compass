@@ -15,9 +15,12 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { getMyInstructorEnrollments } from "@/lib/course-api";
 import { useAuth } from "@/contexts/AuthContext";
-import { getAllEnrollments, getCourses } from "@/lib/course-api";
+import {
+  getCourses,
+  getMyInstructorEnrollments,
+  getMyInstructorEnrollmentSummary,
+} from "@/lib/course-api";
 
 const formatDate = (value?: string) => {
   if (!value) return "—";
@@ -55,8 +58,14 @@ const InstructorStudents = () => {
     isLoading: isEnrollmentsLoading,
     isError: isEnrollmentsError,
   } = useQuery({
-    queryKey: ["enrollments", "all"],
-    queryFn: getAllEnrollments,
+    queryKey: ["enrollments", "instructor", user?.id],
+    queryFn: getMyInstructorEnrollments,
+    enabled: Boolean(user?.id),
+  });
+
+  const { data: enrollmentSummary } = useQuery({
+    queryKey: ["enrollments", "me", "instructor-summary"],
+    queryFn: getMyInstructorEnrollmentSummary,
     enabled: Boolean(user?.id),
   });
 
@@ -71,10 +80,7 @@ const InstructorStudents = () => {
 
   const instructorEnrollments = useMemo(() => {
     if (!user?.id) return [];
-    return enrollments.filter((enrollment) => {
-      if (instructorCourseIds.has(enrollment.courseId)) return true;
-      return enrollment.courseInstructorUserId === user.id;
-    });
+    return enrollments.filter((enrollment) => instructorCourseIds.has(enrollment.courseId));
   }, [enrollments, instructorCourseIds, user?.id]);
 
   const filtered = instructorEnrollments.filter((enrollment) => {
@@ -88,12 +94,14 @@ const InstructorStudents = () => {
   });
 
   const stats = useMemo(() => {
-    const totalEnrolled = instructorEnrollments.length;
-    const totalStudents = new Set(
+    const calculatedTotalEnrollments = instructorEnrollments.length;
+    const calculatedTotalStudents = new Set(
       instructorEnrollments
         .map((enrollment) => enrollment.studentId)
         .filter(Boolean),
     ).size;
+    const totalEnrollments = enrollmentSummary?.totalEnrollments ?? calculatedTotalEnrollments;
+    const totalStudents = enrollmentSummary?.totalStudents ?? calculatedTotalStudents;
     const completedCourses = instructorEnrollments.filter(
       (enrollment) => enrollment.isCompleted || enrollment.progress >= 100,
     ).length;
@@ -104,23 +112,23 @@ const InstructorStudents = () => {
       return Date.now() - updatedAt.getTime() <= 7 * 24 * 60 * 60 * 1000;
     }).length;
     const avgCompletion =
-      totalEnrolled > 0
+      calculatedTotalEnrollments > 0
         ? Math.round(
             instructorEnrollments.reduce(
               (sum, enrollment) => sum + enrollment.progress,
               0,
-            ) / totalEnrolled,
+            ) / calculatedTotalEnrollments,
           )
         : 0;
 
     return {
-      totalEnrolled,
+      totalEnrollments,
       totalStudents,
       completedCourses,
       activeThisWeek,
       avgCompletion,
     };
-  }, [instructorEnrollments]);
+  }, [enrollmentSummary?.totalEnrollments, enrollmentSummary?.totalStudents, instructorEnrollments]);
 
   const isLoading = isCoursesLoading || isEnrollmentsLoading;
   const isError = isCoursesError || isEnrollmentsError;
@@ -148,15 +156,7 @@ const InstructorStudents = () => {
           {[
             {
               label: "Total Enrollments",
-              value: String(enrollments.length),
-              icon: Users,
-            },
-            // { label: 'Unique Students', value: String(uniqueStudents), icon: TrendingUp },
-            // { label: 'Completed', value: String(completedCount), icon: GraduationCap },
-            // { label: 'Avg. Progress', value: `${avgProgress}%`, icon: Clock },
-            {
-              label: "Total Enrolled",
-              value: stats.totalEnrolled.toLocaleString(),
+              value: stats.totalEnrollments.toLocaleString(),
               icon: Users,
             },
             {
@@ -165,7 +165,7 @@ const InstructorStudents = () => {
               icon: TrendingUp,
             },
             {
-              label: "Completed Course",
+              label: "Completed Lessons",
               value: stats.completedCourses.toLocaleString(),
               icon: GraduationCap,
             },
@@ -233,7 +233,7 @@ const InstructorStudents = () => {
                       {student.studentName || "Student"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {student.studentEmail || "No email"}
+                          {student.studentEmail || "No email"}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       <span className="font-medium text-foreground">

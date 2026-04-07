@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
+import Categories from "./pages/Categories";
 import CourseDetail from "./pages/CourseDetail";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
@@ -22,6 +23,7 @@ import StudentCertificates from "./pages/dashboard/StudentCertificates";
 import StudentWishlist from "./pages/dashboard/StudentWishlist";
 import StudentNotifications from "./pages/dashboard/StudentNotifications";
 import StudentInstructorApplication from "./pages/dashboard/StudentInstructorApplication";
+import StudentQuizHistory from "./pages/dashboard/StudentQuizHistory";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
 import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
 import InstructorCourseDetail from "./pages/dashboard/InstructorCourseDetail";
@@ -44,6 +46,7 @@ import AdminInstructorVerifications from "./pages/dashboard/AdminInstructorVerif
 import AdminNotifications from "./pages/dashboard/AdminNotifications";
 import AdminPayouts from "./pages/dashboard/AdminPayouts";
 import AdminManualPayments from "./pages/dashboard/AdminManualPayments";
+import AdminRbac from "./pages/dashboard/AdminRbac";
 import { ReactNode } from "react";
 import { useContentProtection } from "@/hooks/use-content-protection";
 import ContentProtectionOverlay from "@/components/security/ContentProtectionOverlay";
@@ -67,6 +70,7 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: ReactNode; allow
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
+    <Route path="/categories" element={<Categories />} />
     <Route path="/courses" element={<Courses />} />
     <Route path="/cart" element={<Cart />} />
     <Route path="/cart/checkout/success" element={<CheckoutSuccess />} />
@@ -82,6 +86,7 @@ const AppRoutes = () => (
     <Route path="/dashboard/payments" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentPaymentHistory /></ProtectedRoute>} />
     <Route path="/dashboard/referral-withdrawals" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentReferralWithdrawals /></ProtectedRoute>} />
     <Route path="/dashboard/certificates" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentCertificates /></ProtectedRoute>} />
+    <Route path="/dashboard/quiz-history" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentQuizHistory /></ProtectedRoute>} />
     <Route path="/dashboard/wishlist" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentWishlist /></ProtectedRoute>} />
     <Route path="/dashboard/notifications" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentNotifications /></ProtectedRoute>} />
     <Route path="/dashboard/become-instructor" element={<ProtectedRoute allowedRoles={['STUDENT']}><StudentInstructorApplication /></ProtectedRoute>} />
@@ -113,6 +118,7 @@ const AppRoutes = () => (
     <Route path="/admin/payouts" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminPayouts /></ProtectedRoute>} />
     <Route path="/admin/audit-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAuditLogs /></ProtectedRoute>} />
     <Route path="/admin/email-logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminEmailLogs /></ProtectedRoute>} />
+    <Route path="/admin/rbac" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminRbac /></ProtectedRoute>} />
     <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminSettings /></ProtectedRoute>} />
     <Route path="/admin/*" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
 

@@ -213,6 +213,32 @@ type ApiQuestionOption = {
   orderIndex?: number | string;
 };
 
+type ApiQuizAttempt = {
+  id?: string;
+  student?: { id?: string };
+  quiz?: { id?: string };
+  score?: number | string;
+  totalPoints?: number | string;
+  maxPoints?: number | string;
+  isPassed?: boolean;
+  attemptNumber?: number | string;
+  timeTaken?: number | string;
+  startedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ApiQuizAnswer = {
+  id?: string;
+  attempt?: { id?: string };
+  question?: { id?: string };
+  selectedOption?: { id?: string };
+  isCorrect?: boolean;
+  pointsEarned?: number | string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type ApiReview = {
   id?: string;
   course?: { id?: string };
@@ -836,6 +862,52 @@ export type QuestionOptionPayload = {
   optionTextGz?: string;
   isCorrect: boolean;
   orderIndex: number;
+};
+
+export type QuizAttemptPayload = {
+  id: string;
+  studentId: string;
+  quizId: string;
+  score: number;
+  totalPoints: number;
+  maxPoints: number;
+  isPassed: boolean;
+  attemptNumber: number;
+  timeTaken: number;
+  startedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateQuizAttemptPayload = {
+  studentId: string;
+  quizId: string;
+  score: number;
+  totalPoints: number;
+  maxPoints: number;
+  isPassed: boolean;
+  attemptNumber: number;
+  timeTaken: number;
+  startedAt?: string;
+};
+
+export type QuizAnswerPayload = {
+  id: string;
+  attemptId: string;
+  questionId: string;
+  selectedOptionId?: string;
+  isCorrect: boolean;
+  pointsEarned: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CreateQuizAnswerPayload = {
+  attemptId: string;
+  questionId: string;
+  selectedOptionId?: string;
+  isCorrect: boolean;
+  pointsEarned: number;
 };
 
 export type ReviewPayload = {
@@ -1498,6 +1570,124 @@ export const deleteBookmark = async (bookmarkId: string): Promise<void> => {
   await apiFetch<void>(`/api/bookmarks/${bookmarkId}`, { method: "DELETE" });
 };
 
+export type LessonNotePayload = {
+  id: string;
+  lessonId: string;
+  studentId: string;
+  content: string;
+  timestamp: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export const getLessonNotes = async (
+  lessonId?: string,
+): Promise<LessonNotePayload[]> => {
+  const data = await apiFetch<
+    Array<{
+      id?: string;
+      lesson?: { id?: string };
+      student?: { id?: string };
+      content?: string;
+      timestamp?: number;
+      createdAt?: string;
+      updatedAt?: string;
+    }>
+  >("/api/lesson-notes");
+
+  const normalized = (Array.isArray(data) ? data : []).map((n) => ({
+    id: n.id ?? "",
+    lessonId: n.lesson?.id ?? "",
+    studentId: n.student?.id ?? "",
+    content: n.content ?? "",
+    timestamp: Number(n.timestamp ?? 0),
+    createdAt: n.createdAt ?? undefined,
+    updatedAt: n.updatedAt ?? undefined,
+  }));
+
+  return lessonId ? normalized.filter((n) => n.lessonId === lessonId) : normalized;
+};
+
+export const createLessonNote = async (payload: {
+  lessonId: string;
+  studentId: string;
+  content: string;
+  timestamp?: number;
+}): Promise<{ id: string }> => {
+  const data = await apiFetch<{ id?: string }>("/api/lesson-notes", {
+    method: "POST",
+    body: JSON.stringify({
+      lesson: { id: payload.lessonId },
+      student: { id: payload.studentId },
+      content: payload.content,
+      timestamp: payload.timestamp ?? 0,
+    }),
+  });
+
+  return { id: data.id ?? "" };
+};
+
+export const deleteLessonNote = async (lessonNoteId: string): Promise<void> => {
+  await apiFetch<void>(`/api/lesson-notes/${lessonNoteId}`, { method: "DELETE" });
+};
+
+export type DownloadPayload = {
+  id: string;
+  lessonId: string;
+  userId?: string;
+  videoQuality?: string;
+  fileUrl?: string;
+  fileSize?: number;
+  expiresAt?: string;
+  downloadedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export const createDownload = async (payload: {
+  lessonId: string;
+  userId: string;
+  fileUrl: string;
+  fileSize?: number;
+  videoQuality?: string;
+}): Promise<DownloadPayload> => {
+  const data = await apiFetch<{
+    id?: string;
+    lesson?: { id?: string };
+    user?: { id?: string };
+    videoQuality?: string;
+    fileUrl?: string;
+    fileSize?: number | string;
+    expiresAt?: string;
+    downloadedAt?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  }>("/api/downloads", {
+    method: "POST",
+    body: JSON.stringify({
+      lesson: { id: payload.lessonId },
+      user: { id: payload.userId },
+      videoQuality: payload.videoQuality ?? "ORIGINAL",
+      fileUrl: payload.fileUrl,
+      fileSize: payload.fileSize ?? 0,
+      downloadedAt: new Date().toISOString(),
+    }),
+  });
+
+  return {
+    id: data.id || "",
+    lessonId: data.lesson?.id || payload.lessonId,
+    userId: data.user?.id || payload.userId,
+    videoQuality: data.videoQuality || payload.videoQuality || "ORIGINAL",
+    fileUrl: data.fileUrl || payload.fileUrl,
+    fileSize: toNumber(data.fileSize, payload.fileSize ?? 0),
+    expiresAt: data.expiresAt || undefined,
+    downloadedAt: data.downloadedAt || undefined,
+    createdAt: data.createdAt || undefined,
+    updatedAt: data.updatedAt || undefined,
+  };
+};
+
 export const upsertVideoProgress = async (
   enrollmentId: string,
   lessonId: string,
@@ -1715,8 +1905,22 @@ export type InstructorPayoutRequestPayloadV2 = {
   hasReceipt?: boolean;
 };
 
+type InstructorPayoutRequestApiResponse = {
+  id?: string;
+  amount?: number | string;
+  status?: string;
+  payoutDetailsJson?: string;
+  methodOption?: { id?: string; name?: string; type?: string; fieldsJson?: string };
+  rejectionReason?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  reviewedAt?: string;
+  receiptOriginalFileName?: string;
+  receiptUrl?: string;
+};
+
 export const getMyInstructorPayoutRequestsV2 = async (): Promise<InstructorPayoutRequestPayloadV2[]> => {
-  const data = await apiFetch<Array<any>>('/api/instructor-payouts/me');
+  const data = await apiFetch<InstructorPayoutRequestApiResponse[]>('/api/instructor-payouts/me');
   return (Array.isArray(data) ? data : []).map((r) => ({
     id: r.id ?? '',
     amount: Number(r.amount ?? 0),
@@ -1824,6 +2028,47 @@ export const getNotificationUnreadCount = async (): Promise<number> => {
   return typeof n === "number" ? n : 0;
 };
 
+type NotificationUpdateBody = {
+  user: { id: string };
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  relatedId?: string;
+  relatedType?: string;
+  actionUrl?: string;
+};
+
+export const markNotificationRead = async (
+  notification: {
+    id: string;
+    userId: string;
+    type?: string;
+    title?: string;
+    message?: string;
+    relatedId?: string;
+    relatedType?: string;
+    actionUrl?: string;
+  },
+  isRead = true,
+): Promise<void> => {
+  const payload: NotificationUpdateBody = {
+    user: { id: notification.userId },
+    type: notification.type || "SYSTEM",
+    title: notification.title || "Notification",
+    message: notification.message || "",
+    isRead,
+    relatedId: notification.relatedId,
+    relatedType: notification.relatedType,
+    actionUrl: notification.actionUrl,
+  };
+
+  await apiFetch(`/api/notifications/${encodeURIComponent(notification.id)}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+};
+
 export type WishlistItemPayload = { id: string; courseId: string };
 
 export const getMyWishlist = async (): Promise<WishlistItemPayload[]> => {
@@ -1878,10 +2123,11 @@ export const getCertificates = async () => {
 };
 
 export const getCourseSections = async (
-  courseId?: string,
+  courseId?: string | { id?: string },
 ): Promise<CourseSectionPayload[]> => {
-  const url = courseId
-    ? `/api/course-sections?courseId=${encodeURIComponent(courseId)}`
+  const safeCourseId = courseId != null ? normalizeEntityId(courseId, "courseId") : undefined;
+  const url = safeCourseId
+    ? `/api/course-sections?courseId=${encodeURIComponent(safeCourseId)}`
     : "/api/course-sections";
   const data = await apiFetch<ApiCourseSection[]>(url);
   return data.map((section) => ({
@@ -1925,10 +2171,11 @@ export const createCourseSection = async (
 };
 
 export const getLessons = async (
-  courseId?: string,
+  courseId?: string | { id?: string },
 ): Promise<LessonPayload[]> => {
-  const url = courseId
-    ? `/api/lessons?courseId=${encodeURIComponent(courseId)}`
+  const safeCourseId = courseId != null ? normalizeEntityId(courseId, "courseId") : undefined;
+  const url = safeCourseId
+    ? `/api/lessons?courseId=${encodeURIComponent(safeCourseId)}`
     : "/api/lessons";
   const data = await apiFetch<ApiLesson[]>(url);
   return data.map((lesson) => ({
@@ -1951,10 +2198,16 @@ export const getLessons = async (
   }));
 };
 
-export const getLessonResources = async (): Promise<
-  LessonResourcePayload[]
-> => {
-  const data = await apiFetch<ApiLessonResource[]>("/api/lesson-resources");
+export const getLessonResources = async (
+  filters?: { lessonId?: string; courseId?: string },
+): Promise<LessonResourcePayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.lessonId) params.set("lessonId", normalizeEntityId(filters.lessonId, "lessonId"));
+  if (filters?.courseId) params.set("courseId", normalizeEntityId(filters.courseId, "courseId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiLessonResource[]>(
+    query ? `/api/lesson-resources?${query}` : "/api/lesson-resources",
+  );
   return data.map((resource) => ({
     id: resource.id || "",
     lessonId: resource.lesson?.id || "",
@@ -2212,8 +2465,15 @@ export const deleteDiscussionReply = async (replyId: string): Promise<void> => {
   });
 };
 
-export const getCourseOutcomes = async (): Promise<CourseOutcomePayload[]> => {
-  const data = await apiFetch<ApiCourseOutcome[]>("/api/course-outcomes");
+export const getCourseOutcomes = async (
+  courseId?: string | { id?: string },
+): Promise<CourseOutcomePayload[]> => {
+  const safeCourseId = courseId != null ? normalizeEntityId(courseId, "courseId") : undefined;
+  const data = await apiFetch<ApiCourseOutcome[]>(
+    safeCourseId
+      ? `/api/course-outcomes?courseId=${encodeURIComponent(safeCourseId)}`
+      : "/api/course-outcomes",
+  );
   return data.map((outcome) => ({
     id: outcome.id || "",
     courseId: outcome.course?.id || "",
@@ -2225,11 +2485,14 @@ export const getCourseOutcomes = async (): Promise<CourseOutcomePayload[]> => {
   }));
 };
 
-export const getCourseRequirements = async (): Promise<
-  CourseRequirementPayload[]
-> => {
+export const getCourseRequirements = async (
+  courseId?: string | { id?: string },
+): Promise<CourseRequirementPayload[]> => {
+  const safeCourseId = courseId != null ? normalizeEntityId(courseId, "courseId") : undefined;
   const data = await apiFetch<ApiCourseRequirement[]>(
-    "/api/course-requirements",
+    safeCourseId
+      ? `/api/course-requirements?courseId=${encodeURIComponent(safeCourseId)}`
+      : "/api/course-requirements",
   );
   return data.map((requirement) => ({
     id: requirement.id || "",
@@ -2311,8 +2574,14 @@ export const deleteCourseRequirement = async (
   });
 };
 
-export const getQuizzes = async (): Promise<QuizPayload[]> => {
-  const data = await apiFetch<ApiQuiz[]>("/api/quizzes");
+export const getQuizzes = async (
+  filters?: { lessonId?: string; courseId?: string },
+): Promise<QuizPayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.lessonId) params.set("lessonId", normalizeEntityId(filters.lessonId, "lessonId"));
+  if (filters?.courseId) params.set("courseId", normalizeEntityId(filters.courseId, "courseId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiQuiz[]>(query ? `/api/quizzes?${query}` : "/api/quizzes");
   return data.map((quiz) => ({
     id: quiz.id || "",
     lessonId: quiz.lesson?.id || "",
@@ -2331,8 +2600,14 @@ export const getQuizzes = async (): Promise<QuizPayload[]> => {
   }));
 };
 
-export const getQuestions = async (): Promise<QuestionPayload[]> => {
-  const data = await apiFetch<ApiQuestion[]>("/api/questions");
+export const getQuestions = async (
+  filters?: { quizId?: string; courseId?: string },
+): Promise<QuestionPayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.quizId) params.set("quizId", normalizeEntityId(filters.quizId, "quizId"));
+  if (filters?.courseId) params.set("courseId", normalizeEntityId(filters.courseId, "courseId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiQuestion[]>(query ? `/api/questions?${query}` : "/api/questions");
   return data.map((question) => ({
     id: question.id || "",
     quizId: question.quiz?.id || "",
@@ -2351,10 +2626,17 @@ export const getQuestions = async (): Promise<QuestionPayload[]> => {
   }));
 };
 
-export const getQuestionOptions = async (): Promise<
-  QuestionOptionPayload[]
-> => {
-  const data = await apiFetch<ApiQuestionOption[]>("/api/question-options");
+export const getQuestionOptions = async (
+  filters?: { questionId?: string; quizId?: string; courseId?: string },
+): Promise<QuestionOptionPayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.questionId) params.set("questionId", normalizeEntityId(filters.questionId, "questionId"));
+  if (filters?.quizId) params.set("quizId", normalizeEntityId(filters.quizId, "quizId"));
+  if (filters?.courseId) params.set("courseId", normalizeEntityId(filters.courseId, "courseId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiQuestionOption[]>(
+    query ? `/api/question-options?${query}` : "/api/question-options",
+  );
   return data.map((option) => ({
     id: option.id || "",
     questionId: option.question?.id || "",
@@ -2364,6 +2646,114 @@ export const getQuestionOptions = async (): Promise<
     optionTextGz: option.optionTextGz || undefined,
     isCorrect: Boolean(option.isCorrect),
     orderIndex: toNumber(option.orderIndex, 0),
+  }));
+};
+
+export const getQuizAttempts = async (
+  filters?: { studentId?: string; quizId?: string },
+): Promise<QuizAttemptPayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.studentId) params.set("studentId", normalizeEntityId(filters.studentId, "studentId"));
+  if (filters?.quizId) params.set("quizId", normalizeEntityId(filters.quizId, "quizId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiQuizAttempt[]>(
+    query ? `/api/quiz-attempts?${query}` : "/api/quiz-attempts",
+  );
+  return data.map((attempt) => ({
+    id: attempt.id || "",
+    studentId: attempt.student?.id || "",
+    quizId: attempt.quiz?.id || "",
+    score: toNumber(attempt.score, 0),
+    totalPoints: toNumber(attempt.totalPoints, 0),
+    maxPoints: toNumber(attempt.maxPoints, 0),
+    isPassed: Boolean(attempt.isPassed),
+    attemptNumber: toNumber(attempt.attemptNumber, 0),
+    timeTaken: toNumber(attempt.timeTaken, 0),
+    startedAt: attempt.startedAt || undefined,
+    createdAt: attempt.createdAt || undefined,
+    updatedAt: attempt.updatedAt || undefined,
+  }));
+};
+
+export const createQuizAttempt = async (
+  payload: CreateQuizAttemptPayload,
+): Promise<QuizAttemptPayload> => {
+  const data = await apiFetch<ApiQuizAttempt>("/api/quiz-attempts", {
+    method: "POST",
+    body: JSON.stringify({
+      student: { id: payload.studentId },
+      quiz: { id: payload.quizId },
+      score: payload.score,
+      totalPoints: payload.totalPoints,
+      maxPoints: payload.maxPoints,
+      isPassed: payload.isPassed,
+      attemptNumber: payload.attemptNumber,
+      timeTaken: payload.timeTaken,
+      startedAt: payload.startedAt,
+    }),
+  });
+
+  return {
+    id: data.id || "",
+    studentId: data.student?.id || payload.studentId,
+    quizId: data.quiz?.id || payload.quizId,
+    score: toNumber(data.score, payload.score),
+    totalPoints: toNumber(data.totalPoints, payload.totalPoints),
+    maxPoints: toNumber(data.maxPoints, payload.maxPoints),
+    isPassed: Boolean(data.isPassed),
+    attemptNumber: toNumber(data.attemptNumber, payload.attemptNumber),
+    timeTaken: toNumber(data.timeTaken, payload.timeTaken),
+    startedAt: data.startedAt || payload.startedAt,
+    createdAt: data.createdAt || undefined,
+    updatedAt: data.updatedAt || undefined,
+  };
+};
+
+export const createQuizAnswer = async (
+  payload: CreateQuizAnswerPayload,
+): Promise<QuizAnswerPayload> => {
+  const data = await apiFetch<ApiQuizAnswer>("/api/quiz-answers", {
+    method: "POST",
+    body: JSON.stringify({
+      attempt: { id: payload.attemptId },
+      question: { id: payload.questionId },
+      selectedOption: payload.selectedOptionId ? { id: payload.selectedOptionId } : null,
+      isCorrect: payload.isCorrect,
+      pointsEarned: payload.pointsEarned,
+    }),
+  });
+
+  return {
+    id: data.id || "",
+    attemptId: data.attempt?.id || payload.attemptId,
+    questionId: data.question?.id || payload.questionId,
+    selectedOptionId: data.selectedOption?.id || payload.selectedOptionId,
+    isCorrect: Boolean(data.isCorrect),
+    pointsEarned: toNumber(data.pointsEarned, payload.pointsEarned),
+    createdAt: data.createdAt || undefined,
+    updatedAt: data.updatedAt || undefined,
+  };
+};
+
+export const getQuizAnswers = async (
+  filters?: { studentId?: string; attemptId?: string },
+): Promise<QuizAnswerPayload[]> => {
+  const params = new URLSearchParams();
+  if (filters?.studentId) params.set("studentId", normalizeEntityId(filters.studentId, "studentId"));
+  if (filters?.attemptId) params.set("attemptId", normalizeEntityId(filters.attemptId, "attemptId"));
+  const query = params.toString();
+  const data = await apiFetch<ApiQuizAnswer[]>(
+    query ? `/api/quiz-answers?${query}` : "/api/quiz-answers",
+  );
+  return (Array.isArray(data) ? data : []).map((answer) => ({
+    id: answer.id || "",
+    attemptId: answer.attempt?.id || "",
+    questionId: answer.question?.id || "",
+    selectedOptionId: answer.selectedOption?.id || undefined,
+    isCorrect: Boolean(answer.isCorrect),
+    pointsEarned: toNumber(answer.pointsEarned, 0),
+    createdAt: answer.createdAt || undefined,
+    updatedAt: answer.updatedAt || undefined,
   }));
 };
 
