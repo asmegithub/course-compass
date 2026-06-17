@@ -165,7 +165,7 @@ const renderLessonTextHtml = (rawContent: string) => {
   const flushList = () => {
     if (listBuffer.length === 0) return;
     htmlParts.push(
-      `<ul>${listBuffer.map((item) => `<li>${formatInlineMarkdown(item)}</li>`).join("")}</ul>`,
+      `<ul style="list-style:disc;padding-left:1.5rem;margin:0.75rem 0;">${listBuffer.map((item) => `<li style="margin:0.35rem 0;">${formatInlineMarkdown(item)}</li>`).join("")}</ul>`,
     );
     listBuffer = [];
   };
@@ -209,7 +209,7 @@ const renderLessonTextHtml = (rawContent: string) => {
       htmlParts.push(`<h1>${formatInlineMarkdown(trimmed.slice(2))}</h1>`);
       continue;
     }
-    if (trimmed.startsWith("- ")) {
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ ")) {
       flushParagraph();
       listBuffer.push(trimmed.slice(2));
       continue;
@@ -243,6 +243,8 @@ const CourseDetail = () => {
     ? (tabParam as CourseDetailTab)
     : "overview";
   const [activeTab, setActiveTab] = useState<CourseDetailTab>(initialTab);
+  const isStudentUser =
+    user?.role === "STUDENT" || user?.role === "ROLE_STUDENT";
 
   useEffect(() => {
     const nextTab: CourseDetailTab = ALLOWED_TABS.includes(
@@ -734,25 +736,7 @@ const CourseDetail = () => {
   const showCourseLoading =
     isCourseLoading ||
     (Boolean(slugValue) && !isCourseFetched && !isCourseError);
-  const isDetailsLoading = Boolean(
-    course?.id &&
-    (myEnrollmentQuery.isLoading ||
-      sectionsQuery.isLoading ||
-      lessonsQuery.isLoading ||
-      reviewsQuery.isLoading ||
-      outcomesQuery.isLoading ||
-      requirementsQuery.isLoading ||
-      discussionQuery.isLoading),
-  );
-  const isDetailsError = Boolean(
-    course?.id &&
-    (sectionsQuery.isError ||
-      lessonsQuery.isError ||
-      reviewsQuery.isError ||
-      outcomesQuery.isError ||
-      requirementsQuery.isError ||
-      discussionQuery.isError),
-  );
+  const isDetailsLoading = Boolean(course?.id && myEnrollmentQuery.isLoading);
 
   const LoadingScreen = () => (
     <div className="min-h-screen flex flex-col bg-background">
@@ -819,27 +803,6 @@ const CourseDetail = () => {
     return <LoadingScreen />;
   }
 
-  if (isDetailsError) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Navbar />
-        <main className="flex-1 flex items-center justify-center min-h-[60vh]">
-          <div className="container flex flex-col items-center gap-4 text-center">
-            <p className="text-destructive font-medium">
-              {t("courseDetail.feedback.loadCourseDetailsFailed")}
-            </p>
-            <Button variant="outline" asChild>
-              <Link to={`/courses/${slugValue}`}>
-                {t("courseDetail.feedback.backToCourse")}
-              </Link>
-            </Button>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
   if (
     isLoggedIn &&
     user?.role === "STUDENT" &&
@@ -894,7 +857,7 @@ const CourseDetail = () => {
   );
   const instructorBiography =
     course.instructor?.biography || t("courseDetail.instructor.bioFallback");
-  const canDisplayEnrollCta = !isLoggedIn || user?.role === "STUDENT";
+  const canDisplayEnrollCta = !isLoggedIn || isStudentUser;
   const inCart = isInCart(slugValue);
   const resumeLessonId = myEnrollmentQuery.data?.lastAccessedLessonId;
   const learnHref = resumeLessonId
@@ -913,7 +876,7 @@ const CourseDetail = () => {
       return;
     }
 
-    if (user?.role !== "STUDENT") {
+    if (!isStudentUser) {
       toast({
         title: t("courseDetail.feedback.enrollmentNotAllowedTitle"),
         description: t("courseDetail.feedback.enrollmentNotAllowedDesc"),

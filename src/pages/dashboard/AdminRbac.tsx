@@ -6,14 +6,9 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
   createPermission,
@@ -45,7 +40,7 @@ const AdminRbac = () => {
     description: "",
   });
   const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [selectedPermissionId, setSelectedPermissionId] = useState("");
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
 
   const rolesQuery = useQuery({
     queryKey: ["admin-rbac-roles"],
@@ -72,6 +67,56 @@ const AdminRbac = () => {
     () => new Map(permissions.map((permission) => [permission.id, permission])),
     [permissions],
   );
+  const groupedAssignments = useMemo(() => {
+    const byRole = new Map<
+      string,
+      {
+        roleId: string;
+        roleName: string;
+        roleDisplayName: string;
+        roleIsSystem: boolean;
+        permissions: Array<{
+          mappingId: string;
+          permissionId: string;
+          permissionName: string;
+          permissionDisplayName: string;
+          module: string;
+        }>;
+      }
+    >();
+
+    for (const mapping of rolePermissions) {
+      const roleId = mapping.role?.id ?? "";
+      const permissionId = mapping.permission?.id ?? "";
+      if (!roleId || !permissionId) continue;
+
+      const role = roleById.get(roleId);
+      const permission = permissionById.get(permissionId);
+      const existing = byRole.get(roleId) ?? {
+        roleId,
+        roleName: role?.name || roleId,
+        roleDisplayName: role?.displayName || role?.name || roleId,
+        roleIsSystem: Boolean(role?.isSystem),
+        permissions: [],
+      };
+
+      if (!existing.permissions.some((item) => item.permissionId === permissionId)) {
+        existing.permissions.push({
+          mappingId: mapping.id,
+          permissionId,
+          permissionName: permission?.name || permissionId,
+          permissionDisplayName: permission?.displayName || permission?.name || permissionId,
+          module: permission?.module || "GENERAL",
+        });
+      }
+
+      byRole.set(roleId, existing);
+    }
+
+    return Array.from(byRole.values()).sort((left, right) =>
+      left.roleDisplayName.localeCompare(right.roleDisplayName),
+    );
+  }, [permissionById, roleById, rolePermissions]);
 
   const refreshAll = async () => {
     await Promise.all([
@@ -155,10 +200,16 @@ const AdminRbac = () => {
   });
 
   const assignPermissionMutation = useMutation({
-    mutationFn: (payload: { roleId: string; permissionId: string }) =>
-      createRolePermission(payload),
+    mutationFn: async (payload: { roleId: string; permissionIds: string[] }) => {
+      const uniqueIds = Array.from(new Set(payload.permissionIds)).filter(Boolean);
+      await Promise.all(
+        uniqueIds.map((permissionId) =>
+          createRolePermission({ roleId: payload.roleId, permissionId }),
+        ),
+      );
+    },
     onSuccess: async () => {
-      setSelectedPermissionId("");
+      setSelectedPermissionIds([]);
       await refreshAll();
       toast({ title: "Permission assigned to role" });
     },
@@ -207,6 +258,7 @@ const AdminRbac = () => {
   const availablePermissions = permissions.filter(
     (permission) => !assignedPermissionIds.has(permission.id),
   );
+  const selectedPermissionCount = selectedPermissionIds.length;
 
   const handleCreateRole = () => {
     if (!newRole.name.trim()) {
@@ -236,16 +288,16 @@ const AdminRbac = () => {
   };
 
   const handleAssign = () => {
-    if (!selectedRoleId || !selectedPermissionId) {
+    if (!selectedRoleId || selectedPermissionIds.length === 0) {
       toast({
-        title: "Select a role and permission first",
+        title: "Select a role and at least one permission first",
         variant: "destructive",
       });
       return;
     }
     assignPermissionMutation.mutate({
       roleId: selectedRoleId,
-      permissionId: selectedPermissionId,
+      permissionIds: selectedPermissionIds,
     });
   };
 
@@ -487,75 +539,140 @@ const AdminRbac = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.displayName || role.name || role.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)_auto]">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Role</p>
+                <div className="rounded-md border bg-background px-3 py-2 text-sm">
+                  {roles.length > 0 ? (
+                    <select
+                      className="w-full bg-transparent outline-none"
+                      value={selectedRoleId}
+                      onChange={(event) => {
+                        setSelectedRoleId(event.target.value);
+                        setSelectedPermissionIds([]);
+                      }}
+                    >
+                      <option value="">Select role</option>
+                      {roles.map((role) => (
+                        <option key={role.id} value={role.id}>
+                          {role.displayName || role.name || role.id}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-muted-foreground">No roles found</span>
+                  )}
+                </div>
+              </div>
 
-              <Select
-                value={selectedPermissionId}
-                onValueChange={setSelectedPermissionId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select permission" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availablePermissions.map((permission) => (
-                    <SelectItem key={permission.id} value={permission.id}>
-                      {permission.name || permission.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Permissions {selectedPermissionCount > 0 ? `(${selectedPermissionCount} selected)` : ""}
+                </p>
+                <ScrollArea className="h-56 rounded-md border bg-background">
+                  <div className="p-3 space-y-2">
+                    {selectedRoleId ? (
+                      availablePermissions.length > 0 ? (
+                        availablePermissions.map((permission) => {
+                          const checked = selectedPermissionIds.includes(permission.id);
+                          return (
+                            <label
+                              key={permission.id}
+                              className="flex items-start gap-3 rounded-md border p-3 hover:bg-muted/40 cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(value) => {
+                                  setSelectedPermissionIds((previous) =>
+                                    value
+                                      ? [...previous, permission.id]
+                                      : previous.filter((id) => id !== permission.id),
+                                  );
+                                }}
+                                className="mt-0.5"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-medium text-sm truncate">
+                                    {permission.displayName || permission.name || "Unnamed permission"}
+                                  </p>
+                                  {permission.module && (
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      {permission.module}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {permission.name}
+                                </p>
+                              </div>
+                            </label>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-muted-foreground p-2">
+                          All permissions are already assigned to this role.
+                        </p>
+                      )
+                    ) : (
+                      <p className="text-sm text-muted-foreground p-2">
+                        Select a role to choose permissions.
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
 
-              <Button
-                onClick={handleAssign}
-                disabled={assignPermissionMutation.isPending}
-              >
-                Assign
-              </Button>
+              <div className="flex lg:items-end">
+                <Button
+                  onClick={handleAssign}
+                  disabled={
+                    assignPermissionMutation.isPending ||
+                    !selectedRoleId ||
+                    selectedPermissionIds.length === 0
+                  }
+                  className="w-full lg:w-auto"
+                >
+                  Assign selected
+                </Button>
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 rounded-xl border bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium text-sm">Current role assignments</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedRoleId ? rolePermissions.filter((item) => (item.role?.id ?? "") === selectedRoleId).length : 0} items
+                </p>
+              </div>
               {selectedRoleId ? (
                 selectedRoleAssignments.length > 0 ? (
-                  selectedRoleAssignments.map((mapping) => {
-                    const permission = permissionById.get(
-                      mapping.permission?.id ?? "",
-                    );
-                    return (
-                      <div
-                        key={mapping.id}
-                        className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
-                      >
-                        <span>
-                          {permission?.name ||
-                            mapping.permission?.id ||
-                            "Unknown permission"}
-                        </span>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7"
-                          disabled={deleteRolePermissionMutation.isPending}
-                          onClick={() =>
-                            deleteRolePermissionMutation.mutate(mapping.id)
-                          }
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRoleAssignments.map((mapping) => {
+                      const permission = permissionById.get(
+                        mapping.permission?.id ?? "",
+                      );
+                      return (
+                        <div
+                          key={mapping.id}
+                          className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1.5 text-xs shadow-sm"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    );
-                  })
+                          <span className="font-medium">
+                            {permission?.displayName || permission?.name || mapping.permission?.id || "Unknown permission"}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            disabled={deleteRolePermissionMutation.isPending}
+                            onClick={() => deleteRolePermissionMutation.mutate(mapping.id)}
+                            aria-label={`Remove ${permission?.name || mapping.permission?.id || "permission"}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     No permissions assigned for this role.
@@ -575,43 +692,60 @@ const AdminRbac = () => {
             <CardTitle>Assignment Matrix</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-2">Role</th>
-                    <th className="text-left p-2">Permission</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rolePermissions.map((mapping) => {
-                    const role = roleById.get(mapping.role?.id ?? "");
-                    const permission = permissionById.get(
-                      mapping.permission?.id ?? "",
-                    );
-                    return (
-                      <tr key={mapping.id} className="border-b last:border-0">
-                        <td className="p-2">
-                          {role?.name || mapping.role?.id || "Unknown role"}
-                        </td>
-                        <td className="p-2">
-                          {permission?.name ||
-                            mapping.permission?.id ||
-                            "Unknown permission"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {!rolePermissions.length && (
-                    <tr>
-                      <td className="p-2 text-muted-foreground" colSpan={2}>
-                        No assignments found.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            {groupedAssignments.length > 0 ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                {groupedAssignments.map((group) => (
+                  <div
+                    key={group.roleId}
+                    className="rounded-xl border bg-background p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-sm">
+                          {group.roleDisplayName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {group.roleName}
+                        </p>
+                      </div>
+                      {group.roleIsSystem && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          System
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {group.permissions.map((permission) => (
+                        <Badge
+                          key={permission.mappingId}
+                          variant="outline"
+                          className="flex items-center gap-2 rounded-full px-3 py-1.5 text-xs bg-muted/30"
+                        >
+                          <span>{permission.permissionDisplayName}</span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            disabled={deleteRolePermissionMutation.isPending}
+                            onClick={() =>
+                              deleteRolePermissionMutation.mutate(
+                                permission.mappingId,
+                              )
+                            }
+                            aria-label={`Remove ${permission.permissionName}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No assignments found.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

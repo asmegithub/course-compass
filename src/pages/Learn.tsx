@@ -107,7 +107,7 @@ const renderLessonTextHtml = (rawContent: string) => {
   const flushList = () => {
     if (listBuffer.length === 0) return;
     htmlParts.push(
-      `<ul>${listBuffer.map((item) => `<li>${formatInlineMarkdown(item)}</li>`).join("")}</ul>`,
+      `<ul style="list-style:disc;padding-left:1.5rem;margin:0.75rem 0;">${listBuffer.map((item) => `<li style="margin:0.35rem 0;">${formatInlineMarkdown(item)}</li>`).join("")}</ul>`,
     );
     listBuffer = [];
   };
@@ -132,7 +132,7 @@ const renderLessonTextHtml = (rawContent: string) => {
         continue;
       }
     }
-    if (trimmed.startsWith("- ")) {
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("+ ")) {
       flushParagraph();
       listBuffer.push(trimmed.slice(2));
       continue;

@@ -15,6 +15,84 @@ import {
   FileText, PlayCircle, Lock, Check,
 } from 'lucide-react';
 
+const escapeHtml = (value: string) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const formatInlineMarkdown = (value: string) => {
+  const escaped = escapeHtml(value);
+  return escaped
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+};
+
+const renderLessonTextHtml = (rawContent: string) => {
+  const content = rawContent.trim();
+  if (!content) return '';
+  if (/<\/?[a-z][\s\S]*>/i.test(content)) return content;
+
+  const lines = content.split(/\r?\n/);
+  const htmlParts: string[] = [];
+  let paragraphBuffer: string[] = [];
+  let listBuffer: string[] = [];
+  const headingStyles: Record<number, string> = {
+    1: 'font-size:1.6rem;font-weight:800;line-height:1.25;margin:1.1rem 0 0.7rem;text-align:center;',
+    2: 'font-size:1.35rem;font-weight:700;line-height:1.3;margin:0.95rem 0 0.6rem;text-align:center;',
+    3: 'font-size:1.15rem;font-weight:600;line-height:1.35;margin:0.8rem 0 0.5rem;text-align:center;',
+  };
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+    htmlParts.push(`<p>${formatInlineMarkdown(paragraphBuffer.join(' '))}</p>`);
+    paragraphBuffer = [];
+  };
+
+  const flushList = () => {
+    if (listBuffer.length === 0) return;
+    htmlParts.push(`<ul style="list-style:disc;padding-left:1.5rem;margin:0.75rem 0;">${listBuffer.map((item) => `<li style="margin:0.35rem 0;">${formatInlineMarkdown(item)}</li>`).join('')}</ul>`);
+    listBuffer = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const headingMatch = /^(#{1,3})\s*(.+)$/.exec(trimmed);
+    if (headingMatch) {
+      flushParagraph();
+      flushList();
+      const level = headingMatch[1].length;
+      const text = headingMatch[2].trim();
+      if (text) {
+        const style = headingStyles[level] || headingStyles[3];
+        htmlParts.push(`<h${level} style="${style}">${formatInlineMarkdown(text)}</h${level}>`);
+        continue;
+      }
+    }
+
+    if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || trimmed.startsWith('+ ')) {
+      flushParagraph();
+      listBuffer.push(trimmed.slice(2));
+      continue;
+    }
+
+    flushList();
+    paragraphBuffer.push(trimmed);
+  }
+
+  flushParagraph();
+  flushList();
+  return htmlParts.join('\n');
+};
+
 const AdminApprovals = () => {
   const queryClient = useQueryClient();
   const coursesQuery = useQuery({
@@ -329,8 +407,12 @@ const AdminApprovals = () => {
                                       </div>
                                     </div>
                                     {lesson.type === 'TEXT' && (
-                                      <div className="rounded-md bg-muted/40 border border-border p-3 text-sm text-muted-foreground whitespace-pre-wrap">
-                                        {lesson.content?.trim() ? lesson.content : 'No text content added for this lesson.'}
+                                      <div className="rounded-md bg-muted/40 border border-border p-3 text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
+                                        {lesson.content?.trim() ? (
+                                          <div dangerouslySetInnerHTML={{ __html: renderLessonTextHtml(lesson.content) }} />
+                                        ) : (
+                                          <p>No text content added for this lesson.</p>
+                                        )}
                                       </div>
                                     )}
                                   </div>

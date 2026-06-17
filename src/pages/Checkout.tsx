@@ -322,6 +322,23 @@ const Checkout = () => {
     );
   }
 
+  if (isLoggedIn && !isStudent) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Navbar />
+        <main className="flex-1 container py-16">
+          <p className="text-muted-foreground">
+            Enrollment is available only for student accounts.
+          </p>
+          <Button variant="outline" className="mt-4" asChild>
+            <Link to={`/courses/${slugValue}`}>Back to course</Link>
+          </Button>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (isAlreadyEnrolled) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
