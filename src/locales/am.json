@@ -68,22 +68,24 @@
     "instructorDesc": "ይስብዙ እና ይግኙ"
   },
   "home": {
-    "heroTitle": "ዕድልዎን በ",
-    "heroTitleHighlight": "ጥራት ያለው ትምህርት",
-    "heroSubtitle": "በአማርኛ፣ በኦሮሚኛ፣ በግዕዝ እና በእንግሊዝኛ ጥራት ያለው ኮርስ። ዛሬ ይማሩ።",
+    "heroTitle": "የቅድስት ቤተክርስቲያንን ትምህርት በ",
+    "heroTitleHighlight": "ቤተ ጉባኤ ይማሩ",
+    "heroSubtitle": "በቅኔ፣ በአቋቋም፣ በቅዳሴ፣ በግዕዝ ቋንቋ እና ሌሎች የኢትዮጵያ ኦርቶዶክስ ተዋሕዶ ቤተክርስቲያን ትምህርቶች። ዛሬ መማር ይጀምሩ።",
     "heroLanguages": "በቋንቋዎ ይማሩ • እንግሊዝኛ • አማርኛ • ኦሮሚኛ • ግዕዝ",
-    "joinLearners": "ከ50,000+ ተማሪዎች ጋር ይቀላቀሉ",
-    "joinLearnersDesc": "ከባለሙያ አስተማሪዎች የሚፈለጉ ችሎታዎችን ይማሩ። ሰርቲፊኬቶች ይውሰዱ እና ሙያዎን ይቀይሩ።",
-    "whyChooseUs": "ለምን እኛን ይምረጡ",
-    "testimonials": "ተማሪዎቻችን ምን ይላሉ",
-    "getStartedCta": "ጀምር",
+    "joinLearners": "ከ50,000+ የአብነት ተማሪዎች ጋር ይቀላቀሉ",
+    "joinLearnersDesc": "ከዕውቅ ሊቃውንት ዘንድ የአብነት ትምህርትን፣ የቤተክርስቲያን ዜማዎችንና ሥርዓታትን ይማሩ።",
+    "whyChooseUs": "ለምን እዚህ ይማራሉ",
+    "testimonials": "የተማሪዎቻችን ምስክርነት",
+    "getStartedCta": "ትምህርት ጀምር",
     "exploreCoursesCta": "ኮርሶችን ይመልከቱ",
     "watchDemo": "ዴሞ ይመልከቱ",
-    "activeLearners": "ንቁ ተማሪዎች",
-    "courses": "ኮርሶች",
+    "activeLearners": "የአብነት ተማሪዎች",
+    "courses": "ጉባኤያት (ኮርሶች)",
     "certificatesIssued": "የተሰጡ ሰርቲፊኬቶች",
-    "featuredCourses": "የተመረጡ ኮርሶች",
-    "featuredCoursesSubtitle": "ይሳካሉ ዘንድ የተመረጡ ኮርሶች",
+    "featuredCourses": "የተመረጡ ጉባኤያት",
+    "featuredCoursesSubtitle": "የአብነት ትምህርቶችን ጠንቅቀው ይማሩ ዘንድ የተመረጡ ኮርሶች",
+    "categoriesTitle": "የአብነት ጉባኤያት ምድቦች",
+    "categoriesSubtitle": "ከግዕዝ ቋንቋ እስከ ቅኔና ዜማ የአቋቋም ትምህርቶች፤ የቤተክርስቲያኗን ጥንታዊ ዕውቀቶች ይመርምሩ",
     "viewAll": "ሁሉን ይመልከቱ",
     "loadingFeatured": "የተመረጡ ኮርሶች በመጫን ላይ...",
     "noFeatured": "የተመረጡ ኮርሶች የሉም።",
@@ -122,6 +124,21 @@
     "testimonialsSection": {
       "title": "ምስክርነቶች",
       "subtitle": "ሙያቸውን ያሻሻሉ እና ያለውን ልምድ ያገኙ ሺዎች ተማሪዎችን ይቀላቀሉ"
+    },
+    "cta": {
+      "badge": "ዛሬ መማር ይጀምሩ",
+      "title": "የወደፊት ሕይወትዎን ለመቀየር ዝግጁ ነዎት?",
+      "subtitle": "ከ50,000 በላይ ተማሪዎች ቀድሞ ከቤተ ጉባኤ ጋር ችሎታቸውን እየገነቡ ነው። የስኬት ጉዞዎ በአንድ ኮርስ ይጀምራል።",
+      "getStartedFree": "በነጻ ይጀምሩ",
+      "browseCourses": "ኮርሶችን ይመልከቱ"
+    },
+    "categories": {
+      "title": "በምድብ ያስሱ",
+      "subtitle": "ከግዕዝ ቋንቋ እስከ ቅኔ እና ዜማ፤ ፍላጎት ባለዎት መስክ ኮርሶችን ያግኙ",
+      "loading": "ምድቦች በመጫን ላይ...",
+      "error": "ምድቦችን መጫን አልተቻለም።",
+      "empty": "ምንም ምድቦች የሉም።",
+      "browseAll": "ሁሉንም ምድቦች ይመልከቱ"
     }
   },
   "language": {

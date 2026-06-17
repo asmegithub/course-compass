@@ -68,22 +68,22 @@
     "instructorDesc": "ይስብዙ እና ይግኙ"
   },
   "home": {
-    "heroTitle": "ዕድልክን ክፈት በ",
-    "heroTitleHighlight": "ጥራት ያለው ትምህርት",
-    "heroSubtitle": "በአማርኛ፣ በኦሮሚኛ፣ በግዕዝ እና በእንግሊዝኛ ጥራት ያለው ኮርስ። ዛሬ ይማሩ።",
+    "heroTitle": "ትምህርተ ቤተክርስቲያን በ",
+    "heroTitleHighlight": "ቤተ ጉባኤ ተማሀሩ",
+    "heroSubtitle": "በቅኔ፣ በአቋቋም፣ በቅዳሴ፣ በግዕዝ ቋንቋ ወበካልኣን ትምህርተ ቤተክርስቲያን። ዮም ተማሀሩ።",
     "heroLanguages": "በቋንቋዎ ይማሩ • እንግሊዝኛ • አማርኛ • ኦሮሚኛ • ግዕዝ",
     "joinLearners": "ከ50,000+ ተማሪዎች ጋር ይቀላቀሉ",
-    "joinLearnersDesc": "ከባለሙያ አስተማሪዎች የሚፈለጉ ችሎታዎችን ይማሩ። ሰርቲፊኬቶች ይውሰዱ እና ሙያዎን ይቀይሩ።",
-    "whyChooseUs": "ለምን እኛን ይምረጡ",
-    "testimonials": "ተማሪዎቻችን ምን ይላሉ",
-    "getStartedCta": "ጀምር",
+    "joinLearnersDesc": "ከዕውቅ ሊቃውንት ዘንድ የአብነት ትምህርትን፣ የቤተክርስቲያን ዜማዎችንና ሥርዓታትን ይማሩ።",
+    "whyChooseUs": "ለምን እዚህ ይማራሉ",
+    "testimonials": "የተማሪዎቻችን ምስክርነት",
+    "getStartedCta": "ትምህርት ጀምር",
     "exploreCoursesCta": "ኮርሶችን ይመልከቱ",
     "watchDemo": "ዴሞ ይመልከቱ",
-    "activeLearners": "ንቁ ተማሪዎች",
-    "courses": "ኮርሶች",
+    "activeLearners": "አብነት ተማሪዎች",
+    "courses": "ጉባኤያት (ኮርሶች)",
     "certificatesIssued": "የተሰጡ ሰርቲፊኬቶች",
-    "featuredCourses": "የተመረጡ ኮርሶች",
-    "featuredCoursesSubtitle": "ይሳካሉ ዘንድ የተመረጡ ኮርሶች",
+    "featuredCourses": "የተመረጡ ጉባኤያት",
+    "featuredCoursesSubtitle": "የአብነት ትምህርቶችን ጠንቅቀው ይማሩ ዘንድ የተመረጡ ኮርሶች",
     "viewAll": "ሁሉን ይመልከቱ",
     "loadingFeatured": "የተመረጡ ኮርሶች በመጫን ላይ...",
     "noFeatured": "የተመረጡ ኮርሶች የሉም።",
@@ -122,13 +122,28 @@
     "testimonialsSection": {
       "title": "ምስክርነቶች",
       "subtitle": "ሙያቸውን ያሻሻሉ እና ያለውን ልምድ ያገኙ ሺዎች ተማሪዎችን ይቀላቀሉ"
+    },
+    "cta": {
+      "badge": "ይዎም ትምህርት ጀምሩ",
+      "title": "ልትለውጡ ሀይወትከምን ዝግቡ አለከም አንትም?",
+      "subtitle": "ከ50,000 ባልዕል ተማህርት ቀድመው መምህራቸውን እየገነሩ ነው። የስኮት ግዕዕት በሃደ ግዕዕት ይጀምር።",
+      "getStartedFree": "በነጹ ጀምሩ",
+      "browseCourses": "ግዕዕታት ርአዩ"
+    },
+    "categories": {
+      "title": "በምድብ ተዘርዝሩ",
+      "subtitle": "ከግዕዝ ቋንቋ አስከ ቅኔ ወአቋቋም፤ የባሕል ትምህርት ምድቦችን አግኙ",
+      "loading": "ምድቦች ይጫን አሎ...",
+      "error": "ምድቦች ምጫን አይተከአለም።",
+      "empty": "ምድቦች የሉም።",
+      "browseAll": "ዉሉ ምድቦች ርአዩ"
     }
   },
   "language": {
     "english": "እንግሊዝኛ",
     "amharic": "አማርኛ",
     "oromoo": "ኦሮሚኛ",
-    "geez": "ግዕዝ"
+    "geez": "ግእዝ"
   },
   "notificationKeys": {
     "COURSE_CREATED": "ኮርስ ሓድሽ ተፈጢሩ",

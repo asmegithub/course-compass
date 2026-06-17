@@ -122,6 +122,21 @@
     "testimonialsSection": {
       "title": "Ragaa isaanii",
       "subtitle": "Baraataota kumaatamaan lakkaa'aman kan hojii isaanii jijjiiran waliin hirmaadhaa"
+    },
+    "cta": {
+      "badge": "Har'a barachuu jalqabaa",
+      "title": "Fuuldura Keessan Jijjiiruuf Qophii Dha?",
+      "subtitle": "Baraataa 50,000 ol ta'an BeteGubae waliin dandeettii isaanii ijaaraa jiru. Imalli milkaa'ina keessanii koorsii tokkoon jalqaba.",
+      "getStartedFree": "Bilisaan Jalqabaa",
+      "browseCourses": "Koorsii Ilaalaa"
+    },
+    "categories": {
+      "title": "Ramaddii Keessatti Qorii",
+      "subtitle": "Afaan Geez irraa kaasee hanga Qinee fi Aqwaqwam, koorsii damee fedhii keessanitti argadhaa",
+      "loading": "Ramaddiin fe'amaa jira...",
+      "error": "Ramaddii fe'uu hin dandeenye.",
+      "empty": "Ramaddiin hin argamne.",
+      "browseAll": "Ramaddii Hunda Ilaalaa"
     }
   },
   "language": {

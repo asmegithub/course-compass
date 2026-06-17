@@ -6,108 +6,156 @@
 
 @layer base {
   :root {
-    /* Primary - Deep Navy */
-    --primary: 222 47% 15%;
-    --primary-foreground: 210 40% 98%;
+    /* ═══════════════════════════════════════════════════════
+       Ethiopian Orthodox Tewahdo Color Palette
+       Inspired by: ብራና manuscripts, church vestments,
+       liturgical gold crosses, Marian iconography
+       ═══════════════════════════════════════════════════════ */
+
+    /* Primary — Sacred Marian Blue / Holy Virgin Blue (ሰማያዊ)
+       Inspired by Kidane Mehret iconography and liturgical blue robes */
+    --primary: 205 75% 36%;
+    --primary-foreground: 40 40% 96%;
     
-    /* Accent - Warm Coral */
-    --accent: 12 76% 61%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent — Liturgical Gold / Church Cross (ወርቅ)
+       Rich lustrous gold of Ethiopian Orthodox crosses & crowns */
+    --accent: 42 78% 48%;
+    --accent-foreground: 30 30% 10%;
     
-    /* Secondary - Soft Teal */
-    --secondary: 174 42% 65%;
-    --secondary-foreground: 222 47% 15%;
+    /* Secondary — Church Wood / Dark Ebony (ጨው እንጨት)
+       Deep warm brown from ancient church interiors */
+    --secondary: 20 30% 18%;
+    --secondary-foreground: 40 40% 94%;
     
-    /* Background & Surface */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    /* Background & Surface — Aged Brana Parchment (ብራና)
+       Warm cream-tan of traditional goatskin manuscripts */
+    --background: 38 35% 93%;
+    --foreground: 20 25% 12%;
     
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Card — Lighter Parchment Inner */
+    --card: 40 40% 97%;
+    --card-foreground: 20 25% 12%;
     
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 40 40% 97%;
+    --popover-foreground: 20 25% 12%;
     
-    /* Muted */
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 9% 46%;
+    /* Muted — Faded Parchment */
+    --muted: 36 25% 87%;
+    --muted-foreground: 20 12% 42%;
     
-    /* Borders */
-    --border: 220 13% 87%;
-    --input: 220 13% 87%;
-    --ring: 222 47% 15%;
+    /* Borders — Parchment Edge Lines */
+    --border: 34 25% 78%;
+    --input: 34 25% 78%;
+    --ring: 42 78% 48%;
     
-    /* Destructive */
-    --destructive: 0 84% 60%;
+    /* Destructive — Flame Red */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     
-    /* Success */
-    --success: 142 71% 45%;
+    /* Success — Vestment Green / Liturgical Green (ዕፀ ኃይማኖት)
+       The deep olive-green of priestly vestments */
+    --success: 152 55% 33%;
     --success-foreground: 0 0% 100%;
     
-    /* Warning */
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    /* Warning — Deep Amber / Ethiopian Honey (ማር)  */
+    --warning: 36 90% 48%;
+    --warning-foreground: 30 30% 10%;
     
-    /* Info */
-    --info: 199 89% 48%;
+    /* Info — Marian Blue / Holy Virgin Blue (ሰማያዊ)
+       The sacred blue used in icons of Kidane Mehret */
+    --info: 215 65% 42%;
     --info-foreground: 0 0% 100%;
     
     --radius: 0.75rem;
     
-    /* Sidebar */
-    --sidebar-background: 222 47% 15%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 12 76% 61%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 47% 22%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 47% 22%;
-    --sidebar-ring: 12 76% 61%;
+    /* Sidebar — Church Interior Dark Wood */
+    --sidebar-background: 20 30% 14%;
+    --sidebar-foreground: 40 35% 94%;
+    --sidebar-primary: 42 78% 48%;
+    --sidebar-primary-foreground: 30 30% 10%;
+    --sidebar-accent: 20 30% 20%;
+    --sidebar-accent-foreground: 40 35% 94%;
+    --sidebar-border: 20 25% 22%;
+    --sidebar-ring: 42 78% 48%;
     
     /* Custom gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(222 47% 15%) 0%, hsl(222 47% 25%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(12 76% 61%) 0%, hsl(12 76% 51%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 98%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(205 75% 26%) 0%, hsl(20 30% 12%) 50%, hsl(20 25% 10%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(42 78% 48%) 0%, hsl(36 70% 38%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(40 40% 97%) 0%, hsl(38 35% 93%) 100%);
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.1), 0 2px 4px -2px hsl(222 47% 11% / 0.1);
-    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.1), 0 4px 6px -4px hsl(222 47% 11% / 0.1);
-    --shadow-xl: 0 20px 25px -5px hsl(222 47% 11% / 0.1), 0 8px 10px -6px hsl(222 47% 11% / 0.1);
-    --shadow-glow: 0 0 20px hsl(12 76% 61% / 0.3);
+    /* Shadows — warm brown tint */
+    --shadow-sm: 0 1px 2px 0 hsl(20 25% 12% / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(20 25% 12% / 0.1), 0 2px 4px -2px hsl(20 25% 12% / 0.08);
+    --shadow-lg: 0 10px 15px -3px hsl(20 25% 12% / 0.12), 0 4px 6px -4px hsl(20 25% 12% / 0.08);
+    --shadow-xl: 0 20px 25px -5px hsl(20 25% 12% / 0.14), 0 8px 10px -6px hsl(20 25% 12% / 0.08);
+    --shadow-glow: 0 0 24px hsl(42 78% 48% / 0.35);
   }
 
   .dark {
-    --primary: 210 40% 98%;
-    --primary-foreground: 222 47% 11%;
+    /* Primary — Lighter Sacred Marian Blue for dark bg */
+    --primary: 200 80% 55%;
+    --primary-foreground: 20 20% 8%;
     
-    --accent: 12 76% 61%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent — Bright Liturgical Gold */
+    --accent: 42 80% 55%;
+    --accent-foreground: 20 25% 8%;
     
-    --secondary: 174 42% 45%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary — Muted Parchment Tan */
+    --secondary: 34 20% 28%;
+    --secondary-foreground: 40 35% 94%;
     
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
+    /* Background — Deep Church Interior */
+    --background: 20 20% 7%;
+    --foreground: 38 30% 92%;
     
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    /* Card — Slightly lifted dark */
+    --card: 20 18% 11%;
+    --card-foreground: 38 30% 92%;
     
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 20 18% 11%;
+    --popover-foreground: 38 30% 92%;
     
-    --muted: 222 47% 15%;
-    --muted-foreground: 215 20% 65%;
+    /* Muted */
+    --muted: 20 15% 16%;
+    --muted-foreground: 34 15% 58%;
     
-    --border: 222 47% 18%;
-    --input: 222 47% 18%;
-    --ring: 12 76% 61%;
+    /* Borders */
+    --border: 20 15% 20%;
+    --input: 20 15% 20%;
+    --ring: 42 80% 55%;
     
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-accent: 222 47% 15%;
-    --sidebar-border: 222 47% 15%;
+    /* Destructive */
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Success — Brighter Vestment Green */
+    --success: 152 50% 42%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning */
+    --warning: 38 85% 55%;
+    --warning-foreground: 30 30% 10%;
+    
+    /* Info — Brighter Marian Blue */
+    --info: 215 60% 55%;
+    --info-foreground: 0 0% 100%;
+    
+    /* Sidebar */
+    --sidebar-background: 20 22% 6%;
+    --sidebar-foreground: 38 30% 92%;
+    --sidebar-primary: 42 80% 55%;
+    --sidebar-primary-foreground: 20 25% 8%;
+    --sidebar-accent: 20 18% 14%;
+    --sidebar-accent-foreground: 38 30% 92%;
+    --sidebar-border: 20 18% 14%;
+    --sidebar-ring: 42 80% 55%;
+
+    /* Dark mode gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(205 70% 18%) 0%, hsl(20 22% 6%) 50%, hsl(20 20% 4%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(42 80% 55%) 0%, hsl(36 70% 42%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(20 18% 11%) 0%, hsl(20 18% 9%) 100%);
+    
+    --shadow-glow: 0 0 24px hsl(42 80% 55% / 0.25);
   }
 }
 
@@ -147,6 +195,18 @@
     box-shadow: var(--shadow-glow);
   }
   
+  /* Ethiopian ornamental border pattern effect */
+  .border-ethiopic {
+    border-image: linear-gradient(
+      90deg,
+      hsl(42 78% 48%) 0%,
+      hsl(205 75% 36%) 25%,
+      hsl(42 78% 48%) 50%,
+      hsl(205 75% 36%) 75%,
+      hsl(42 78% 48%) 100%
+    ) 1;
+  }
+  
   .animate-float {
     animation: float 6s ease-in-out infinite;
   }
@@ -161,6 +221,19 @@
   
   .animate-fade-in {
     animation: fadeIn 0.5s ease-out;
+  }
+
+  /* Gold shimmer for accent elements */
+  .shimmer-gold {
+    background: linear-gradient(
+      110deg,
+      hsl(42 78% 48%) 0%,
+      hsl(45 85% 62%) 40%,
+      hsl(42 78% 48%) 60%,
+      hsl(38 70% 40%) 100%
+    );
+    background-size: 200% 100%;
+    animation: goldShimmer 3s ease-in-out infinite;
   }
 }
 
@@ -193,7 +266,12 @@
   }
 }
 
-/* Custom scrollbar */
+@keyframes goldShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Custom scrollbar — warm tones */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -205,12 +283,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
+  background: hsl(var(--accent) / 0.35);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--accent) / 0.55);
 }
 
 @media print {

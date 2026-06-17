@@ -74,9 +74,9 @@ const HeroSection = () => {
           <div className="relative hidden lg:block animate-fade-in">
             <div className="relative z-10">
               <img 
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=500&fit=crop"
-                alt="Students learning together"
-                className="rounded-2xl shadow-2xl"
+                src="/bete-gubae.png"
+                alt="Traditional Ethiopian Orthodox Tewahdo Bete Gubae"
+                className="rounded-2xl shadow-2xl object-cover w-[600px] h-[500px]"
               />
               
               {/* Floating Cards */}
@@ -86,8 +86,8 @@ const HeroSection = () => {
                     <Award className="h-5 w-5 text-success" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Certificate Earned</p>
-                    <p className="font-semibold">Web Development</p>
+                    <p className="text-xs text-muted-foreground">Gubae Completed</p>
+                    <p className="font-semibold">ቅዳሴ (Liturgical Hymns)</p>
                   </div>
                 </div>
               </div>
@@ -99,7 +99,7 @@ const HeroSection = () => {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Continue Learning</p>
-                    <p className="font-semibold">Python Basics</p>
+                    <p className="font-semibold">ግእዝ ቋንቋ (Ge'ez Language)</p>
                   </div>
                 </div>
               </div>

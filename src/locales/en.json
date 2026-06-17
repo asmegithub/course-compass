@@ -68,22 +68,24 @@
     "instructorDesc": "Teach and earn"
   },
   "home": {
-    "heroTitle": "Unlock Your Potential with",
-    "heroTitleHighlight": "Quality Education",
-    "heroSubtitle": "Quality courses in Amharic, Oromo, Geez, and English. Start learning today.",
+    "heroTitle": "Explore the Sacred Teachings of",
+    "heroTitleHighlight": "Tewahdo Bete Gubae",
+    "heroSubtitle": "Online courses in Ge'ez, Qene, Aqwaqwam, Qidase, and church literature. Preserving the heritage of the Ethiopian Orthodox Tewahdo Church.",
     "heroLanguages": "Learn in your language • English • አማርኛ • Oromoo • ግዕዝ",
-    "joinLearners": "Join 50,000+ learners",
-    "joinLearnersDesc": "Learn in-demand skills from expert instructors. Earn certificates and transform your career.",
-    "whyChooseUs": "Why Choose Us",
-    "testimonials": "What Our Learners Say",
-    "getStartedCta": "Get Started",
+    "joinLearners": "Join 50,000+ church learners",
+    "joinLearnersDesc": "Learn sacred arts and literature from expert teachers. Study manuscripts, liturgies, and languages.",
+    "whyChooseUs": "Why Study Here",
+    "testimonials": "What Our Students Say",
+    "getStartedCta": "Start Learning",
     "exploreCoursesCta": "Explore Courses",
     "watchDemo": "Watch Demo",
     "activeLearners": "Active Learners",
-    "courses": "Courses",
-    "certificatesIssued": "Certificates Issued",
-    "featuredCourses": "Featured Courses",
-    "featuredCoursesSubtitle": "Hand-picked courses to help you succeed",
+    "courses": "Gubaeyat (Courses)",
+    "certificatesIssued": "Certificates Granted",
+    "featuredCourses": "Featured Gubaeyat",
+    "featuredCoursesSubtitle": "Hand-picked courses to help you master traditional disciplines",
+    "categoriesTitle": "Explore Sacred Gubaeyat",
+    "categoriesSubtitle": "From Ge'ez language to complex liturgical hymns, discover the deep traditional fields of our heritage",
     "viewAll": "View All",
     "loadingFeatured": "Loading featured courses...",
     "noFeatured": "No featured courses available.",
@@ -122,6 +124,21 @@
     "testimonialsSection": {
       "title": "Testimonials",
       "subtitle": "Join thousands of satisfied students who have transformed their careers"
+    },
+    "cta": {
+      "badge": "Start learning today",
+      "title": "Ready to Transform Your Future?",
+      "subtitle": "Join over 50,000 learners who are already building their skills with BeteGubae. Your journey to success starts with a single course.",
+      "getStartedFree": "Get Started Free",
+      "browseCourses": "Browse Courses"
+    },
+    "categories": {
+      "title": "Explore by Category",
+      "subtitle": "From programming to personal development, find courses in the field you're passionate about",
+      "loading": "Loading categories...",
+      "error": "Failed to load categories.",
+      "empty": "No categories available.",
+      "browseAll": "Browse All Categories"
     }
   },
   "language": {

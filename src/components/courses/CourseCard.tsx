@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Star, Clock, Users, BookOpen } from 'lucide-react';
+import { Star, Users, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Course } from '@/types';
-import { formatDuration, formatPrice } from '@/lib/formatters';
+import { formatPrice } from '@/lib/formatters';
 import { getLocalizedTitle } from '@/lib/localized-content';
 import { cn } from '@/lib/utils';
 
@@ -30,95 +30,72 @@ const CourseCard = ({ course, className }: CourseCardProps) => {
     <Link 
       to={`/courses/${course.slug}`}
       className={cn(
-        "group block bg-card rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1",
+        "group block bg-card rounded-md overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-0.5",
         className
       )}
     >
       {/* Thumbnail */}
-      <div className="relative aspect-video overflow-hidden">
+      <div className="relative aspect-[2/1] overflow-hidden">
         <img 
           src={course.thumbnail} 
           alt={displayTitle || course.title}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
         {course.isFeatured && (
-          <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground border-0">
+          <Badge className="absolute top-1 left-1 bg-accent text-accent-foreground border-0 text-[9px] px-1 py-0 h-4 leading-none">
             {t('home.featured')}
           </Badge>
         )}
         {discount > 0 && (
-          <Badge className="absolute top-3 right-3 bg-success text-success-foreground border-0">
-            {discount}% OFF
+          <Badge className="absolute top-1 right-1 bg-success text-success-foreground border-0 text-[9px] px-1 py-0 h-4 leading-none">
+            {discount}%
           </Badge>
         )}
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-3">
-        {/* Category */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-accent">
+      <div className="p-2 space-y-1">
+        {/* Category & Level */}
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] font-medium text-accent truncate">
             {course.category?.icon} {course.category?.name}
           </span>
-          <Badge variant="outline" className="text-xs capitalize">
+          <Badge variant="outline" className="text-[9px] capitalize px-1 py-0 h-3.5 leading-none shrink-0">
             {displayLevel}
           </Badge>
         </div>
 
         {/* Title */}
-        <h3 className="font-display font-semibold text-card-foreground line-clamp-2 group-hover:text-accent transition-colors">
+        <h3 className="font-display text-xs font-semibold text-card-foreground line-clamp-1 leading-snug group-hover:text-accent transition-colors">
           {displayTitle || course.title}
         </h3>
 
-        {/* Instructor */}
-        {/* <div className="flex items-center gap-2">
-          <img 
-            src={course.instructor?.user?.profileImage} 
-            alt={`${course.instructor?.user?.firstName} ${course.instructor?.user?.lastName}`}
-            className="w-6 h-6 rounded-full object-cover"
-          />
-          <span className="text-sm text-muted-foreground">
-            {course.instructor?.user?.firstName} {course.instructor?.user?.lastName}
+        {/* Compact Stats */}
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-0.5">
+            <Star className="h-2.5 w-2.5 fill-warning text-warning" />
+            {course.averageRating.toFixed(1)}
           </span>
-        </div> */}
-
-        {/* Stats */}
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 fill-warning text-warning" />
-            <span className="font-medium text-foreground">{course.averageRating.toFixed(1)}</span>
-            <span>({course.totalReviews.toLocaleString()})</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            <span>{course.enrollmentCount.toLocaleString()}</span>
-          </div>
-        </div>
-
-        {/* Duration & Lessons */}
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{formatDuration(course.totalDuration)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <BookOpen className="h-3.5 w-3.5" />
-            <span>{course.totalLessons} lessons</span>
-          </div>
+          <span className="flex items-center gap-0.5">
+            <Users className="h-2.5 w-2.5" />
+            {course.enrollmentCount}
+          </span>
+          <span className="flex items-center gap-0.5">
+            <BookOpen className="h-2.5 w-2.5" />
+            {course.totalLessons}
+          </span>
         </div>
 
         {/* Price */}
-        <div className="pt-2 border-t border-border">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-lg font-bold text-foreground">
-              {formatPrice(course.discountPrice || course.price, course.currency)}
+        <div className="flex items-center gap-1">
+          <span className="font-display text-xs font-bold text-foreground">
+            {formatPrice(course.discountPrice || course.price, course.currency)}
+          </span>
+          {course.discountPrice && (
+            <span className="text-[9px] text-muted-foreground line-through">
+              {formatPrice(course.price, course.currency)}
             </span>
-            {course.discountPrice && (
-              <span className="text-sm text-muted-foreground line-through">
-                {formatPrice(course.price, course.currency)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </Link>

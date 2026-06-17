@@ -21,7 +21,7 @@ const TestimonialsSection = () => {
 
   return (
     <section className="py-16 lg:py-24 bg-muted/50">
-      <div className="container">
+      <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="font-display text-3xl lg:text-4xl font-bold text-foreground mb-4">
@@ -32,39 +32,49 @@ const TestimonialsSection = () => {
           </p>
         </div>
 
-        {/* Testimonials Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
+        {/* Testimonials Dynamic Centered Layout Container */}
+        <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto">
           {featuredReviews.map((review) => (
-            <div key={review.id} className="bg-card p-6 rounded-xl shadow-card">
-              {/* Quote Icon */}
-              <Quote className="h-8 w-8 text-accent/30 mb-4" />
+            <div
+              key={review.id}
+              /* w-full: Takes full width on mobile
+                md:w-... Calculates matching width for 2 columns per row on medium viewports 
+                lg:w-... Calculates matching width for 3 columns per row on large viewports
+                flex flex-col justify-between: Ensures even if text length varies, the card footers align perfectly at the bottom edge
+              */
+              className="bg-card p-6 rounded-xl shadow-card w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 flex flex-col justify-between"
+            >
+              <div>
+                {/* Quote Icon */}
+                <Quote className="h-8 w-8 text-accent/30 mb-4" />
 
-              {/* Rating */}
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-4 w-4 ${i < review.rating ? "fill-warning text-warning" : "text-muted"}`}
-                  />
-                ))}
+                {/* Rating */}
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-4 w-4 ${i < review.rating ? "fill-warning text-warning" : "text-muted"}`}
+                    />
+                  ))}
+                </div>
+
+                {/* Content */}
+                <p className="text-card-foreground mb-6 line-clamp-4 italic">
+                  "{review.content}"
+                </p>
               </div>
 
-              {/* Content */}
-              <p className="text-card-foreground mb-6 line-clamp-4">
-                "{review.content}"
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-3 pt-4 border-t border-border">
-                <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center font-semibold text-accent">
+              {/* Author Footer Wrapper */}
+              <div className="flex items-center gap-3 pt-4 border-t border-border mt-auto">
+                <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center font-semibold text-accent shrink-0">
                   {(review.studentName || "L")[0]?.toUpperCase()}
                 </div>
                 <div>
-                  <p className="font-semibold text-card-foreground">
+                  <p className="font-semibold text-card-foreground line-clamp-1">
                     {review.studentName || t("courseDetail.discussion.learner")}
                   </p>
                   {review.title && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground line-clamp-1">
                       {review.title}
                     </p>
                   )}
@@ -72,8 +82,10 @@ const TestimonialsSection = () => {
               </div>
             </div>
           ))}
+
           {featuredReviews.length === 0 && (
-            <div className="md:col-span-3 text-center text-muted-foreground py-8">
+            <div className="w-full text-center text-muted-foreground py-8">
+              {/* Fallback translation or static text */}
               No reviews yet.
             </div>
           )}

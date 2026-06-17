@@ -10,16 +10,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types';
 import { getApiBaseUrl } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  GraduationCap, Eye, EyeOff, Mail, Lock, User,
-  ArrowLeft, Loader2, BookOpen,
-} from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { supportedLngs, languageNames, type Locale } from '@/i18n';
+import { GraduationCap, Eye, EyeOff, Mail, Lock, User, ArrowLeft, Loader2, BookOpen, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const POST_LOGIN_REDIRECT_KEY = 'postLoginRedirect';
 
 const Auth = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const setLanguage = (lng: Locale) => {
+    void i18n.changeLanguage(lng);
+  };
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { login, signup, applyOAuthTokens, user, isLoading } = useAuth();
@@ -182,6 +184,21 @@ const Auth = () => {
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8">
             <ArrowLeft className="h-4 w-4" /> {t('auth.backToHome')}
           </Link>
+          {/* Language toggle */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" title={t('language.english')}>
+                <Globe className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-card">
+              {supportedLngs.map((lng) => (
+                <DropdownMenuItem key={lng} onClick={() => setLanguage(lng)} className={i18n.language?.startsWith(lng) ? 'bg-accent/10' : ''}>
+                  {languageNames[lng]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className="flex items-center gap-2 mb-8">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
@@ -311,7 +328,7 @@ const Auth = () => {
       {/* Right Panel */}
       <div className="hidden lg:block relative flex-1">
         <div className="absolute inset-0 gradient-hero" />
-        <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&h=1600&fit=crop" alt="Students learning" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-40" />
+        <img src="/bete-gubae.png" alt="Students learning" className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-40" />
         <div className="absolute inset-0 flex items-center justify-center p-12">
           <div className="text-center text-primary-foreground max-w-md">
             <h2 className="font-display text-3xl font-bold mb-4">Join 50,000+ learners</h2>

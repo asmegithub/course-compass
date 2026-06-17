@@ -98,9 +98,9 @@ export default {
         shimmer: "shimmer 2s infinite",
       },
       boxShadow: {
-        'card': '0 4px 6px -1px hsl(222 47% 11% / 0.08), 0 2px 4px -2px hsl(222 47% 11% / 0.08)',
-        'card-hover': '0 10px 15px -3px hsl(222 47% 11% / 0.12), 0 4px 6px -4px hsl(222 47% 11% / 0.12)',
-        'glow': '0 0 20px hsl(12 76% 61% / 0.3)',
+        'card': '0 2px 8px -1px hsl(20 25% 12% / 0.08), 0 1px 3px -1px hsl(20 25% 12% / 0.06)',
+        'card-hover': '0 8px 16px -4px hsl(20 25% 12% / 0.12), 0 4px 6px -2px hsl(20 25% 12% / 0.08)',
+        'glow': '0 0 24px hsl(42 78% 48% / 0.35)',
       },
     },
   },

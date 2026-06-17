@@ -145,7 +145,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <aside
         className={cn(
           "fixed lg:sticky top-0 left-0 z-[100] h-screen w-64 text-sidebar-foreground flex flex-col transition-transform duration-300 shadow-xl lg:shadow-card",
-          "bg-[hsl(222,47%,11%)] backdrop-blur-none",
+          "bg-sidebar backdrop-blur-none",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
@@ -189,7 +189,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                   isActive
                     ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-secondary hover:text-accent hover:bg-sidebar-accent",
+                    : "text-sidebar-foreground/70 hover:text-sidebar-primary hover:bg-sidebar-accent",
                 )}
               >
                 <item.icon className="h-4 w-4 shrink-0" />
