@@ -43,6 +43,7 @@ import {
   CheckCircle2,
   X,
   Loader2,
+  Video,
 } from "lucide-react";
 import { formatDuration, formatPrice } from "@/lib/formatters";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -125,11 +126,11 @@ const REFERRAL_COURSE_KEY = "referralCourseId";
 
 const escapeHtml = (value: string) =>
   value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 
 const formatInlineMarkdown = (value: string) => {
   const escaped = escapeHtml(value);
@@ -244,7 +245,7 @@ const CourseDetail = () => {
     : "overview";
   const [activeTab, setActiveTab] = useState<CourseDetailTab>(initialTab);
   const isStudentUser =
-    user?.role === "STUDENT" || user?.role === "ROLE_STUDENT";
+    user?.role === "STUDENT" || (user?.role as string) === "ROLE_STUDENT";
 
   useEffect(() => {
     const nextTab: CourseDetailTab = ALLOWED_TABS.includes(
@@ -292,13 +293,13 @@ const CourseDetail = () => {
 
   const outcomesQuery = useQuery({
     queryKey: ["course-outcomes", course?.id],
-    queryFn: getCourseOutcomes,
+    queryFn: () => getCourseOutcomes(course!.id),
     enabled: Boolean(course?.id),
   });
 
   const requirementsQuery = useQuery({
     queryKey: ["course-requirements", course?.id],
-    queryFn: getCourseRequirements,
+    queryFn: () => getCourseRequirements(course!.id),
     enabled: Boolean(course?.id),
   });
 
@@ -399,9 +400,9 @@ const CourseDetail = () => {
   }, [reviewsQuery.data, course?.id]);
 
   const whatYoullLearn = useMemo<string[]>(() => {
-    const items = (outcomesQuery.data || [])
+    const items = ((outcomesQuery.data as CourseOutcomePayload[]) || [])
       .filter(
-        (outcome: CourseOutcomePayload) => outcome.courseId === course?.id,
+        (outcome) => outcome.courseId === course?.id,
       )
       .sort((a, b) => a.orderIndex - b.orderIndex)
       .map((outcome) => outcome.text)
@@ -410,9 +411,9 @@ const CourseDetail = () => {
   }, [outcomesQuery.data, course?.id]);
 
   const requirements = useMemo<string[]>(() => {
-    const items = (requirementsQuery.data || [])
+    const items = ((requirementsQuery.data as CourseRequirementPayload[]) || [])
       .filter(
-        (requirement: CourseRequirementPayload) =>
+        (requirement) =>
           requirement.courseId === course?.id,
       )
       .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -823,12 +824,17 @@ const CourseDetail = () => {
         )
       : 0;
 
+  const canPreviewAll =
+    isEnrolled ||
+    user?.role === "ADMIN" ||
+    user?.id === course.instructorId;
+
   const firstPreviewLesson = curriculumSections
     .flatMap((section) => section.lessons)
     .find(
       (lesson) =>
         (lesson.type === "VIDEO" || lesson.type === "TEXT") &&
-        (isEnrolled || lesson.isFree),
+        (canPreviewAll || lesson.isFree),
     );
 
   const allPreviewLessons = curriculumSections
@@ -836,7 +842,7 @@ const CourseDetail = () => {
     .filter(
       (lesson) =>
         (lesson.type === "VIDEO" || lesson.type === "TEXT") &&
-        (isEnrolled || lesson.isFree),
+        (canPreviewAll || lesson.isFree),
     );
   const selectedPreviewLesson =
     allPreviewLessons.find((lesson) => lesson.id === selectedPreviewLessonId) ||
@@ -1064,9 +1070,7 @@ const CourseDetail = () => {
                     <span className="text-primary-foreground/70">
                       (
                       {t("courseDetail.reviews.reviewsCount", {
-                        count: Number(
-                          course.totalReviews ?? 0,
-                        ).toLocaleString(),
+                        count: Number(course.totalReviews ?? 0),
                       })}
                       )
                     </span>
@@ -1074,9 +1078,7 @@ const CourseDetail = () => {
                   <span className="text-primary-foreground/50">•</span>
                   <span>
                     {t("courseDetail.instructor.studentsLabel", {
-                      count: Number(
-                        course.enrollmentCount ?? 0,
-                      ).toLocaleString(),
+                      count: Number(course.enrollmentCount ?? 0),
                     })}
                   </span>
                 </div>
@@ -1084,7 +1086,7 @@ const CourseDetail = () => {
                 <div className="flex items-center gap-4">
                   {course.instructor?.user?.profileImage ? (
                     <img
-                      src={course.instructor.user.profileImage}
+                      src={course.instructor?.user?.profileImage}
                       alt={instructorFullName}
                       className="h-12 w-12 rounded-full object-cover"
                     />
@@ -1335,14 +1337,22 @@ const CourseDetail = () => {
                 )}
             </div>
             {isEnrolled ? (
-              <Button variant="accent" className="flex-1" asChild>
-                <Link to={learnHref}>
-                  <Play className="h-4 w-4 mr-2" />{" "}
-                  {resumeLessonId
-                    ? t("courseDetail.actions.resumeLearning")
-                    : t("courseDetail.actions.continueLearning")}
-                </Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                <Button variant="accent" className="flex-1" asChild>
+                  <Link to={learnHref}>
+                    <Play className="h-4 w-4 mr-2" />{" "}
+                    {resumeLessonId
+                      ? t("courseDetail.actions.resumeLearning")
+                      : t("courseDetail.actions.continueLearning")}
+                  </Link>
+                </Button>
+                <Button variant="outline" className="flex-1" asChild>
+                  <Link to={`/live/${course.id}`}>
+                    <Video className="h-4 w-4 mr-2" />{" "}
+                    Join Live Class
+                  </Link>
+                </Button>
+              </div>
             ) : canDisplayEnrollCta ? (
               <Button
                 variant="accent"
@@ -1477,7 +1487,7 @@ const CourseDetail = () => {
                         <ul className="space-y-1">
                           {section.lessons.map((lesson) => {
                             const isPreviewable =
-                              (isEnrolled || lesson.isFree) &&
+                              (canPreviewAll || lesson.isFree) &&
                               (lesson.type === "VIDEO" ||
                                 lesson.type === "TEXT");
                             const isActive =
@@ -1519,7 +1529,7 @@ const CourseDetail = () => {
                                         lesson.duration,
                                       )}
                                     </span>
-                                    {!isEnrolled && !lesson.isFree && (
+                                    {!canPreviewAll && !lesson.isFree && (
                                       <Lock className="h-3 w-3 text-muted-foreground" />
                                     )}
                                     {isPreviewable && (
@@ -1653,7 +1663,7 @@ const CourseDetail = () => {
                         <Users className="h-4 w-4" />
                         <span>
                           {t("courseDetail.instructor.studentsLabel", {
-                            count: instructorTotalStudents.toLocaleString(),
+                            count: Number(instructorTotalStudents),
                           })}
                         </span>
                       </div>
@@ -1661,7 +1671,7 @@ const CourseDetail = () => {
                         <BookOpen className="h-4 w-4" />
                         <span>
                           {t("courseDetail.instructor.coursesLabel", {
-                            count: instructorTotalCourses.toLocaleString(),
+                            count: Number(instructorTotalCourses),
                           })}
                         </span>
                       </div>
@@ -1815,9 +1825,7 @@ const CourseDetail = () => {
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {t("courseDetail.reviews.reviewsCount", {
-                        count: Number(
-                          course.totalReviews ?? 0,
-                        ).toLocaleString(),
+                        count: Number(course.totalReviews ?? 0),
                       })}
                     </p>
                   </div>

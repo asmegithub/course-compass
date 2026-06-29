@@ -1695,8 +1695,13 @@ const InstructorCourseCreate = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.icon} {cat.name}
+                           <SelectItem key={cat.id} value={cat.id}>
+                            <span className="inline-flex items-center gap-2">
+                              <span className="flex h-5 w-5 items-center justify-center shrink-0">
+                                <img src="/icon.ico" className="h-4 w-4 object-contain" alt="" />
+                              </span>
+                              <span>{cat.name}</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>

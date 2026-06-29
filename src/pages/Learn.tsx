@@ -20,6 +20,7 @@ import {
   BookmarkPlus,
   Bookmark,
   Trash2,
+  Video,
 } from "lucide-react";
 import { formatDuration } from "@/lib/formatters";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -441,17 +442,43 @@ const Learn = () => {
   });
 
   const curriculumSections = useMemo(() => {
-    const sections = sectionsQuery.data || [];
-    const lessons = lessonsQuery.data || [];
-    return sections
-      .sort((a, b) => a.orderIndex - b.orderIndex)
-      .map((section) => ({
-        ...section,
-        lessons: lessons
-          .filter((l) => l.sectionId === section.id)
-          .sort((a, b) => a.orderIndex - b.orderIndex),
-      }));
-  }, [sectionsQuery.data, lessonsQuery.data]);
+    if (!course?.id) return [];
+
+    const allSections = sectionsQuery.data || [];
+    const allLessons = lessonsQuery.data || [];
+    const lessonSectionIds = new Set(
+      allLessons.map((lesson) => lesson.sectionId).filter(Boolean),
+    );
+    const courseSections = allSections.filter(
+      (section) => section.courseId === course.id,
+    );
+    const inferredSections = allSections.filter((section) =>
+      lessonSectionIds.has(section.id),
+    );
+    const sectionsToUse = (
+      courseSections.length > 0 ? courseSections : inferredSections
+    ).sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // If there are lessons but NO sections at all, we create a default section
+    if (sectionsToUse.length === 0 && allLessons.length > 0) {
+      return [
+        {
+          id: "default-section",
+          title: "Course Content",
+          courseId: course.id,
+          orderIndex: 0,
+          lessons: allLessons.sort((a, b) => a.orderIndex - b.orderIndex),
+        }
+      ];
+    }
+
+    return sectionsToUse.map((section) => ({
+      ...section,
+      lessons: allLessons
+        .filter((l) => l.sectionId === section.id)
+        .sort((a, b) => a.orderIndex - b.orderIndex),
+    }));
+  }, [sectionsQuery.data, lessonsQuery.data, course?.id]);
 
   const completedLessonIds = useMemo(
     () =>
@@ -741,7 +768,20 @@ const Learn = () => {
               · {Math.round(progressPercent)}% complete
             </p>
           </div>
-          <Progress value={progressPercent} className="w-24 sm:w-32 h-2" />
+          <div className="flex items-center gap-3">
+            <Button variant="accent" size="sm" asChild className="hidden sm:flex">
+              <Link to={`/live/${course.id}`}>
+                <Video className="h-4 w-4 mr-2" />
+                Join Live Class
+              </Link>
+            </Button>
+            <Button variant="accent" size="icon" asChild className="sm:hidden">
+              <Link to={`/live/${course.id}`}>
+                <Video className="h-4 w-4" />
+              </Link>
+            </Button>
+            <Progress value={progressPercent} className="w-24 sm:w-32 h-2" />
+          </div>
         </div>
       </header>
 

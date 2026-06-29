@@ -13,6 +13,7 @@ import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import Learn from "./pages/Learn";
 import Auth from "./pages/Auth";
+import LiveClass from "./pages/LiveClass";
 import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
 import Cart from "./pages/Cart";
@@ -98,6 +99,11 @@ const AppRoutes = () => (
     />
     <Route path="/courses/:slug/learn" element={<Learn />} />
     <Route path="/auth" element={<Auth />} />
+    <Route path="/live/:courseId" element={
+      <ProtectedRoute allowedRoles={["STUDENT", "INSTRUCTOR", "ADMIN"]}>
+        <LiveClass />
+      </ProtectedRoute>
+    } />
     <Route path="/referrals" element={<Referrals />} />
 
     {/* Student routes */}

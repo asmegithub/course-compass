@@ -507,7 +507,9 @@ const Courses = () => {
                         }
                         className="sr-only"
                       />
-                      <span>{cat.icon}</span>
+                       <span className="flex h-5 w-5 items-center justify-center shrink-0">
+                        <img src="/icon.ico" className="h-4 w-4 object-contain" alt="" />
+                      </span>
                       <span className="text-sm">
                         {getLocalizedCategoryName(cat, currentLang)}
                       </span>

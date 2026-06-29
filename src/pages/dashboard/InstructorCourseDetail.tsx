@@ -15,6 +15,7 @@ import {
   getDiscussionReplies,
   createDiscussionReply,
   getLessons,
+  getCourseSections,
   type ReviewPayload,
   type LessonDiscussionPayload,
   type DiscussionReplyPayload,
@@ -23,7 +24,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import {
   ArrowLeft, Star, Users, DollarSign, BookOpen, MessageSquare,
-  Send, BarChart3, Loader2,
+  Send, BarChart3, Loader2, Video,
 } from 'lucide-react';
 
 const InstructorCourseDetail = () => {
@@ -52,6 +53,12 @@ const InstructorCourseDetail = () => {
     enabled: Boolean(courseId),
   });
 
+  const sectionsQuery = useQuery({
+    queryKey: ['course-sections', courseId],
+    queryFn: () => getCourseSections(courseId!),
+    enabled: Boolean(courseId),
+  });
+
   const discussionsQuery = useQuery({
     queryKey: ['lesson-discussions'],
     queryFn: getLessonDiscussions,
@@ -67,11 +74,24 @@ const InstructorCourseDetail = () => {
   const course = courseQuery.data;
   const allReviews = reviewsQuery.data ?? [];
   const allLessons = lessonsQuery.data ?? [];
+  const allSections = sectionsQuery.data ?? [];
   const allDiscussions = discussionsQuery.data ?? [];
   const allReplies = repliesQuery.data ?? [];
 
   const courseLessonIds = useMemo(() => new Set(allLessons.map((l) => l.id)), [allLessons]);
   const lessonsById = useMemo(() => Object.fromEntries(allLessons.map((l) => [l.id, l])), [allLessons]);
+
+  const courseSections = useMemo(() => {
+    return allSections
+      .filter((s) => s.courseId === courseId)
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((s) => ({
+        ...s,
+        lessons: allLessons
+          .filter((l) => l.sectionId === s.id)
+          .sort((a, b) => a.orderIndex - b.orderIndex),
+      }));
+  }, [allSections, allLessons, courseId]);
 
   const displayReviews = useMemo(
     () => (course ? allReviews.filter((r) => r.courseId === course.id) : []),
@@ -180,6 +200,10 @@ const InstructorCourseDetail = () => {
               <Badge variant={course.status === 'PUBLISHED' ? 'default' : 'secondary'}>
                 {course.status ?? 'DRAFT'}
               </Badge>
+              <div className="flex-1" />
+              <Button onClick={() => navigate(`/live/${course.id}`)} variant="accent" size="sm" className="ml-auto">
+                <Video className="w-4 h-4 mr-2" /> Start Live Class
+              </Button>
             </div>
             <p className="text-muted-foreground text-sm mt-1">{course.description ?? ''}</p>
           </div>
@@ -266,6 +290,40 @@ const InstructorCourseDetail = () => {
                 </CardContent>
               </Card>
             </div>
+
+            <Card className="mt-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Course Curriculum</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {courseSections.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No curriculum available.</p>
+                )}
+                {courseSections.map((section, idx) => (
+                  <div key={section.id} className="border rounded-md p-4 space-y-3">
+                    <h3 className="font-semibold text-sm">
+                      Section {idx + 1}: {section.title}
+                    </h3>
+                    <div className="space-y-2 pl-4 border-l-2 border-muted">
+                      {section.lessons.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No lessons in this section.</p>
+                      )}
+                      {section.lessons.map((lesson, lIdx) => (
+                        <div key={lesson.id} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">{lIdx + 1}.</span>
+                            <span>{lesson.title}</span>
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">
+                            {lesson.type}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="reviews" className="mt-6 space-y-6">

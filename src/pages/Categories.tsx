@@ -142,8 +142,8 @@ const Categories = () => {
                     <Card className="h-full overflow-hidden border-border/60 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-xl">
                       <CardContent className="p-6 space-y-4">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-3xl">
-                            {category.icon || "📚"}
+                          <div className="flex h-24 w-48 items-center justify-center rounded-2xl bg-primary/10 text-3xl p-2 shrink-0">
+                            <img src="/icon.ico" className="h-20 w-40 object-contain" alt="" />
                           </div>
                           <div className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
                             {count} courses

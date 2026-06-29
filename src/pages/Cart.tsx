@@ -136,7 +136,7 @@ const Cart = () => {
 
   const currency = cartCourses[0]?.currency ?? 'ETB';
 
-  const isStudent = isLoggedIn && (user?.role === 'STUDENT' || user?.role === 'ROLE_STUDENT');
+  const isStudent = isLoggedIn && (user?.role === 'STUDENT' || (user?.role as string) === 'ROLE_STUDENT');
 
   if (!isLoggedIn) {
     return (

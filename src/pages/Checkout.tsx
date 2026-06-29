@@ -76,7 +76,7 @@ const Checkout = () => {
     ? courseByIdQuery.data
     : coursesQuery.data?.find((c) => c.slug === slugValue);
   const isStudent =
-    isLoggedIn && (user?.role === "STUDENT" || user?.role === "ROLE_STUDENT");
+    isLoggedIn && (user?.role === "STUDENT" || (user?.role as string) === "ROLE_STUDENT");
 
   const referralBalanceQuery = useQuery({
     queryKey: ["referral-balance"],

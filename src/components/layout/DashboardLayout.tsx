@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -104,6 +104,26 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Persist and restore sidebar scroll position so it doesn't jump to top on navigation
+  const NAV_SCROLL_KEY = `sidebar-scroll-${user?.role ?? 'unknown'}`;
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    // Restore saved position
+    const saved = sessionStorage.getItem(NAV_SCROLL_KEY);
+    if (saved) {
+      nav.scrollTop = Number(saved);
+    }
+    // Save position on every scroll
+    const handleScroll = () => {
+      sessionStorage.setItem(NAV_SCROLL_KEY, String(nav.scrollTop));
+    };
+    nav.addEventListener('scroll', handleScroll, { passive: true });
+    return () => nav.removeEventListener('scroll', handleScroll);
+  }, [location.pathname, NAV_SCROLL_KEY]);
   const unreadCountQuery = useQuery({
     queryKey: ["notification-unread-count", user?.id],
     queryFn: getNotificationUnreadCount,
@@ -176,7 +196,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
 
         {/* Nav items */}
-        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+        <nav ref={navRef} className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (

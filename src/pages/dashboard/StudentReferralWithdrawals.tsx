@@ -29,7 +29,7 @@ const parseFields = (fieldsJson?: string): MethodField[] => {
     const parsed = JSON.parse(fieldsJson);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((f) => ({
+      .map((f): MethodField => ({
         key: String(f.key ?? ''),
         label: String(f.label ?? ''),
         required: Boolean(f.required),

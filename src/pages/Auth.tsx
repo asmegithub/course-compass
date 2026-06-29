@@ -64,7 +64,7 @@ const Auth = () => {
       ? candidateRedirect
       : null;
     const role = user.role;
-    const normalizedRole = role === 'ROLE_ADMIN' ? 'ADMIN' : role;
+    const normalizedRole = (role as string) === 'ROLE_ADMIN' ? 'ADMIN' : role;
     const dest = safeRedirect || (normalizedRole === 'ADMIN' ? '/admin' : normalizedRole === 'INSTRUCTOR' ? '/instructor' : '/dashboard');
     try {
       localStorage.removeItem(POST_LOGIN_REDIRECT_KEY);

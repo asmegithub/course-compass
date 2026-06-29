@@ -148,7 +148,9 @@ const AdminCategories = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{c.icon || '📚'}</span>
+                    <div className="flex h-10 w-10 items-center justify-center text-2xl shrink-0 bg-stone-100 rounded-lg p-1">
+                      <img src="/icon.ico" className="h-7 w-7 object-contain" alt="" />
+                    </div>
                     <div>
                       <p className="font-medium">{c.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -178,7 +180,7 @@ const AdminCategories = () => {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Name (English)</Label><Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} /></div>
-                <div><Label>Icon (emoji)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="💻" /></div>
+                <div><Label>Icon (emoji or image path)</Label><Input value={form.icon} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))} placeholder="💻 or /icon.ico" /></div>
               </div>
               <div><Label>Name (Amharic)</Label><Input value={form.nameAm} onChange={e => setForm(f => ({ ...f, nameAm: e.target.value }))} /></div>
               <div><Label>Name (Afaan Oromoo)</Label><Input value={form.nameOm} onChange={e => setForm(f => ({ ...f, nameOm: e.target.value }))} /></div>

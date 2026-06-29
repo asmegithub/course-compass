@@ -8,13 +8,104 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet, Star } from 'lucide-react';
+import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet, Star, Plus, Trash } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { enableAdminPushNotifications, getAdminPushStatus, sendAdminTestPush } from '@/lib/push-api';
 import { createPaymentAccount, createSystemSetting, deletePaymentAccount, getPaymentAccounts, getSystemSettings, PaymentAccount, setCourseFeatured, updatePaymentAccount, updateSystemSetting } from '@/lib/admin-api';
 import { createPayoutMethodOption, deletePayoutMethodOption, getPayoutMethodOptions, PayoutMethodOption, updatePayoutMethodOption } from '@/lib/admin-api';
 import { getCourses } from '@/lib/course-api';
 import type { Course } from '@/types';
+
+const PayoutFieldsEditor = ({ value, onSave }: { value: string; onSave: (v: string) => void }) => {
+  const [fields, setFields] = useState<any[]>(() => {
+    try { return JSON.parse(value || '[]'); } catch { return []; }
+  });
+
+  useEffect(() => {
+    try {
+      const parsed = JSON.parse(value || '[]');
+      if (JSON.stringify(parsed) !== JSON.stringify(fields)) {
+        setFields(parsed);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const updateField = (index: number, updates: any) => {
+    const newFields = [...fields];
+    newFields[index] = { ...newFields[index], ...updates };
+    setFields(newFields);
+  };
+  
+  const handleBlur = () => {
+    onSave(JSON.stringify(fields));
+  };
+
+  const addField = () => {
+    const newFields = [...fields, { key: '', label: '', required: false }];
+    setFields(newFields);
+    onSave(JSON.stringify(newFields));
+  };
+
+  const removeField = (index: number) => {
+    const newFields = fields.filter((_: any, i: number) => i !== index);
+    setFields(newFields);
+    onSave(JSON.stringify(newFields));
+  };
+
+  const handleSwitchChange = (index: number, v: boolean) => {
+    const newFields = [...fields];
+    newFields[index] = { ...newFields[index], required: v };
+    setFields(newFields);
+    onSave(JSON.stringify(newFields));
+  };
+
+  return (
+    <div className="space-y-3">
+      {fields.map((f: any, i: number) => (
+        <div key={i} className="flex items-start gap-3 bg-muted/30 p-3 rounded-md border">
+          <div className="flex-1 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Field Key (internal)</Label>
+                <Input 
+                  value={f.key || ''} 
+                  onChange={e => updateField(i, { key: e.target.value })} 
+                  onBlur={handleBlur}
+                  placeholder="e.g. accountNumber" 
+                  className="h-8 text-sm bg-background" 
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Display Label</Label>
+                <Input 
+                  value={f.label || ''} 
+                  onChange={e => updateField(i, { label: e.target.value })} 
+                  onBlur={handleBlur}
+                  placeholder="e.g. Account Number" 
+                  className="h-8 text-sm bg-background" 
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch 
+                checked={Boolean(f.required)} 
+                onCheckedChange={v => handleSwitchChange(i, v)} 
+              />
+              <span className="text-xs text-muted-foreground">Required field</span>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => removeField(i)} className="text-destructive shrink-0 h-8 w-8">
+            <Trash className="h-4 w-4" />
+          </Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={addField} className="gap-1">
+        <Plus className="h-4 w-4" /> Add Field
+      </Button>
+    </div>
+  );
+};
 
 const AdminSettings = () => {
   const { toast } = useToast();
@@ -629,7 +720,8 @@ const AdminSettings = () => {
                   Configure system-wide payout methods that instructors can choose from when requesting withdrawals.
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
+                  <h3 className="font-medium text-sm">Add New Payout Method</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label>Name</Label>
@@ -637,15 +729,28 @@ const AdminSettings = () => {
                     </div>
                     <div>
                       <Label>Type</Label>
-                      <Input value={newPayoutMethod.type ?? ''} onChange={e => setNewPayoutMethod(m => ({ ...m, type: e.target.value }))} placeholder="e.g. TELEBIRR" />
+                      <Select value={newPayoutMethod.type ?? 'BANK_TRANSFER'} onValueChange={v => setNewPayoutMethod(m => ({ ...m, type: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
+                          <SelectItem value="TELEBIRR">Telebirr</SelectItem>
+                          <SelectItem value="CHAPA">Chapa</SelectItem>
+                          <SelectItem value="WALLET">Mobile Wallet</SelectItem>
+                          <SelectItem value="OTHER">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                   <div>
-                    <Label>Fields JSON</Label>
-                    <Input value={newPayoutMethod.fieldsJson ?? ''} onChange={e => setNewPayoutMethod(m => ({ ...m, fieldsJson: e.target.value }))} placeholder='[{"key":"phone","label":"Phone","required":true}]' />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Provide a JSON array of fields with {`key,label,required,placeholder,type`}. (UI uses this to render the form.)
-                    </p>
+                    <Label>Description (optional)</Label>
+                    <Input value={(newPayoutMethod as any).description ?? ''} onChange={e => setNewPayoutMethod(m => ({ ...m, description: e.target.value }))} placeholder="e.g. mobile number or merchant ID" />
+                  </div>
+                  <div>
+                    <Label className="mb-2 block">Method Fields</Label>
+                    <PayoutFieldsEditor 
+                      value={newPayoutMethod.fieldsJson ?? ''}
+                      onSave={v => setNewPayoutMethod(m => ({ ...m, fieldsJson: v }))}
+                    />
                   </div>
                   <div className="flex gap-2">
                     <Button variant="accent" disabled={createPayoutMethodMutation.isPending || !newPayoutMethod.name || !newPayoutMethod.type} onClick={() => createPayoutMethodMutation.mutate(newPayoutMethod)}>
@@ -669,13 +774,18 @@ const AdminSettings = () => {
 
                   <div className="space-y-3">
                     {payoutMethods.map((m) => (
-                      <div key={m.id} className="rounded-lg border p-4 space-y-3">
+                      <div key={m.id} className="rounded-lg border p-4 space-y-4">
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium">{m.name}</p>
-                            <p className="text-xs text-muted-foreground">{m.type}</p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{m.name}</p>
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${(m.isActive ?? true) ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-muted text-muted-foreground'}`}>
+                                {(m.isActive ?? true) ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{m.type}{(m as any).description ? ` · ${(m as any).description}` : ''}</p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 shrink-0">
                             <Button
                               variant="outline"
                               size="sm"
@@ -696,10 +806,10 @@ const AdminSettings = () => {
                         </div>
 
                         <div>
-                          <Label className="text-xs">Fields JSON</Label>
-                          <Input
-                            defaultValue={m.fieldsJson ?? ''}
-                            onBlur={(e) => updatePayoutMethodMutation.mutate({ id: m.id, data: { fieldsJson: e.target.value } })}
+                          <Label className="text-xs mb-2 block">Method Fields</Label>
+                          <PayoutFieldsEditor 
+                            value={m.fieldsJson ?? ''}
+                            onSave={(v) => updatePayoutMethodMutation.mutate({ id: m.id, data: { fieldsJson: v } })}
                           />
                         </div>
                       </div>
