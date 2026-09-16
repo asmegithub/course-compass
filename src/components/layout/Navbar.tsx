@@ -14,13 +14,16 @@ import {
 import { 
   Search, Menu, X, GraduationCap, ShoppingCart, Bell, User,
   BookOpen, Heart, LogOut, Settings, Globe, BarChart3, ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supportedLngs, languageNames, type Locale } from '@/i18n';
+import StudentProfileEnrollmentDialog from '@/components/enrollment/StudentProfileEnrollmentDialog';
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
   const { user, isLoggedIn, logout } = useAuth();
@@ -150,9 +153,14 @@ const Navbar = () => {
                     </Link>
                   </DropdownMenuItem>
                   {user?.role === 'STUDENT' && (
-                    <DropdownMenuItem asChild>
-                      <Link to="/dashboard/wishlist" className="flex items-center gap-2"><Heart className="h-4 w-4" /> {t('common.wishlist')}</Link>
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={() => setShowProfileDialog(true)} className="flex items-center gap-2 cursor-pointer">
+                        <UserCheck className="h-4 w-4" /> የተማሪ መረጃ (Student Profile)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard/wishlist" className="flex items-center gap-2"><Heart className="h-4 w-4" /> {t('common.wishlist')}</Link>
+                      </DropdownMenuItem>
+                    </>
                   )}
                   {user?.role === 'INSTRUCTOR' && (
                     <DropdownMenuItem asChild>
@@ -206,6 +214,15 @@ const Navbar = () => {
           </nav>
         </div>
       </div>
+
+      {/* Student Profile Dialog - accessible from user dropdown */}
+      {user?.role === 'STUDENT' && (
+        <StudentProfileEnrollmentDialog
+          open={showProfileDialog}
+          onOpenChange={setShowProfileDialog}
+          onComplete={() => {}}
+        />
+      )}
     </header>
   );
 };

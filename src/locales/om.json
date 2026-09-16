@@ -65,7 +65,18 @@
     "student": "Baraataa",
     "instructor": "Barsiisaa",
     "studentDesc": "Barsi adeemsi",
-    "instructorDesc": "Barsiisi faayidaa argadhaa"
+    "instructorDesc": "Barsiisi faayidaa argadhaa",
+    "bannerTitle": "Baraataa 50,000+ waliin Makaa",
+    "bannerSubtitle": "Barsiisotaa beektoota irraa beekumsa barbaachisumaa qabu baradhaa. Sertifikeetii argadhaa fi karriraa keessan jijjiradhaa.",
+    "parentInfo": "Oodeeffannoo Maatii / Guddiftuu",
+    "optional": "Filannoo",
+    "parentInfoDesc": "Maatiin ykn guddiftoonni keessan abbootii qabeenyaa fi barsiisota koorsii waliin kallattiin akka wal qunnaman taasisa.",
+    "parentName": "Maqaa Maatii / Guddiftuu",
+    "parentEmail": "Imeelii Maatii",
+    "parentPhone": "Bilbila Maatii",
+    "parentRelationship": "Firooma",
+    "churchProfile": "Oodeeffannoo Qeesummaa fi Sadarkaa Barumsaa",
+    "churchProfileDesc": "Hordoffii barumsaa, galmee lubummaa fi waraqaa ragaa qopheessuuf odeeffannoo filannoo."
   },
   "home": {
     "heroTitle": "Dandeettii Keessan Baafadhaa",

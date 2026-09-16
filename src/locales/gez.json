@@ -65,7 +65,18 @@
     "student": "ተማሪ",
     "instructor": "አስተማሪ",
     "studentDesc": "ይማሩ እና ያድጉ",
-    "instructorDesc": "ይስብዙ እና ይግኙ"
+    "instructorDesc": "ይስብዙ እና ይግኙ",
+    "bannerTitle": "ምስለ 50,000+ አዕሩክ ተማሀሩ",
+    "bannerSubtitle": "ከዕውቅ ሊቃውንት ዘንድ የአብነት ትምህርትን፣ የቤተክርስቲያን ዜማዎችንና ሥርዓታትን ይማሩ። ሰርተፍኬት ያግኙ።",
+    "parentInfo": "ዜና ወላዲ / ሞግዚት",
+    "optional": "አማራጭ",
+    "parentInfoDesc": "ወላዲክሙ ወእለ ይትፌነዉ ምስለ ሊቃውንት ወመምህራን ይትዛረቡ ዘንድ ይረድእ።",
+    "parentName": "ስመ ወላዲ / ሞግዚት",
+    "parentEmail": "ኢሜይል ወላዲ",
+    "parentPhone": "ቍጽረ ስልክ ወላዲ",
+    "parentRelationship": "ዝምድና",
+    "churchProfile": "ዜና ክህነት ወደረጃ ትምህርት",
+    "churchProfileDesc": "ለተዘክሮ ትምህርት ወክህነት ወለጽሑፈ ምስክር ዘይጠቅም አማራጭ ዜና።"
   },
   "home": {
     "heroTitle": "ትምህርተ ቤተክርስቲያን በ",

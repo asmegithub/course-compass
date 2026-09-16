@@ -43,12 +43,12 @@ const CategoriesSection = () => {
               to={`/courses?category=${category.slug}`}
               className="group flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 w-full sm:w-44 h-44 shrink-0 border border-stone-100"
             >
-              <div className="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-24 w-48">
+              {/* <div className="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300 flex items-center justify-center h-24 w-48">
                 <img src="/icon.ico" className="h-24 w-auto object-contain" alt="" />
-              </div>
-              {/* <div className="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">
-                {category.icon || '📚'} */}
-
+              </div> */}
+              <div className="text-4xl mb-3 transform group-hover:scale-110 transition-transform duration-300">
+                {category.icon || '📚'}
+                </div>
               <h3 className="font-semibold text-stone-800 text-center text-base leading-tight group-hover:text-amber-600 transition-colors px-2 line-clamp-2">
                 {category.name}
               </h3>

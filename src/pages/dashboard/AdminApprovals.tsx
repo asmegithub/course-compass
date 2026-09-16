@@ -14,6 +14,7 @@ import {
   Eye, CheckCircle2, XCircle, Clock, BookOpen,
   FileText, PlayCircle, Lock, Check,
 } from 'lucide-react';
+import SecureVideoPlayer from '@/components/security/SecureVideoPlayer';
 
 const escapeHtml = (value: string) =>
   value
@@ -102,6 +103,7 @@ const AdminApprovals = () => {
   const [reviewCourseId, setReviewCourseId] = useState<string | null>(null);
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [previewVideoLesson, setPreviewVideoLesson] = useState<{ title: string; videoUrl: string } | null>(null);
   const { toast } = useToast();
 
   const courses = coursesQuery.data || [];
@@ -395,8 +397,17 @@ const AdminApprovals = () => {
                                         )}
                                         {lesson.isPublished && <Check className="h-3 w-3 text-success" />}
                                         {lesson.videoUrl && lesson.type === 'VIDEO' && (
-                                          <Button variant="outline" size="sm" asChild>
-                                            <a href={lesson.videoUrl} target="_blank" rel="noreferrer">Preview</a>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() =>
+                                              setPreviewVideoLesson({
+                                                title: lesson.title,
+                                                videoUrl: lesson.videoUrl!,
+                                              })
+                                            }
+                                          >
+                                            Preview
                                           </Button>
                                         )}
                                         {lesson.documentUrl && lesson.type === 'DOCUMENT' && (
@@ -455,6 +466,25 @@ const AdminApprovals = () => {
               <Button variant="outline" onClick={() => { setRejectDialogId(null); setRejectionReason(''); }}>Cancel</Button>
               <Button variant="destructive" onClick={handleReject} disabled={!rejectionReason.trim()}>Submit Rejection</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Secure Video Preview Modal */}
+        <Dialog open={Boolean(previewVideoLesson)} onOpenChange={(open) => !open && setPreviewVideoLesson(null)}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black text-white">
+            <DialogHeader className="p-4 bg-background text-foreground border-b">
+              <DialogTitle>{previewVideoLesson?.title || 'Lesson Video Preview'}</DialogTitle>
+            </DialogHeader>
+            <div className="aspect-video w-full">
+              {previewVideoLesson && (
+                <SecureVideoPlayer
+                  src={previewVideoLesson.videoUrl}
+                  className="w-full h-full"
+                  showWatermark={true}
+                  watermarkText="Admin Review Preview"
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </div>

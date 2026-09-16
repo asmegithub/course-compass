@@ -84,6 +84,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useContentProtection } from "@/hooks/use-content-protection";
 import ContentProtectionOverlay from "@/components/security/ContentProtectionOverlay";
 import SecureVideoPlayer from "@/components/security/SecureVideoPlayer";
+import StudentProfileEnrollmentDialog from "@/components/enrollment/StudentProfileEnrollmentDialog";
+import { getStudentProfile } from "@/lib/student-profile";
 
 const POST_LOGIN_REDIRECT_KEY = "postLoginRedirect";
 const ALLOWED_TABS = [
@@ -477,9 +479,10 @@ const CourseDetail = () => {
   const [reviewTitle, setReviewTitle] = useState("");
   const [reviewContent, setReviewContent] = useState("");
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [showEnrollProfileDialog, setShowEnrollProfileDialog] = useState(false);
   const { isContentObscured, isDevtoolsOpen } = useContentProtection({
     enabled: true,
-    detectDevtools: true,
+    detectDevtools: false,
     blockPrint: true,
     blockSelection: true,
   });
@@ -804,19 +807,6 @@ const CourseDetail = () => {
     return <LoadingScreen />;
   }
 
-  if (
-    isLoggedIn &&
-    user?.role === "STUDENT" &&
-    myEnrollmentQuery.isSuccess &&
-    myEnrollmentQuery.data?.id
-  ) {
-    const resumeLessonId = myEnrollmentQuery.data?.lastAccessedLessonId;
-    const redirectTo = resumeLessonId
-      ? `/courses/${slugValue}/learn?lesson=${encodeURIComponent(resumeLessonId)}`
-      : `/courses/${slugValue}/learn`;
-    return <Navigate to={redirectTo} replace />;
-  }
-
   const discount =
     course.discountPrice != null && Number(course.price) > 0
       ? Math.round(
@@ -870,6 +860,10 @@ const CourseDetail = () => {
     ? `/courses/${slugValue}/learn?lesson=${encodeURIComponent(resumeLessonId)}`
     : `/courses/${slugValue}/learn`;
 
+  const proceedToCheckout = () => {
+    navigate(`/courses/${slugValue}/checkout${location.search}`);
+  };
+
   const handleEnroll = () => {
     if (!isLoggedIn) {
       const redirectTo = `${location.pathname}/checkout${location.search}`;
@@ -891,7 +885,13 @@ const CourseDetail = () => {
       return;
     }
 
-    navigate(`/courses/${slugValue}/checkout${location.search}`);
+    const savedProfile = user?.id ? getStudentProfile(user.id) : null;
+    if (!savedProfile) {
+      setShowEnrollProfileDialog(true);
+      return;
+    }
+
+    proceedToCheckout();
   };
 
   const handleAddToCart = () => {
@@ -1216,14 +1216,14 @@ const CourseDetail = () => {
                               : t("courseDetail.actions.continueLearning")}
                           </Link>
                         </Button>
-                        <Button
+                        {/* <Button
                           variant="outline"
                           className="w-full text-destructive hover:text-destructive"
                           onClick={handleUnenroll}
                           disabled={unenrollMutation.isPending}
                         >
                           {t("courseDetail.actions.unenroll")}
-                        </Button>
+                        </Button> */}
                       </>
                     ) : (
                       <>
@@ -1254,7 +1254,7 @@ const CourseDetail = () => {
                     </p> */}
 
                     {/* Quick Info */}
-                    <div className="space-y-3 pt-4 border-t">
+                    {/* <div className="space-y-3 pt-4 border-t">
                       <h4 className="font-semibold">
                         {t("courseDetail.includes.title")}
                       </h4>
@@ -1280,7 +1280,7 @@ const CourseDetail = () => {
                           {t("courseDetail.includes.certificate")}
                         </li>
                       </ul>
-                    </div>
+                    </div> */}
 
                     {/* Actions */}
                     <div className="flex gap-2 pt-4 border-t">
@@ -2136,6 +2136,15 @@ const CourseDetail = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Student Profile Enrollment Dialog */}
+      <StudentProfileEnrollmentDialog
+        open={showEnrollProfileDialog}
+        onOpenChange={setShowEnrollProfileDialog}
+        onComplete={() => {
+          proceedToCheckout();
+        }}
+      />
 
       <Footer />
     </div>

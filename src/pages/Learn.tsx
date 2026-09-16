@@ -11,6 +11,9 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChevronLeft,
+  ChevronRight,
+  PanelLeftOpen,
+  PanelLeftClose,
   Check,
   Play,
   FileText,
@@ -21,6 +24,7 @@ import {
   Bookmark,
   Trash2,
   Video,
+  MessageSquare,
 } from "lucide-react";
 import { formatDuration } from "@/lib/formatters";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +64,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { getApiBaseUrl } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import SecureVideoPlayer from "@/components/security/SecureVideoPlayer";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -160,6 +166,7 @@ const Learn = () => {
   const requestedLessonId = searchParams.get("lesson");
 
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quizSelections, setQuizSelections] = useState<Record<string, string>>(
     {},
   );
@@ -751,42 +758,69 @@ const Learn = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b border-border bg-card shrink-0">
-        <div className="container flex h-14 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to={`/courses/${slugValue}`}>
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="font-semibold truncate text-sm sm:text-base">
-              {course.title}
-            </h1>
-            <p className="text-xs text-muted-foreground truncate">
-              {enrollment.completedLessonsCount} of {allLessons.length} lessons
-              · {Math.round(progressPercent)}% complete
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="accent" size="sm" asChild className="hidden sm:flex">
-              <Link to={`/live/${course.id}`}>
-                <Video className="h-4 w-4 mr-2" />
-                Join Live Class
+    <DashboardLayout>
+      {/* Course-specific top bar inside the portal layout */}
+      <div className="-mx-4 lg:-mx-6 -mt-4 lg:-mt-6 mb-0">
+        <div className="border-b border-border bg-card">
+          <div className="flex h-12 items-center gap-2 px-3 sm:px-4">
+            {/* Lesson sidebar toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              title={sidebarOpen ? "Collapse lesson list" : "Expand lesson list"}
+              className="shrink-0 h-8 w-8"
+            >
+              {sidebarOpen ? (
+                <PanelLeftClose className="h-4 w-4" />
+              ) : (
+                <PanelLeftOpen className="h-4 w-4" />
+              )}
+            </Button>
+            <Button variant="ghost" size="icon" asChild className="shrink-0 h-8 w-8">
+              <Link to={`/courses/${slugValue}`}>
+                <ChevronLeft className="h-4 w-4" />
               </Link>
             </Button>
-            <Button variant="accent" size="icon" asChild className="sm:hidden">
-              <Link to={`/live/${course.id}`}>
-                <Video className="h-4 w-4" />
-              </Link>
-            </Button>
-            <Progress value={progressPercent} className="w-24 sm:w-32 h-2" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate text-sm">{course.title}</p>
+              <p className="text-[11px] text-muted-foreground truncate">
+                {enrollment.completedLessonsCount} of {allLessons.length} lessons · {Math.round(progressPercent)}% complete
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" asChild className="hidden md:flex h-7 text-xs">
+                <Link to={`/courses/${slugValue}?tab=discussion`}>
+                  <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                  Discussion
+                </Link>
+              </Button>
+              <Button variant="accent" size="sm" asChild className="hidden sm:flex h-7 text-xs">
+                <Link to={`/live/${course.id}`}>
+                  <Video className="h-3.5 w-3.5 mr-1.5" />
+                  Join Live Class
+                </Link>
+              </Button>
+              <Button variant="accent" size="icon" asChild className="sm:hidden h-7 w-7">
+                <Link to={`/live/${course.id}`}>
+                  <Video className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
+              <Progress value={progressPercent} className="w-20 sm:w-28 h-1.5" />
+            </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="flex-1 flex min-h-0">
-        <aside className="w-72 border-r border-border bg-muted/20 flex flex-col shrink-0 hidden md:flex">
+      {/* Content: lesson sidebar + video/content area */}
+      <div className="flex min-h-0 h-[calc(100vh-9rem)] -mx-4 lg:-mx-6 relative">
+        {/* Collapsible sidebar */}
+        <aside
+          className={cn(
+            "border-r border-border bg-muted/20 flex flex-col shrink-0 transition-all duration-300 ease-in-out overflow-hidden",
+            sidebarOpen ? "w-72" : "w-0",
+          )}
+        >
           <ScrollArea className="flex-1 p-3">
             <nav className="space-y-4">
               {curriculumSections.map((section) => (
@@ -837,6 +871,18 @@ const Learn = () => {
           </ScrollArea>
         </aside>
 
+        {/* Collapsed sidebar peek button */}
+        {!sidebarOpen && (
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center w-5 h-16 bg-muted/80 border border-border rounded-r-md hover:bg-muted transition-colors"
+            title="Open sidebar"
+          >
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        )}
+
         <main className="flex-1 flex flex-col min-w-0 overflow-auto">
           {selectedLesson ? (
             <>
@@ -849,12 +895,12 @@ const Learn = () => {
                     selectedLesson.videoUrl && (
                       <>
                         <div className="aspect-video bg-black rounded-lg overflow-hidden mb-4">
-                          <video
+                          <SecureVideoPlayer
                             ref={videoRef}
-                            src={selectedLesson.videoUrl}
-                            controls
+                            src={toAbsoluteMediaUrl(selectedLesson.videoUrl)}
+                            watermarkText={`ቤተ ጉባኤ ዘኢትዮ ግእዝ ሚዲያ/${user?.firstName} ${user?.lastName}` }
+                            showWatermark={Boolean(isLoggedIn)}
                             className="w-full h-full"
-                            playsInline
                             onLoadedMetadata={handleVideoLoadedMetadata}
                             onPause={handleVideoPause}
                             onTimeUpdate={handleVideoTimeUpdate}
@@ -1675,31 +1721,7 @@ const Learn = () => {
           )}
         </main>
       </div>
-
-      {/* Mobile lesson list */}
-      <div className="md:hidden border-t border-border p-3 bg-card">
-        <ScrollArea className="w-full">
-          <div className="flex gap-2 pb-2">
-            {allLessons.map((lesson) => {
-              const isCompleted = completedLessonIds.has(lesson.id);
-              const isSelected = selectedLesson?.id === lesson.id;
-              return (
-                <Button
-                  key={lesson.id}
-                  variant={isSelected ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleSelectLesson(lesson)}
-                  className="shrink-0"
-                >
-                  {isCompleted && <Check className="h-3 w-3 mr-1" />}
-                  <span className="truncate max-w-[120px]">{lesson.title}</span>
-                </Button>
-              );
-            })}
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 };
 

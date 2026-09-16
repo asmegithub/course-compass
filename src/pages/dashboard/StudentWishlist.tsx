@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, BookOpen, Loader2 } from 'lucide-react';
 import { getMyWishlist, getApprovedCourses } from '@/lib/course-api';
+import { useTranslation } from 'react-i18next';
 
 const StudentWishlist = () => {
+  const { t } = useTranslation();
   const { data: wishlist, isLoading, error } = useQuery({
     queryKey: ['wishlist-me'],
     queryFn: getMyWishlist,
@@ -46,17 +48,17 @@ const StudentWishlist = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">My Wishlist</h1>
-          <p className="text-muted-foreground text-sm mt-1">Courses you saved for later.</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t('studentPortal.myWishlist', 'My Wishlist')}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t('studentPortal.wishlistSubtitle', 'Courses you saved for later.')}</p>
         </div>
 
         {!wishlistCourses.length ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground text-center">No courses in your wishlist yet.</p>
+              <p className="text-muted-foreground text-center">{t('studentPortal.noWishlist', 'No courses in your wishlist yet.')}</p>
               <Button asChild variant="accent" className="mt-4">
-                <Link to="/courses">Browse courses</Link>
+                <Link to="/courses">{t('studentPortal.browseCourses', 'Browse courses')}</Link>
               </Button>
             </CardContent>
           </Card>

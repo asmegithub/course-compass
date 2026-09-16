@@ -12,6 +12,11 @@ export interface User {
   language: Language;
   referralCode?: string;
   referredBy?: string;
+  bio?: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  parentRelationship?: string;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -286,4 +291,77 @@ export interface Certificate {
   verificationCode: string;
   issuedAt: string;
   expiresAt?: string;
+}
+
+// ─── Chat Types ───────────────────────────────────────────────────────────────
+export interface ChatParticipant {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'MEMBER'; // Chat room role
+  userRole: string; // System role: STUDENT, INSTRUCTOR, ADMIN
+  profileImage?: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  parentRelationship?: string;
+  joinedAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderName: string;
+  senderRole: string;
+  senderProfileImage?: string;
+  parentName?: string;
+  parentRelationship?: string;
+  content: string;
+  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM' | 'VOICE';
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
+  replyToId?: string;
+  replyToContent?: string;
+  replyToSenderName?: string;
+  reactions?: string; // JSON string
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  createdAt: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  type: 'DIRECT' | 'GROUP';
+  title?: string;
+  description?: string;
+  avatarUrl?: string;
+  courseId?: string;
+  courseTitle?: string;
+  createdByUserId?: string;
+  lastMessageText?: string;
+  lastMessageAt?: string;
+  lastMessageSenderName?: string;
+  unreadCount: number;
+  participants: ChatParticipant[];
+  directOtherParticipant?: ChatParticipant;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatContact {
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+  profileImage?: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  parentRelationship?: string;
+  courseId?: string;
+  courseTitle?: string;
+  contactType: string;
 }

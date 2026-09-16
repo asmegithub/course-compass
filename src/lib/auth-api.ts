@@ -14,6 +14,10 @@ export interface SignupPayload {
   lastName?: string;
   role?: string;
   language?: string;
+  parentName?: string;
+  parentEmail?: string;
+  parentPhone?: string;
+  parentRelationship?: string;
 }
 
 export interface AuthResponse {
@@ -76,5 +80,13 @@ export const logout = async (refreshToken: string): Promise<void> => {
 
 export const me = async (): Promise<User> => {
   const response = await apiFetch<User>('/api/auth/me');
+  return normalizeUser(response);
+};
+
+export const updateMe = async (payload: Partial<User>): Promise<User> => {
+  const response = await apiFetch<User>('/api/auth/me', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
   return normalizeUser(response);
 };

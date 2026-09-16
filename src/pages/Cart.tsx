@@ -15,13 +15,23 @@ import { useCart } from '@/contexts/CartContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { AlertCircle, CreditCard } from 'lucide-react';
 
 const Cart = () => {
   const { user, isLoggedIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { cartSlugs, removeFromCart, setCartSlugs } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState<'CHAPA' | 'MANUAL'>('CHAPA');
+  const [paymentMethod, setPaymentMethod] = useState<'CHAPA' | 'MANUAL'>('MANUAL');
+  const [showChapaNotice, setShowChapaNotice] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(null);
@@ -279,9 +289,28 @@ const Cart = () => {
                   <span>Total</span>
                   <span>{formatPrice(total, currency)}</span>
                 </div>
-                <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as 'CHAPA' | 'MANUAL')} className="space-y-3">
+                <Tabs
+                  value={paymentMethod}
+                  onValueChange={(v) => {
+                    if (v === 'CHAPA') {
+                      setShowChapaNotice(true);
+                      setPaymentMethod('MANUAL');
+                      return;
+                    }
+                    setPaymentMethod(v as 'CHAPA' | 'MANUAL');
+                  }}
+                  className="space-y-3"
+                >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="CHAPA" className="px-2 text-xs sm:text-sm">
+                    <TabsTrigger
+                      value="CHAPA"
+                      className="px-2 text-xs sm:text-sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowChapaNotice(true);
+                        setPaymentMethod('MANUAL');
+                      }}
+                    >
                       Pay with Chapa
                     </TabsTrigger>
                     <TabsTrigger value="MANUAL" className="px-2 text-xs sm:text-sm">
@@ -292,35 +321,18 @@ const Cart = () => {
                   <TabsContent value="CHAPA" className="space-y-3">
                     <Button
                       className="w-full"
-                      disabled={cartCourses.length === 0 || checkoutAllMutation.isPending}
+                      disabled={cartCourses.length === 0}
                       onClick={() => {
-                        if (!isStudent) {
-                          toast({
-                            title: 'Enrollment not allowed',
-                            description: 'Instructor accounts can add to cart/wishlist, but cannot enroll in courses.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-                        checkoutAllMutation.mutate();
+                        setShowChapaNotice(true);
+                        setPaymentMethod('MANUAL');
                       }}
                     >
-                      {checkoutAllMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Redirecting to payment…
-                        </>
-                      ) : cartCourses.length === 1 ? (
-                        'Checkout'
-                      ) : (
-                        'Pay for all courses'
-                      )}
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Pay with Chapa
                     </Button>
-                    {cartCourses.length > 1 && (
-                      <p className="text-xs text-muted-foreground">
-                        Pay once for all {cartCourses.length} courses in a single transaction.
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Chapa is currently undergoing maintenance. Please select Manual Payment.
+                    </p>
                   </TabsContent>
 
                   <TabsContent value="MANUAL" className="space-y-3">
@@ -434,6 +446,41 @@ const Cart = () => {
             </Card>
           </div>
         )}
+
+        {/* Chapa Notice Dialog */}
+        <Dialog open={showChapaNotice} onOpenChange={setShowChapaNotice}>
+          <DialogContent className="max-w-md p-6">
+            <DialogHeader className="space-y-2">
+              <div className="flex items-center gap-2 text-amber-600 font-medium text-sm">
+                <AlertCircle className="h-5 w-5" />
+                <span>ክፍያ ማስታወሻ / Payment Notice</span>
+              </div>
+              <DialogTitle className="text-lg font-bold">
+                Chapa ክፍያ ለጊዜው አይሰራም
+              </DialogTitle>
+              <DialogDescription className="text-sm space-y-2 pt-2 text-foreground">
+                <p>
+                  የChapa ኦንላይን ክፍያ አገልግሎት ለጊዜው እየሰራ ስላልሆነ እባክዎ በ<strong>እጅ ክፍያ (Manual Payment)</strong> አማራጭ የባንክ ዝውውር በማድረግ ደረሰኝዎን ይላኩ።
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Chapa payment is currently unavailable. Please select Manual Payment to transfer funds to our designated bank account and upload your receipt screenshot.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-3 border-t">
+              <Button
+                variant="accent"
+                className="w-full"
+                onClick={() => {
+                  setShowChapaNotice(false);
+                  setPaymentMethod('MANUAL');
+                }}
+              >
+                በእጅ ክፍያ ቀጥል (Continue with Manual Payment)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
       <Footer />
     </div>

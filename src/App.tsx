@@ -25,6 +25,8 @@ import StudentWishlist from "./pages/dashboard/StudentWishlist";
 import StudentNotifications from "./pages/dashboard/StudentNotifications";
 import StudentInstructorApplication from "./pages/dashboard/StudentInstructorApplication";
 import StudentQuizHistory from "./pages/dashboard/StudentQuizHistory";
+import StudentSettings from "./pages/dashboard/StudentSettings";
+import ChatPage from "./pages/dashboard/ChatPage";
 import InstructorDashboard from "./pages/dashboard/InstructorDashboard";
 import InstructorCourseCreate from "./pages/dashboard/InstructorCourseCreate";
 import InstructorCourseDetail from "./pages/dashboard/InstructorCourseDetail";
@@ -64,7 +66,7 @@ const ProtectedRoute = ({
   const { user, isLoggedIn } = useAuth();
   const { isContentObscured, isDevtoolsOpen } = useContentProtection({
     enabled: isLoggedIn,
-    detectDevtools: true,
+    detectDevtools: false,
     blockPrint: true,
     blockSelection: true,
   });
@@ -172,6 +174,22 @@ const AppRoutes = () => (
       }
     />
     <Route
+      path="/dashboard/chat"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <ChatPage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/dashboard/settings"
+      element={
+        <ProtectedRoute allowedRoles={["STUDENT"]}>
+          <StudentSettings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
       path="/dashboard/*"
       element={
         <ProtectedRoute allowedRoles={["STUDENT"]}>
@@ -250,6 +268,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
           <InstructorSettings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/instructor/chat"
+      element={
+        <ProtectedRoute allowedRoles={["INSTRUCTOR"]}>
+          <ChatPage />
         </ProtectedRoute>
       }
     />
@@ -380,6 +406,14 @@ const AppRoutes = () => (
       element={
         <ProtectedRoute allowedRoles={["ADMIN"]}>
           <AdminSettings />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      path="/admin/chat"
+      element={
+        <ProtectedRoute allowedRoles={["ADMIN"]}>
+          <ChatPage />
         </ProtectedRoute>
       }
     />

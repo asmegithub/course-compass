@@ -28,6 +28,18 @@ import { CreditCard, Banknote, Loader2, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { StudentProfileEnrollmentDialog } from "@/components/enrollment/StudentProfileEnrollmentDialog";
+import { getStudentProfile, type StudentDetailedProfile } from "@/lib/student-profile";
+import { AlertCircle, UserCheck } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const isUuid = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -36,6 +48,7 @@ const REFERRAL_STORAGE_KEY = "referralRef";
 const REFERRAL_COURSE_KEY = "referralCourseId";
 
 const Checkout = () => {
+  const { t } = useTranslation();
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -46,9 +59,10 @@ const Checkout = () => {
   const isUuidSlug = isUuid(slugValue);
 
   const [useBalance, setUseBalance] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"CHAPA" | "MANUAL">(
-    "CHAPA",
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"CHAPA" | "MANUAL">("MANUAL");
+  const [showChapaNotice, setShowChapaNotice] = useState(false);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [studentProfile, setStudentProfile] = useState<StudentDetailedProfile | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState<string | null>(
@@ -59,6 +73,12 @@ const Checkout = () => {
   );
   const [note, setNote] = useState<string>("");
   const receiptPreviewRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      setStudentProfile(getStudentProfile(user.id));
+    }
+  }, [user?.id]);
 
   const courseByIdQuery = useQuery({
     queryKey: ["course", slugValue],
@@ -328,10 +348,10 @@ const Checkout = () => {
         <Navbar />
         <main className="flex-1 container py-16">
           <p className="text-muted-foreground">
-            Enrollment is available only for student accounts.
+            {t("checkout.onlyStudents")}
           </p>
           <Button variant="outline" className="mt-4" asChild>
-            <Link to={`/courses/${slugValue}`}>Back to course</Link>
+            <Link to={`/courses/${slugValue}`}>{t("checkout.backToCourse")}</Link>
           </Button>
         </main>
         <Footer />
@@ -345,7 +365,7 @@ const Checkout = () => {
         <Navbar />
         <main className="flex-1 container py-16">
           <p className="text-muted-foreground">
-            You are already enrolled in this course.
+            {t("checkout.alreadyEnrolled")}
           </p>
           <Button
             className="mt-4"
@@ -353,7 +373,7 @@ const Checkout = () => {
               navigate(`/courses/${slugValue}/learn`, { replace: true })
             }
           >
-            Continue learning
+            {t("checkout.continueLearning")}
           </Button>
         </main>
         <Footer />
@@ -373,15 +393,15 @@ const Checkout = () => {
         <Button variant="ghost" size="sm" className="mb-4 -ml-2" asChild>
           <Link to={`/courses/${slugValue}`}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to course
+            {t("checkout.backToCourse")}
           </Link>
         </Button>
 
-        <h1 className="font-display text-2xl font-bold mb-6">Checkout</h1>
+        <h1 className="font-display text-2xl font-bold mb-6">{t("checkout.title")}</h1>
 
         <Card className="mb-6">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Order summary</CardTitle>
+            <CardTitle className="text-base">{t("checkout.orderSummary")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-4">
@@ -400,6 +420,29 @@ const Checkout = () => {
               </div>
             </div>
 
+            {/* Student Profile Overview / Edit Button */}
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <UserCheck className="h-4 w-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="font-medium text-xs truncate">
+                    {t("checkout.studentProfile")} {studentProfile?.fullName || [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.email}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {studentProfile?.ordination || t("checkout.ordinationNotSet")} • {studentProfile?.residenceLocation || (studentProfile?.residenceType === "ETHIOPIA" ? t("checkout.inEthiopia") : t("checkout.abroad"))}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs shrink-0"
+                onClick={() => setShowProfileDialog(true)}
+              >
+                {studentProfile ? t("checkout.editProfile") : t("checkout.fillProfile")}
+              </Button>
+            </div>
+
             {canUseBalance && (
               <label className="flex items-center gap-2 cursor-pointer text-sm border rounded-lg p-3">
                 <Checkbox
@@ -407,8 +450,7 @@ const Checkout = () => {
                   onCheckedChange={(c) => setUseBalance(Boolean(c))}
                 />
                 <span>
-                  Use my referral balance (
-                  {formatPrice(referralBalance, course.currency)})
+                  {t("checkout.useReferralBalance", { balance: formatPrice(referralBalance, course.currency) })}
                 </span>
               </label>
             )}
@@ -421,9 +463,8 @@ const Checkout = () => {
                 onClick={() => {
                   if (!isStudent) {
                     toast({
-                      title: "Enrollment not allowed",
-                      description:
-                        "Instructor accounts can add to cart/wishlist, but cannot enroll in courses.",
+                      title: t("checkout.onlyStudents"),
+                      description: t("checkout.onlyStudents"),
                       variant: "destructive",
                     });
                     return;
@@ -436,17 +477,33 @@ const Checkout = () => {
                 ) : (
                   <Banknote className="h-4 w-4 mr-2" />
                 )}
-                Complete with referral balance
+                {t("checkout.completeWithBalance")}
               </Button>
             ) : (
               <Tabs
                 value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as "CHAPA" | "MANUAL")}
+                onValueChange={(v) => {
+                  if (v === "CHAPA") {
+                    setShowChapaNotice(true);
+                    setPaymentMethod("MANUAL");
+                    return;
+                  }
+                  setPaymentMethod(v as "CHAPA" | "MANUAL");
+                }}
                 className="space-y-3"
               >
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="CHAPA">Pay with Chapa</TabsTrigger>
-                  <TabsTrigger value="MANUAL">Manual Payment</TabsTrigger>
+                  <TabsTrigger
+                    value="CHAPA"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowChapaNotice(true);
+                      setPaymentMethod("MANUAL");
+                    }}
+                  >
+                    {t("checkout.payWithChapa")}
+                  </TabsTrigger>
+                  <TabsTrigger value="MANUAL">{t("checkout.manualPayment")}</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="CHAPA" className="space-y-3">
@@ -455,47 +512,31 @@ const Checkout = () => {
                     size="lg"
                     disabled={pending}
                     onClick={() => {
-                      if (!isStudent) {
-                        toast({
-                          title: "Enrollment not allowed",
-                          description:
-                            "Instructor accounts can add to cart/wishlist, but cannot enroll in courses.",
-                          variant: "destructive",
-                        });
-                        return;
-                      }
-                      payWithChapaMutation.mutate();
+                      setShowChapaNotice(true);
+                      setPaymentMethod("MANUAL");
                     }}
                   >
-                    {payWithChapaMutation.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <CreditCard className="h-4 w-4 mr-2" />
-                    )}
-                    Pay with Chapa (card, mobile money, etc.)
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    {t("checkout.payWithChapaBtn")}
                   </Button>
                 </TabsContent>
 
                 <TabsContent value="MANUAL" className="space-y-3">
                   <div className="space-y-3 rounded-lg border p-3 sm:p-4">
                     <p className="text-sm text-muted-foreground">
-                      Transfer{" "}
-                      <span className="font-medium">
-                        {formatPrice(coursePrice, course.currency ?? "ETB")}
-                      </span>{" "}
-                      to one of the accounts below, then upload receipt.
+                      {t("checkout.transferNotice", { price: formatPrice(coursePrice, course.currency ?? "ETB") })}
                     </p>
                     <div className="space-y-2">
-                      <Label>Select account</Label>
+                      <Label>{t("checkout.selectAccount")}</Label>
                       {paymentAccountsQuery.isLoading && (
                         <p className="text-sm text-muted-foreground">
-                          Loading accounts…
+                          {t("checkout.loadingAccounts")}
                         </p>
                       )}
                       {!paymentAccountsQuery.isLoading &&
                         (paymentAccountsQuery.data ?? []).length === 0 && (
                           <p className="text-sm text-muted-foreground">
-                            No active payment accounts available right now.
+                            {t("checkout.noActiveAccounts")}
                           </p>
                         )}
                       <div className="space-y-2">
@@ -537,7 +578,7 @@ const Checkout = () => {
                               <div className="mt-2 text-xs text-muted-foreground space-y-1">
                                 {acc.accountName && (
                                   <p>
-                                    <span className="font-medium">Name:</span>{" "}
+                                    <span className="font-medium">{t("checkout.name")}:</span>{" "}
                                     {acc.accountName}
                                   </p>
                                 )}
@@ -550,7 +591,7 @@ const Checkout = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Receipt screenshot</Label>
+                      <Label>{t("checkout.receiptScreenshot")}</Label>
                       <Input
                         type="file"
                         accept="image/*,application/pdf"
@@ -571,7 +612,7 @@ const Checkout = () => {
                               className="h-7"
                               onClick={() => setReceiptFile(null)}
                             >
-                              Remove
+                              {t("checkout.removeReceipt")}
                             </Button>
                           </div>
                           {receiptPreviewUrl &&
@@ -593,11 +634,11 @@ const Checkout = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Note (optional)</Label>
+                      <Label>{t("checkout.noteOptional")}</Label>
                       <Input
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
-                        placeholder="e.g. Sender name / reference number"
+                        placeholder={t("checkout.notePlaceholder")}
                       />
                     </div>
 
@@ -611,9 +652,8 @@ const Checkout = () => {
                       onClick={() => {
                         if (!isStudent) {
                           toast({
-                            title: "Enrollment not allowed",
-                            description:
-                              "Instructor accounts can add to cart/wishlist, but cannot enroll in courses.",
+                            title: t("checkout.onlyStudents"),
+                            description: t("checkout.onlyStudents"),
                             variant: "destructive",
                           });
                           return;
@@ -624,15 +664,14 @@ const Checkout = () => {
                       {manualSubmitMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Submitting…
+                          {t("checkout.submittingReceipt")}
                         </>
                       ) : (
-                        "Submit receipt for approval"
+                        t("checkout.submitReceipt")
                       )}
                     </Button>
                     <p className="text-xs text-muted-foreground">
-                      Admin will approve/reject your receipt. If rejected, you
-                      can resubmit from Payment History.
+                      {t("checkout.adminApprovalNotice")}
                     </p>
                   </div>
                 </TabsContent>
@@ -640,11 +679,54 @@ const Checkout = () => {
             )}
 
             <p className="text-xs text-muted-foreground text-center">
-              Chapa: pay online instantly. Manual: transfer and upload receipt
-              for admin approval.
+              {t("checkout.chapaManualSummary")}
             </p>
           </CardContent>
         </Card>
+
+        {/* Chapa Unavailable Notice Dialog */}
+        <Dialog open={showChapaNotice} onOpenChange={setShowChapaNotice}>
+          <DialogContent className="max-w-md p-6">
+            <DialogHeader className="space-y-2">
+              <div className="flex items-center gap-2 text-amber-600 font-medium text-sm">
+                <AlertCircle className="h-5 w-5" />
+                <span>{t("checkout.paymentNotice")}</span>
+              </div>
+              <DialogTitle className="text-lg font-bold">
+                {t("checkout.chapaUnavailableTitle")}
+              </DialogTitle>
+              <DialogDescription className="text-sm space-y-2 pt-2 text-foreground">
+                <p>
+                  {t("checkout.chapaUnavailableDesc")}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t("checkout.chapaUnavailableSub")}
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-3 border-t">
+              <Button
+                variant="accent"
+                className="w-full"
+                onClick={() => {
+                  setShowChapaNotice(false);
+                  setPaymentMethod("MANUAL");
+                }}
+              >
+                {t("checkout.continueManual")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Student Profile Enrollment Dialog */}
+        <StudentProfileEnrollmentDialog
+          open={showProfileDialog}
+          onOpenChange={setShowProfileDialog}
+          onComplete={(profile) => {
+            if (profile) setStudentProfile(profile);
+          }}
+        />
       </main>
       <Footer />
     </div>

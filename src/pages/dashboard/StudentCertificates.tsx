@@ -6,6 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import { getCertificates } from '@/lib/course-api';
 import { getApiBaseUrl } from '@/lib/api';
 
+import { useTranslation } from 'react-i18next';
+
 const toAbsoluteUrl = (maybeUrl?: string) => {
   if (!maybeUrl) return '';
   if (maybeUrl.startsWith('http://') || maybeUrl.startsWith('https://')) return maybeUrl;
@@ -14,6 +16,7 @@ const toAbsoluteUrl = (maybeUrl?: string) => {
 };
 
 const StudentCertificates = () => {
+  const { t } = useTranslation();
   const { data: certificates, isLoading, error } = useQuery({
     queryKey: ['certificates'],
     queryFn: getCertificates,
@@ -25,8 +28,8 @@ const StudentCertificates = () => {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground">My Certificates</h1>
-          <p className="text-muted-foreground mt-1">Certificates for courses you have completed</p>
+          <h1 className="font-display text-2xl font-bold text-foreground">{t('studentPortal.myCertificates', 'My Certificates')}</h1>
+          <p className="text-muted-foreground mt-1">{t('studentPortal.certificatesSubtitle', 'Certificates for courses you have completed')}</p>
         </div>
 
         {isLoading && (
@@ -39,8 +42,8 @@ const StudentCertificates = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <Award className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-              <p className="text-muted-foreground">No certificates yet.</p>
-              <p className="text-sm text-muted-foreground mt-1">Complete courses to earn certificates.</p>
+              <p className="text-muted-foreground">{t('studentPortal.noCertificates', 'No certificates yet.')}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('studentPortal.completeCoursesForCertificates', 'Complete courses to earn certificates.')}</p>
             </CardContent>
           </Card>
         )}
@@ -56,12 +59,12 @@ const StudentCertificates = () => {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">Certificate #{c.certificateNumber || c.id.slice(0, 8)}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Issued {c.issuedAt ? new Date(c.issuedAt).toLocaleDateString() : '–'}
+                        {t('studentPortal.issued', { date: c.issuedAt ? new Date(c.issuedAt).toLocaleDateString() : '–' })}
                       </p>
                       {c.certificateUrl && (
                         <Button variant="link" size="sm" className="h-auto p-0 mt-2 text-xs" asChild>
                           <a href={toAbsoluteUrl(c.certificateUrl)} target="_blank" rel="noopener noreferrer">
-                            View / Download <ExternalLink className="h-3 w-3 ml-0.5 inline" />
+                            {t('studentPortal.viewDownload', 'View / Download')} <ExternalLink className="h-3 w-3 ml-0.5 inline" />
                           </a>
                         </Button>
                       )}

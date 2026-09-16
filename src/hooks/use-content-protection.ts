@@ -31,7 +31,7 @@ const pauseMedia = () => {
 
 export const useContentProtection = ({
   enabled = true,
-  detectDevtools = true,
+  detectDevtools = false,
   blockPrint = true,
   blockSelection = true,
   blockContextMenu = true,
@@ -164,14 +164,17 @@ export const useContentProtection = ({
 
     const handleAfterPrint = () => revealContentIfSafe();
 
-    if (detectDevtools) {
+    if (detectDevtools && !import.meta.env.DEV) {
       devtoolsInterval = window.setInterval(() => {
+        const threshold = 180;
         const widthDiff = Math.abs(window.outerWidth - window.innerWidth);
         const heightDiff = Math.abs(window.outerHeight - window.innerHeight);
-        const devtoolsOpen = widthDiff > 120 || heightDiff > 120;
+        const devtoolsOpen = widthDiff > threshold || heightDiff > threshold;
         setIsDevtoolsOpen(devtoolsOpen);
         if (devtoolsOpen) {
           hideContent();
+        } else if (isDevtoolsOpen) {
+          revealContentIfSafe();
         }
       }, 1200);
     }

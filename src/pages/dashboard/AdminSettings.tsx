@@ -598,10 +598,10 @@ const AdminSettings = () => {
                       <Label>Account / Wallet Number</Label>
                       <Input value={newAccount.accountNumber ?? ''} onChange={e => setNewAccount(a => ({ ...a, accountNumber: e.target.value }))} placeholder="e.g. 1000xxxxxx" />
                     </div>
-                    <div>
+                    {/* <div>
                       <Label>USSD Code (optional)</Label>
                       <Input value={newAccount.ussdCode ?? ''} onChange={e => setNewAccount(a => ({ ...a, ussdCode: e.target.value }))} placeholder="e.g. *847#" />
-                    </div>
+                    </div> */}
                     <div className="flex items-end">
                       <div className="flex items-center justify-between w-full gap-3 rounded-md border p-3">
                         <div>
@@ -687,14 +687,14 @@ const AdminSettings = () => {
                               placeholder="Account / wallet number"
                             />
                           </div>
-                          <div>
+                          {/* <div>
                             <Label className="text-xs">USSD Code</Label>
                             <Input
                               defaultValue={acc.ussdCode ?? ''}
                               onBlur={(e) => updateAccountMutation.mutate({ id: acc.id, data: { ussdCode: e.target.value } })}
                               placeholder="USSD code"
                             />
-                          </div>
+                          </div> */}
                           <div>
                             <Label className="text-xs">Instructions</Label>
                             <Input
