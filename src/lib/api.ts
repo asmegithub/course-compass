@@ -1,4 +1,4 @@
-const DEFAULT_API_BASE_URL = 'http://localhost:8080';
+const DEFAULT_API_BASE_URL = 'https://api.render.com/deploy/srv-dalop8ek1f9s738vquo0?key=1YItEqlRkCs';
 
 import { clearTokens, getAccessToken, getRefreshToken, setStoredUser, setTokens } from '@/lib/auth-storage';
 
