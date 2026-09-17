@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GraduationCap, Facebook, Twitter, Linkedin, Youtube, Instagram } from 'lucide-react';
+import { useSystemSettings } from '@/contexts/SystemSettingsContext';
 
 const Footer = () => {
   const { t } = useTranslation();
+  const { siteName, tagline } = useSystemSettings();
   return (
     <footer className="bg-primary text-primary-foreground">
       <div className="container py-12 md:py-16">
@@ -14,10 +16,10 @@ const Footer = () => {
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                 <GraduationCap className="h-6 w-6 text-accent-foreground" />
               </div>
-              <span className="font-display text-xl font-bold">{t('common.brand')}</span>
+              <span className="font-display text-xl font-bold">{siteName}</span>
             </Link>
             <p className="text-sm text-primary-foreground/70 mb-4">
-              {t('home.footerTagline')}
+              {tagline}
             </p>
             <div className="flex gap-4">
               <a href="#" className="text-primary-foreground/70 hover:text-accent transition-colors">
@@ -86,7 +88,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-primary-foreground/60">
-            © {new Date().getFullYear()} {t('common.brand')}. {t('common.allRightsReserved')}
+            © {new Date().getFullYear()} {siteName}. {t('common.allRightsReserved')}
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-sm text-primary-foreground/60">
             <Link to="/privacy" className="hover:text-accent transition-colors">{t('common.privacyPolicy')}</Link>

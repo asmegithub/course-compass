@@ -9,9 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Globe, DollarSign, Mail, ShieldCheck, Bell, Landmark, Wallet, Star, Plus, Trash } from 'lucide-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { enableAdminPushNotifications, getAdminPushStatus, sendAdminTestPush } from '@/lib/push-api';
-import { createPaymentAccount, createSystemSetting, deletePaymentAccount, getPaymentAccounts, getSystemSettings, PaymentAccount, setCourseFeatured, updatePaymentAccount, updateSystemSetting } from '@/lib/admin-api';
+import { batchUpsertSystemSettings, createPaymentAccount, createSystemSetting, deletePaymentAccount, getPaymentAccounts, getSystemSettings, PaymentAccount, setCourseFeatured, updatePaymentAccount, updateSystemSetting } from '@/lib/admin-api';
 import { createPayoutMethodOption, deletePayoutMethodOption, getPayoutMethodOptions, PayoutMethodOption, updatePayoutMethodOption } from '@/lib/admin-api';
 import { getCourses } from '@/lib/course-api';
 import type { Course } from '@/types';
@@ -171,6 +171,138 @@ const AdminSettings = () => {
   const systemSettingsQuery = useQuery({
     queryKey: ['system-settings'],
     queryFn: getSystemSettings,
+  });
+
+  const queryClient = useQueryClient();
+
+  const settingsMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    (systemSettingsQuery.data ?? []).forEach((s) => {
+      if (s.key && s.value != null) {
+        map[s.key] = s.value;
+        map[s.key.toUpperCase()] = s.value;
+      }
+    });
+    return map;
+  }, [systemSettingsQuery.data]);
+
+  useEffect(() => {
+    if (!systemSettingsQuery.data || systemSettingsQuery.data.length === 0) return;
+    setGeneral((prev) => ({
+      ...prev,
+      siteName: settingsMap['SITE_NAME'] ?? settingsMap['SITENAME'] ?? prev.siteName,
+      tagline: settingsMap['SITE_TAGLINE'] ?? settingsMap['TAGLINE'] ?? prev.tagline,
+      supportEmail: settingsMap['SUPPORT_EMAIL'] ?? prev.supportEmail,
+      defaultLanguage: settingsMap['DEFAULT_LANGUAGE'] ?? prev.defaultLanguage,
+      maintenanceMode: settingsMap['MAINTENANCE_MODE'] != null ? settingsMap['MAINTENANCE_MODE'] === 'true' : prev.maintenanceMode,
+      registrationOpen: settingsMap['REGISTRATION_OPEN'] != null ? settingsMap['REGISTRATION_OPEN'] !== 'false' : prev.registrationOpen,
+      requireEmailVerification: settingsMap['REQUIRE_EMAIL_VERIFICATION'] != null ? settingsMap['REQUIRE_EMAIL_VERIFICATION'] !== 'false' : prev.requireEmailVerification,
+    }));
+  }, [settingsMap, systemSettingsQuery.data]);
+
+  useEffect(() => {
+    if (!systemSettingsQuery.data || systemSettingsQuery.data.length === 0) return;
+    setEmail((prev) => ({
+      ...prev,
+      smtpHost: settingsMap['SMTP_HOST'] ?? prev.smtpHost,
+      smtpPort: settingsMap['SMTP_PORT'] ?? prev.smtpPort,
+      senderName: settingsMap['EMAIL_SENDER_NAME'] ?? prev.senderName,
+      senderEmail: settingsMap['EMAIL_SENDER_ADDRESS'] ?? prev.senderEmail,
+      welcomeEmailEnabled: settingsMap['WELCOME_EMAIL_ENABLED'] != null ? settingsMap['WELCOME_EMAIL_ENABLED'] === 'true' : prev.welcomeEmailEnabled,
+      enrollmentEmailEnabled: settingsMap['ENROLLMENT_EMAIL_ENABLED'] != null ? settingsMap['ENROLLMENT_EMAIL_ENABLED'] === 'true' : prev.enrollmentEmailEnabled,
+      payoutEmailEnabled: settingsMap['PAYOUT_EMAIL_ENABLED'] != null ? settingsMap['PAYOUT_EMAIL_ENABLED'] === 'true' : prev.payoutEmailEnabled,
+    }));
+  }, [settingsMap, systemSettingsQuery.data]);
+
+  useEffect(() => {
+    if (!systemSettingsQuery.data || systemSettingsQuery.data.length === 0) return;
+    setSecurity((prev) => ({
+      ...prev,
+      maxLoginAttempts: settingsMap['MAX_LOGIN_ATTEMPTS'] ? Number(settingsMap['MAX_LOGIN_ATTEMPTS']) : prev.maxLoginAttempts,
+      sessionTimeout: settingsMap['SESSION_TIMEOUT_MINUTES'] ? Number(settingsMap['SESSION_TIMEOUT_MINUTES']) : prev.sessionTimeout,
+      passwordMinLength: settingsMap['PASSWORD_MIN_LENGTH'] ? Number(settingsMap['PASSWORD_MIN_LENGTH']) : prev.passwordMinLength,
+      twoFactorRequired: settingsMap['REQUIRE_2FA_ADMIN'] != null ? settingsMap['REQUIRE_2FA_ADMIN'] === 'true' : prev.twoFactorRequired,
+      autoApproveInstructors: settingsMap['AUTO_APPROVE_INSTRUCTORS'] != null ? settingsMap['AUTO_APPROVE_INSTRUCTORS'] === 'true' : prev.autoApproveInstructors,
+      requireCourseApproval: settingsMap['REQUIRE_COURSE_APPROVAL'] != null ? settingsMap['REQUIRE_COURSE_APPROVAL'] !== 'false' : prev.requireCourseApproval,
+    }));
+  }, [settingsMap, systemSettingsQuery.data]);
+
+  const saveGeneralMutation = useMutation({
+    mutationFn: async () => {
+      const payload = [
+        { key: 'SITE_NAME', value: general.siteName, description: 'Platform project and brand name', isPublic: true },
+        { key: 'SITE_TAGLINE', value: general.tagline, description: 'Platform tagline', isPublic: true },
+        { key: 'SUPPORT_EMAIL', value: general.supportEmail, description: 'Official support email', isPublic: true },
+        { key: 'DEFAULT_LANGUAGE', value: general.defaultLanguage, description: 'Default system language', isPublic: true },
+        { key: 'MAINTENANCE_MODE', value: String(general.maintenanceMode), description: 'Maintenance mode toggle', isPublic: true },
+        { key: 'REGISTRATION_OPEN', value: String(general.registrationOpen), description: 'User registration toggle', isPublic: true },
+        { key: 'REQUIRE_EMAIL_VERIFICATION', value: String(general.requireEmailVerification), description: 'Email verification requirement', isPublic: true },
+      ];
+      return batchUpsertSystemSettings(payload);
+    },
+    onSuccess: () => {
+      toast({ title: 'General settings saved', description: 'Changes have been applied.' });
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['public-system-settings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to save general settings',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const saveEmailMutation = useMutation({
+    mutationFn: async () => {
+      const payload = [
+        { key: 'SMTP_HOST', value: email.smtpHost, description: 'SMTP server hostname', isPublic: false },
+        { key: 'SMTP_PORT', value: email.smtpPort, description: 'SMTP server port', isPublic: false },
+        { key: 'EMAIL_SENDER_NAME', value: email.senderName, description: 'Default email sender name', isPublic: false },
+        { key: 'EMAIL_SENDER_ADDRESS', value: email.senderEmail, description: 'Default email sender address', isPublic: false },
+        { key: 'WELCOME_EMAIL_ENABLED', value: String(email.welcomeEmailEnabled), description: 'Send welcome email on signup', isPublic: false },
+        { key: 'ENROLLMENT_EMAIL_ENABLED', value: String(email.enrollmentEmailEnabled), description: 'Send email on course enrollment', isPublic: false },
+        { key: 'PAYOUT_EMAIL_ENABLED', value: String(email.payoutEmailEnabled), description: 'Send email on payout processing', isPublic: false },
+      ];
+      return batchUpsertSystemSettings(payload);
+    },
+    onSuccess: () => {
+      toast({ title: 'Email settings saved', description: 'Changes have been applied.' });
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to save email settings',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const saveSecurityMutation = useMutation({
+    mutationFn: async () => {
+      const payload = [
+        { key: 'MAX_LOGIN_ATTEMPTS', value: String(security.maxLoginAttempts), description: 'Max failed login attempts', isPublic: false },
+        { key: 'SESSION_TIMEOUT_MINUTES', value: String(security.sessionTimeout), description: 'Session timeout in minutes', isPublic: false },
+        { key: 'PASSWORD_MIN_LENGTH', value: String(security.passwordMinLength), description: 'Minimum password length', isPublic: false },
+        { key: 'REQUIRE_2FA_ADMIN', value: String(security.twoFactorRequired), description: 'Require 2FA for administrators', isPublic: false },
+        { key: 'AUTO_APPROVE_INSTRUCTORS', value: String(security.autoApproveInstructors), description: 'Auto-approve instructor applications', isPublic: false },
+        { key: 'REQUIRE_COURSE_APPROVAL', value: String(security.requireCourseApproval), description: 'Require admin approval for new courses', isPublic: false },
+      ];
+      return batchUpsertSystemSettings(payload);
+    },
+    onSuccess: () => {
+      toast({ title: 'Security settings saved', description: 'Changes have been applied.' });
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Failed to save security settings',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    },
   });
 
   const platformFeeSetting = useMemo(
@@ -442,7 +574,15 @@ const AdminSettings = () => {
                   <div className="flex items-center justify-between"><Label>Open Registration</Label><Switch checked={general.registrationOpen} onCheckedChange={v => setGeneral(g => ({ ...g, registrationOpen: v }))} /></div>
                   <div className="flex items-center justify-between"><Label>Require Email Verification</Label><Switch checked={general.requireEmailVerification} onCheckedChange={v => setGeneral(g => ({ ...g, requireEmailVerification: v }))} /></div>
                 </div>
-                <Button variant="accent" className="gap-1" onClick={() => save('General')}><Save className="h-4 w-4" /> Save Changes</Button>
+                <Button
+                  variant="accent"
+                  className="gap-1"
+                  onClick={() => saveGeneralMutation.mutate()}
+                  disabled={saveGeneralMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {saveGeneralMutation.isPending ? 'Saving…' : 'Save Changes'}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -498,7 +638,15 @@ const AdminSettings = () => {
                   <div className="flex items-center justify-between"><Label>Enrollment Confirmation Email</Label><Switch checked={email.enrollmentEmailEnabled} onCheckedChange={v => setEmail(em => ({ ...em, enrollmentEmailEnabled: v }))} /></div>
                   <div className="flex items-center justify-between"><Label>Payout Notification Email</Label><Switch checked={email.payoutEmailEnabled} onCheckedChange={v => setEmail(em => ({ ...em, payoutEmailEnabled: v }))} /></div>
                 </div>
-                <Button variant="accent" className="gap-1" onClick={() => save('Email')}><Save className="h-4 w-4" /> Save Changes</Button>
+                <Button
+                  variant="accent"
+                  className="gap-1"
+                  onClick={() => saveEmailMutation.mutate()}
+                  disabled={saveEmailMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {saveEmailMutation.isPending ? 'Saving…' : 'Save Changes'}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -518,7 +666,15 @@ const AdminSettings = () => {
                   <div className="flex items-center justify-between"><Label>Auto-Approve New Instructors</Label><Switch checked={security.autoApproveInstructors} onCheckedChange={v => setSecurity(s => ({ ...s, autoApproveInstructors: v }))} /></div>
                   <div className="flex items-center justify-between"><Label>Require Course Approval</Label><Switch checked={security.requireCourseApproval} onCheckedChange={v => setSecurity(s => ({ ...s, requireCourseApproval: v }))} /></div>
                 </div>
-                <Button variant="accent" className="gap-1" onClick={() => save('Security')}><Save className="h-4 w-4" /> Save Changes</Button>
+                <Button
+                  variant="accent"
+                  className="gap-1"
+                  onClick={() => saveSecurityMutation.mutate()}
+                  disabled={saveSecurityMutation.isPending}
+                >
+                  <Save className="h-4 w-4" />
+                  {saveSecurityMutation.isPending ? 'Saving…' : 'Save Changes'}
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

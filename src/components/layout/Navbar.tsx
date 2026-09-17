@@ -19,9 +19,11 @@ import {
 import { cn } from '@/lib/utils';
 import { supportedLngs, languageNames, type Locale } from '@/i18n';
 import StudentProfileEnrollmentDialog from '@/components/enrollment/StudentProfileEnrollmentDialog';
+import { useSystemSettings } from '@/contexts/SystemSettingsContext';
 
 const Navbar = () => {
   const { t, i18n } = useTranslation();
+  const { siteName } = useSystemSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,7 +70,7 @@ const Navbar = () => {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent">
             <GraduationCap className="h-5 w-5 text-accent-foreground" />
           </div>
-          <span className="font-display text-xl font-bold text-foreground hidden sm:block">{t('common.brand')}</span>
+          <span className="font-display text-xl font-bold text-foreground hidden sm:block">{siteName}</span>
         </Link>
 
         <nav className="hidden lg:flex items-center gap-6">

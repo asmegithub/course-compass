@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
+import { SystemSettingsProvider } from "@/contexts/SystemSettingsContext";
 import Index from "./pages/Index";
 import Courses from "./pages/Courses";
 import Categories from "./pages/Categories";
@@ -438,7 +439,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
-            <AppRoutes />
+            <SystemSettingsProvider>
+              <AppRoutes />
+            </SystemSettingsProvider>
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>

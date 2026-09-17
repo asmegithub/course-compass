@@ -9,6 +9,7 @@ import { getNotificationUnreadCount } from "@/lib/course-api";
 import { getChatUnreadCount } from "@/lib/chat-api";
 import { useTranslation } from "react-i18next";
 import { supportedLngs, languageNames, type Locale } from "@/i18n";
+import { useSystemSettings } from "@/contexts/SystemSettingsContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -189,6 +190,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
   const chatUnreadCount = chatUnreadQuery.data ?? 0;
 
   const { t, i18n } = useTranslation();
+  const { siteName } = useSystemSettings();
   const setLanguage = (lng: Locale) => {
     void i18n.changeLanguage(lng);
   };
@@ -254,7 +256,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 isCollapsed && "lg:hidden",
               )}
             >
-              BeteGubae
+              {siteName}
             </span>
           </Link>
 

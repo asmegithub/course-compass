@@ -631,3 +631,18 @@ export const updateSystemSetting = async (
     body: JSON.stringify(payload),
   });
 };
+
+export const getPublicSystemSettings = async (): Promise<SystemSetting[]> => {
+  const data = await apiFetch<SystemSetting[]>("/api/system-settings/public");
+  return Array.isArray(data) ? data : [];
+};
+
+export const batchUpsertSystemSettings = async (
+  settings: Partial<SystemSetting>[],
+): Promise<SystemSetting[]> => {
+  const data = await apiFetch<SystemSetting[]>("/api/system-settings/batch", {
+    method: "POST",
+    body: JSON.stringify(settings),
+  });
+  return Array.isArray(data) ? data : [];
+};
