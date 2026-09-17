@@ -13,7 +13,7 @@ export const languageNames: Record<Locale, string> = {
   en: 'English',
   am: 'አማርኛ',
   om: 'Oromoo',
-  gez: 'ግዕዝ',
+  gez: 'ግእዝ',
 };
 
 void i18n

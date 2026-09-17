@@ -187,7 +187,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
     enabled: Boolean(user?.id),
     refetchInterval: 12000,
   });
-  const chatUnreadCount = chatUnreadQuery.data ?? 0;
+  const chatUnreadCount = chatUnreadQuery.data?.unreadCount ?? 0;
 
   const { t, i18n } = useTranslation();
   const { siteName } = useSystemSettings();
@@ -256,7 +256,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
                 isCollapsed && "lg:hidden",
               )}
             >
-              {siteName}
+              {siteName || "BeteGubae"}
             </span>
           </Link>
 
