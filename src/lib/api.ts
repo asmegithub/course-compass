@@ -1,4 +1,3 @@
-// const DEFAULT_API_BASE_URL = 'https://lms-2u73.onrender.com'; https://lms-im60.onrender.com/
 const DEFAULT_API_BASE_URL = 'https://lms-im60.onrender.com';
 import { clearTokens, getAccessToken, getRefreshToken, setStoredUser, setTokens } from '@/lib/auth-storage';
 

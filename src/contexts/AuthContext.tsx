@@ -125,7 +125,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const MIN_MS_BETWEEN_REFRESH = 5 * 60_000;
     const MOUSE_MOVE_THROTTLE_MS = 2 * 60_000;
 
-    let lastRefreshAt = 0;
+    // Start the clock at "now" so a fresh login doesn't immediately trigger
+    // a proactive refresh (which would fail if the token was just issued).
+    let lastRefreshAt = Date.now();
     let lastMouseTriggeredAt = 0;
     let inFlight = false;
 
