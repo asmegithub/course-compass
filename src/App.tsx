@@ -17,6 +17,7 @@ import Auth from "./pages/Auth";
 import LiveClass from "./pages/LiveClass";
 import Referrals from "./pages/Referrals";
 import NotFound from "./pages/NotFound";
+import TermsAndConditions from "./pages/TermsAndConditions";
 import Cart from "./pages/Cart";
 import StudentDashboard from "./pages/dashboard/StudentDashboard";
 import StudentPaymentHistory from "./pages/dashboard/StudentPaymentHistory";
@@ -108,6 +109,7 @@ const AppRoutes = () => (
       </ProtectedRoute>
     } />
     <Route path="/referrals" element={<Referrals />} />
+    <Route path="/terms" element={<TermsAndConditions />} />
 
     {/* Student routes */}
     <Route

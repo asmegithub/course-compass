@@ -114,6 +114,18 @@ export const updateUser = async (
   });
 };
 
+/** Change only a user's role. Sends the full user object with the updated role field. */
+export const changeUserRole = async (
+  id: string,
+  user: AdminUser,
+  newRole: string,
+): Promise<AdminUser> => {
+  return apiFetch<AdminUser>(`/api/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ ...user, role: newRole }),
+  });
+};
+
 export const getEnrollments = async (): Promise<AdminEnrollment[]> => {
   return apiFetch<AdminEnrollment[]>("/api/enrollments");
 };
